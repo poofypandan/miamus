@@ -255,5 +255,9 @@ describe("Ada bahan yang habis? (S2a)", () => {
     // What cooking took off by amount isn't asked.
     expect(ranOutCandidates(recipe, items, [{ item_id: "i1", amount: 1, unit: "kg" }]).map((i) => i.id)).toEqual(["i3"]);
     expect(ranOutCandidates(null, items, [])).toEqual([]);
+    // With Kitchen amounts on, a counted item keeps its own amount: never asked (Codex, PR #164).
+    const counted = items.map((i) => (i.id === "i3" ? ({ ...i, track_amount: true, unit: "kg" } as typeof i) : i));
+    expect(ranOutCandidates(recipe, counted, [], true).map((i) => i.id)).toEqual(["i1"]);
+    expect(ranOutCandidates(recipe, counted, [], false).map((i) => i.id)).toEqual(["i1", "i3"]);
   });
 });

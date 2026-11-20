@@ -638,12 +638,14 @@ export function toBuyPatch(line: Pick<ToBuyLine, "item" | "buy">): { stock_statu
  * 20 Nov): the recipe's linked items that cooking didn't take off, so the
  * cook can mark the ones that ran out with one tap. With Kitchen amounts
  * off that is every linked item; with it on, the ones not counted by
- * amount. An item already Out isn't asked again. In recipe order, once each.
+ * amount, never a counted (tracked) one, whose amount is its own. An item
+ * already Out isn't asked again. In recipe order, once each.
  */
 export function ranOutCandidates(
   recipe: RecipeWithLines | null,
   items: readonly InventoryItem[],
-  uses: readonly CookedUse[]
+  uses: readonly CookedUse[],
+  amounts = false
 ): InventoryItem[] {
   if (!recipe) return [];
   const taken = new Set(uses.map((use) => use.item_id));
@@ -651,6 +653,8 @@ export function ranOutCandidates(
   for (const line of [...recipe.ingredients].sort((a, b) => a.position - b.position)) {
     const item = lineItem(line, items);
     if (!item || taken.has(item.id) || stockStatus(item) === "out" || out.some((i) => i.id === item.id)) continue;
+    // A counted item keeps its own amount; Out would empty it (Codex, PR #164).
+    if (amounts && isTracked(item)) continue;
     out.push(item);
   }
   return out;

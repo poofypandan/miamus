@@ -104,7 +104,7 @@ export function useCookFlow(
 } {
   const id = lang === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh, setInventoryStatus } = useHousehold();
+  const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh, setInventoryStatus, setIngredientExpiry } = useHousehold();
   const { recipes, fresh: recipesFresh, errored: recipesErrored } = useRecipes();
   const { flags, ready: featuresReady } = useHouseholdFeatures();
   // With Kitchen amounts off nothing is counted off stock (features countedItems).
@@ -119,7 +119,8 @@ export function useCookFlow(
   // What each tap there changed, per dish, so the cooked toast's Undo puts it
   // back too: only within that toast's time, never on a much later undo
   // (Mark not cooked hours later), when the statuses may be true.
-  const marks = useRef(new Map<string, { at: number; before: Map<string, StockStatus> }>());
+  // Out clears an item's use-by date (migrations/154), so the date is kept too (Codex, PR #164).
+  const marks = useRef(new Map<string, { at: number; before: Map<string, { status: StockStatus; expiresOn: string | null }> }>());
 
   // Whether amounts are counted depends on the Kitchen switch: until it is
   // known, a dish with a recipe waits, or cooking could take nothing off
@@ -195,10 +196,14 @@ export function useCookFlow(
   }
 
   async function undo(dish: MenuDish, title: string) {
+    // Decided at the tap, not after the server answers: a slow signal
+    // mustn't turn a timely Batalkan into one that skips the marks (Codex, PR #164).
+    const marked = marks.current.get(dish.id);
+    const putBack = marked !== undefined && Date.now() - marked.at <= COOKED_TOAST_MS + 2000;
     try {
       const { items, skipped } = await uncookDish(dish.id);
       applyInventoryRows(items);
-      await putBackMarks(dish.id);
+      await putBackMarks(dish.id, putBack);
       if (skipped.length > 0) {
         // An owner changed an item's unit to one that doesn't convert: that
         // item is left as it is rather than given a wrong number.
@@ -242,32 +247,43 @@ export function useCookFlow(
   }
 
   /** Undo (S2a): what "Ada bahan yang habis?" marked for this dish goes back as it was. */
-  async function putBackMarks(dishId: string) {
+  async function putBackMarks(dishId: string, putBack: boolean) {
     const made = marks.current.get(dishId);
     marks.current.delete(dishId);
     // Functional: the toast's Undo was made before the sheet opened (review, S2a).
     setRanOut((open) => (open?.dishId === dishId ? null : open));
-    if (!made || Date.now() - made.at > COOKED_TOAST_MS + 2000) return;
-    for (const [itemId, before] of made.before) {
-      try {
-        await setInventoryStatus(itemId, before);
-      } catch (err) {
-        console.error(err);
-      }
+    if (!made || !putBack) return;
+    for (const [itemId, before] of made.before) await restore(itemId, before);
+  }
+
+  /** An item back as it was before the sheet: its status, and the date Out cleared. */
+  async function restore(itemId: string, before: { status: StockStatus; expiresOn: string | null }) {
+    try {
+      const row = await setInventoryStatus(itemId, before.status);
+      if (before.expiresOn && (row.expires_on ?? null) !== before.expiresOn) await setIngredientExpiry(itemId, before.expiresOn);
+    } catch (err) {
+      console.error(err);
     }
   }
 
   /** One tap on a chip: Habis, then Hampir habis, then back to how it was. */
   async function markRanOut(dishId: string, item: InventoryItem) {
-    const entry = marks.current.get(dishId) ?? { at: Date.now(), before: new Map<string, StockStatus>() };
+    const entry = marks.current.get(dishId) ?? { at: Date.now(), before: new Map() };
     marks.current.set(dishId, entry);
     const made = entry.before;
-    const current = stockStatus(inventoryItems.find((i) => i.id === item.id) ?? item);
-    const before = made.get(item.id) ?? current;
-    if (!made.has(item.id)) made.set(item.id, before);
+    const now = inventoryItems.find((i) => i.id === item.id) ?? item;
+    const current = stockStatus(now);
+    const was = made.get(item.id) ?? { status: current, expiresOn: now.expires_on ?? null };
+    if (!made.has(item.id)) made.set(item.id, was);
+    const before = was.status;
     const next: StockStatus = current === "out" ? (before === "low" ? before : "low") : current === "low" && before !== "low" ? before : "out";
-    if (next === before) made.delete(item.id);
     try {
+      if (next === before) {
+        // Back as it was, date included.
+        made.delete(item.id);
+        await restore(item.id, was);
+        return;
+      }
       await setInventoryStatus(item.id, next);
     } catch (err) {
       console.error(err);
@@ -284,7 +300,7 @@ export function useCookFlow(
       // What cooking didn't take off: ask what ran out first (S2a). The
       // cooked toast and its Batalkan wait until that sheet closes: a sheet
       // covers the toast, so its button couldn't be tapped meanwhile.
-      const asked = ranOutCandidates(recipeOf(dish, recipes), inventoryItems, uses);
+      const asked = ranOutCandidates(recipeOf(dish, recipes), inventoryItems, uses, amountsOn(flags));
       if (asked.length > 0) {
         marks.current.set(dish.id, { at: Date.now(), before: new Map() });
         setRanOut({ dishId: dish.id, title, items: asked, cooked: () => cookedToast(dish, title) });
