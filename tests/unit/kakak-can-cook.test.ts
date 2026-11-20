@@ -10,11 +10,12 @@ import { describe, expect, it } from "vitest";
 import { KAKAK_CLIENT_VERSION } from "@/lib/kakak/client";
 import { buildContext, type ContextRecipeRow, type ContextRows } from "@/lib/kakak/context";
 import { describeSuggestion, savedSummary } from "@/lib/kakak/describe";
+import { dishAnswerFromBlock, dishAnswerLine } from "@/lib/kakak/dish-answer";
 import { runKakakTurn, type TurnDeps, type TurnResult } from "@/lib/kakak/engine";
 import { MAX_RECIPES_IN_BLOCK, renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household";
 import { practiceClient } from "@/lib/kakak/practice";
 import { correctionFor, guardReplyText, replyProblems, watchesAmounts } from "@/lib/kakak/reply-guard";
-import { clientVersionFor, isSaveableSuggestion, needsNewerApp, toSuggestions, type KakakSuggestion } from "@/lib/kakak/suggestions";
+import { clientVersionFor, isSaveableSuggestion, needsNewerApp, toSuggestions, type KakakSuggestion, type MenuDishSuggestion } from "@/lib/kakak/suggestions";
 import { KAKAK_TOOLS } from "@/lib/kakak/tools";
 import { validateToolCall } from "@/lib/kakak/validate";
 import { gradeCase, type ActualTurn } from "../kakak/grade";
@@ -468,5 +469,99 @@ describe("the film's sentence: two chores and a dish from one turn (owner, 20 No
     expect(result.items.map((i) => i.kind)).toEqual(["chore", "chore", "menu_dish"]);
     for (const item of result.items) expect(isSaveableSuggestion(item)).toBe(true);
     expect(result.text).toContain("everything but Santan");
+  });
+});
+
+describe("her answer is never missing (paid run 44705966410, 20 Nov)", () => {
+  const dish = (check: MenuDishSuggestion["check"], relative: MenuDishSuggestion["relative"] = "today"): MenuDishSuggestion => ({
+    kind: "menu_dish",
+    recipeId: id(9),
+    title: "Opor ayam",
+    day: "2026-11-11",
+    meal: "dinner",
+    servings: null,
+    relative,
+    check,
+    missing: [],
+  });
+
+  it("words the app's own check the way her instructions do, in the owner's language", () => {
+    const missing = dish({ state: "missing", missing: [{ name: "Santan", listed: true }], unchecked: ["Serai"] });
+    expect(dishAnswerLine([missing], "en")).toBe("For Opor ayam, you have everything but Santan. Santan is already on the shopping list.");
+    expect(dishAnswerLine([missing], "id")).toBe("Untuk Opor ayam, semua ada kecuali Santan. Santan sudah ada di daftar belanja.");
+    const two = dish({ state: "missing", missing: [{ name: "Ayam", listed: false }, { name: "Bihun", listed: false }], unchecked: [] });
+    expect(dishAnswerLine([two], "en")).toBe("For Opor ayam, you have everything but Ayam and Bihun.");
+    expect(dishAnswerLine([dish({ state: "ready", missing: [], unchecked: [] })], "id")).toBe("Bahan Opor ayam lengkap.");
+    expect(dishAnswerLine([dish({ state: "ready", missing: [], unchecked: [] }, "tomorrow")], "en")).toBe("You have everything for Opor ayam right now.");
+    expect(dishAnswerLine([dish({ state: "unknown", missing: [], unchecked: ["Serai"] })], "en")).toContain("couldn't check");
+    // A typed dish has no check, so nothing to say; never an amount.
+    expect(dishAnswerLine([dish(null)], "en")).toBe("");
+  });
+
+  async function turnWith(content: unknown[], text: string) {
+    const fetch = async () =>
+      new Response(
+        JSON.stringify({
+          id: "msg_1",
+          type: "message",
+          role: "assistant",
+          model: "claude-opus-5-5",
+          content,
+          stop_reason: "tool_use",
+          stop_sequence: null,
+          usage: { input_tokens: 1000, output_tokens: 200, cache_read_input_tokens: 3000, cache_creation_input_tokens: 0 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    const client = new Anthropic({ apiKey: "k", authToken: null, baseURL: "http://fake.test", maxRetries: 0, fetch });
+    const b = built();
+    const deps: TurnDeps = {
+      client,
+      model: "claude-opus-5-5",
+      effort: "medium",
+      household: b.household,
+      refs: b.refs,
+      names: b.names,
+      begin: async () => ({ ok: true, requestId: id(701), callsLeft: 5 }),
+      record: async () => undefined,
+    };
+    return runKakakTurn(deps, null, text);
+  }
+
+  it("a card with no line gets the app's answer, not \"Here's what I'll add:\"", async () => {
+    const result = await turnWith([{ type: "tool_use", id: "toolu_1", name: "plan_dish", input: plan() }], "Opor tonight, do we have everything?");
+    if (result.kind !== "suggestions") throw new Error(`expected suggestions, got ${result.kind}`);
+    expect(result.text).toMatch(/Opor ayam/);
+    expect(result.text).not.toMatch(/\d+\s*(ml|g|kg)\b/);
+  });
+
+  it("a line too long beside one card is replaced by the app's answer", async () => {
+    const long = "For opor ayam you have everything but Santan, which is already on the shopping list, and I couldn't check the lemongrass because it isn't on your list yet, so you may want to add it under Kitchen and check again before tonight.";
+    const result = await turnWith(
+      [{ type: "text", text: long }, { type: "tool_use", id: "toolu_1", name: "plan_dish", input: plan() }],
+      "Opor tonight, do we have everything?",
+    );
+    if (result.kind !== "suggestions") throw new Error(`expected suggestions, got ${result.kind}`);
+    expect(result.text).not.toBe(long);
+    expect(result.text).toMatch(/Opor ayam/);
+  });
+
+  it("the paid run gives the same answer from the household block (K161)", () => {
+    const fixture = JSON.parse(readFileSync(join(__dirname, "../kakak/household.json"), "utf8")) as KakakHousehold;
+    const household = { ...fixture, ownerLocale: "id" as const };
+    const call = { name: "plan_dish", input: { recipe: "D1", dish_name: "none", day: household.today, meal: "dinner", servings: 0, add_missing: true } };
+    expect(dishAnswerFromBlock(household, [call])).toBe("Untuk Opor ayam, semua ada kecuali Santan. Santan sudah ada di daftar belanja.");
+    // Another number of servings is checked again by the app only.
+    expect(dishAnswerFromBlock(household, [{ ...call, input: { ...call.input, servings: 8 } }])).toBe("");
+  });
+
+  it("beside several cards the line still fits 200: the prompt's model for the film's sentence", () => {
+    const line = "Baik. Kakak siapkan pel teras untuk Sari, jemput Maya untuk Joko, dan opor malam ini. Semua ada kecuali Santan.";
+    expect(line.length).toBeLessThanOrEqual(200);
+    expect(guardReplyText("suggestions", line, "id").text).toBe(line);
+    // Too long is still dropped (Fable pass 30 keeps the cap); the app's answer covers it.
+    const long = `${line} Santan sudah ada di daftar belanja, dan Serai belum bisa Kakak cek karena belum ada di daftar, jadi mungkin perlu ditambahkan dulu.`;
+    expect(long.length).toBeGreaterThan(200);
+    expect(guardReplyText("suggestions", long, "id").text).toBe("");
   });
 });

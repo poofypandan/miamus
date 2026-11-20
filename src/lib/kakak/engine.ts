@@ -16,6 +16,7 @@ import { guideForKakak } from "@/lib/guide";
 import { renderHouseholdBlock, type KakakHousehold } from "./household";
 import { KAKAK_SYSTEM_PROMPT } from "./prompt";
 import { correctionFor, guardReplyText, replyProblems, watchesAmounts } from "./reply-guard";
+import { dishAnswerLine } from "./dish-answer";
 import { toSuggestions, type KakakSuggestion } from "./suggestions";
 import { KAKAK_TOOLS, KAKAK_TOOL_NAMES } from "./tools";
 import { validateToolCall } from "./validate";
@@ -380,7 +381,9 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
     await deps.record(begun.requestId, record);
     return {
       kind: "suggestions",
-      text: shownText("suggestions", text, deps.household, calls.some((call) => call.name === "plan_dish")),
+      text:
+        shownText("suggestions", text, deps.household, calls.some((call) => call.name === "plan_dish")) ||
+        dishAnswerLine(items, deps.household.ownerLocale),
       items,
       requestId: begun.requestId,
       history: out,
