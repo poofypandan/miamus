@@ -151,7 +151,7 @@ export function ShoppingTab() {
   return (
     <div className="flex flex-col gap-6 px-4 pb-6">
       <section className="flex flex-col gap-2" aria-labelledby="to-buy-title">
-        <h2 id="to-buy-title" className="text-sm font-semibold text-gray-900">
+        <h2 id="to-buy-title" className="text-sm font-semibold text-muted-foreground">
           {t("To buy", "Perlu dibeli")}
           {count > 0 && <span className="text-gray-500"> ({count})</span>}
         </h2>
