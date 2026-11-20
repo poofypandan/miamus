@@ -293,7 +293,10 @@ select pg_temp.ok((select count(*) = 4 and bool_and(roles = '{authenticated}')
   'inventory_items: still the four tenant policies, authenticated only; no new policy');
 select pg_temp.ok((select relrowsecurity from pg_class where oid = 'public.inventory_items'::regclass),
   '... row level security still on');
-select pg_temp.ok((select array_agg(tgname::text order by tgname) = array['inventory_items_owner_guard', 'inventory_items_refuse_archived_staff', 'inventory_items_stamp_stock_status']
+-- 154's own three; 177 added inventory_items_same_household, which sorts
+-- after the owner guard and before the stamp (and changes neither).
+select pg_temp.ok((select array_agg(tgname::text order by tgname) filter (where tgname <> 'inventory_items_same_household')
+                          = array['inventory_items_owner_guard', 'inventory_items_refuse_archived_staff', 'inventory_items_stamp_stock_status']
                      from pg_trigger where tgrelid = 'public.inventory_items'::regclass and not tgisinternal),
   'the same three triggers, in the same (name) order');
 select pg_temp.ok((select not prosecdef and proconfig @> array['search_path=""']
