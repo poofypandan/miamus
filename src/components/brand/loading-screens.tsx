@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import {
   BRAND_INK,
   M_POINTS,
@@ -59,30 +59,33 @@ export function MiamusPromise({ text }: { text: string }) {
   );
 }
 
-
 /**
  * The Miamus mark as the app icon's rounded square, the roof and then the M
  * drawing themselves while something loads, as the mark draws itself at the
  * end of the film (20 Nov; the roof alone from 2026-11-09).
  *
- * The house is whole first, so a quick load shows the plain logo. If loading
- * goes on, the strokes fade, and the roof writes itself left to right with the
- * M following before the roof has landed; it rests whole, and goes again. The
- * film draws along each line (a stroke dash); here a strip of the tile's own
- * ink slides off each line instead, because a slide is a transform and runs on
- * the compositor, which keeps it smooth while the page underneath is busy
+ * The house is whole first and stays still for 2.2s, so a quick load shows the
+ * plain logo, and a slow one shows it with the promise line before anything
+ * moves. Then the strokes fade, the roof writes itself left to right, and the
+ * M follows as the roof lands, in pen order: up the left wall, along the V,
+ * down the right wall. It rests whole, and goes again. The film draws along
+ * each line (a stroke dash); here strips of the tile's own ink slide off the
+ * lines instead, inside fixed windows, because a slide is a transform and runs
+ * on the compositor, which keeps it smooth while the page underneath is busy
  * loading (dashes repaint on the main thread, and would stutter just then).
- * Curves and timings are the film's; see the mark-* keyframes in globals.css.
+ * Timings are the film's; curves and keyframes are the mark-* ones in
+ * globals.css (Fable's look, 20 Nov).
  *
- * `opening` is the launch mark. On an installed Android app its first frame is
- * the phone's splash itself (a black circle, the glyph at the splash's scale)
- * and it settles into the rounded square; iPhones and browser tabs start
- * settled (globals.css decides, so it is right in the first server-rendered
- * frame). Every opening mark keeps one clock (lib/launch-clock), so the marks
- * a cold start draws one after another read as one.
+ * `opening` is the launch mark. On an installed Android app it is the phone's
+ * splash itself, held: a black circle, the glyph at the splash's scale, and it
+ * never changes shape (the home icon and the splash are circles there too).
+ * iPhones and browser tabs show the rounded square, as their home icon and
+ * launch screen do. globals.css decides, so the first server-rendered frame is
+ * already right. Every opening mark keeps one clock (lib/launch-clock), so the
+ * marks a cold start draws one after another read as one.
  *
  * `still` is the start screen's mark: the whole house, nothing moving.
- * Reduced motion gets the settled, still mark everywhere.
+ * Reduced motion gets the still mark everywhere.
  */
 export function MiamusMark({
   size = LAUNCH_MARK_SIZE,
@@ -94,26 +97,16 @@ export function MiamusMark({
   opening?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    if (opening && ref.current) alignToLaunchClock(ref.current);
-  }, [opening]);
+  useLaunchClock(ref, opening);
 
   const radius = size * TILE_RADIUS;
   return (
     <div
       ref={ref}
       aria-hidden
-      className="relative shrink-0 overflow-hidden"
-      style={{ width: size, height: size, borderRadius: radius }}
+      className={cn("relative shrink-0 overflow-hidden", opening && "mark-opening")}
+      style={{ width: size, height: size, borderRadius: radius, background: BRAND_INK }}
     >
-      {opening && (
-        // The splash's circle, under the tile while the tile fades in.
-        <div className="absolute inset-0 rounded-full" style={{ background: BRAND_INK }} />
-      )}
-      <div
-        className={cn("absolute inset-0", opening && "mark-opening-tile")}
-        style={{ borderRadius: radius, background: BRAND_INK }}
-      />
       <div className={cn("absolute inset-0", opening && "mark-opening-glyph")}>
         <div className={cn("absolute inset-0", !still && "animate-mark-strokes motion-reduce:animate-none")}>
           <div className="absolute inset-0">
@@ -124,19 +117,39 @@ export function MiamusMark({
           </div>
         </div>
         {!still && (
-          <>
+          <div className="absolute inset-0 motion-reduce:hidden">
             {/* The roof's band is the top 46.5% (its stroke ends at 234 of 512,
-                the M's starts at 242), the M's the rest, so neither strip ever
-                touches the other line. */}
+                the M's starts at 242), the M's the rest, so no strip ever
+                touches the other line. The roof's strip slides off it to the
+                right, its soft edge leading. */}
             <span
-              className="absolute top-0 left-0 h-[46.5%] w-full animate-mark-roof will-change-transform motion-reduce:hidden"
-              style={{ background: INK_STRIP }}
+              className="absolute top-0 left-0 h-[46.5%] w-full animate-mark-roof will-change-transform"
+              style={{ background: inkStrip("90deg", 3.9) }}
             />
-            <span
-              className="absolute top-[46.5%] left-0 h-[53.5%] w-full animate-mark-m will-change-transform motion-reduce:hidden"
-              style={{ background: INK_STRIP }}
-            />
-          </>
+            {/* The M's three windows, split where the walls meet the V (176
+                and 336 of 512). Each strip is 18% longer than its window, the
+                soft edge in the part that starts outside it. The V's window
+                laps 1px over each wall's, on top: two clips meeting on a
+                fraction of a pixel let a hairline of the stroke through. */}
+            <div className="absolute top-[46.5%] left-0 h-[53.5%] w-[34.4%] overflow-hidden">
+              <span
+                className="absolute inset-x-0 top-0 h-[118%] animate-mark-m-left will-change-transform"
+                style={{ background: inkStrip("0deg", 13) }}
+              />
+            </div>
+            <div className="absolute top-[46.5%] left-[calc(34.4%_-_1px)] h-[53.5%] w-[calc(31.2%_+_2px)] overflow-hidden">
+              <span
+                className="absolute inset-y-0 left-[-18%] w-[118%] animate-mark-m-v will-change-transform"
+                style={{ background: inkStrip("90deg", 13) }}
+              />
+            </div>
+            <div className="absolute top-[46.5%] left-[65.6%] h-[53.5%] w-[34.4%] overflow-hidden">
+              <span
+                className="absolute inset-x-0 top-[-18%] h-[118%] animate-mark-m-right will-change-transform"
+                style={{ background: inkStrip("180deg", 13) }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -144,10 +157,19 @@ export function MiamusMark({
 }
 
 /**
- * A strip of the tile's ink with a soft leading edge (20 of 512 units), so a
- * line is uncovered the way a pen lays it down, not cut by a hard edge.
+ * A strip of the tile's ink with a soft leading edge, so a line is uncovered
+ * the way a pen lays it down, not cut by a hard edge.
  */
-const INK_STRIP = `linear-gradient(90deg, ${BRAND_INK}00 0%, ${BRAND_INK} 3.9%)`;
+function inkStrip(direction: string, softPercent: number): string {
+  return `linear-gradient(${direction}, ${BRAND_INK}00 0%, ${BRAND_INK} ${softPercent}%)`;
+}
+
+/** Hangs every animation inside `ref` from the launch clock, before paint. */
+export function useLaunchClock(ref: RefObject<HTMLElement | null>, enabled: boolean) {
+  useLayoutEffect(() => {
+    if (enabled && ref.current) alignToLaunchClock(ref.current);
+  }, [enabled, ref]);
+}
 
 /**
  * The full-screen stage every launch picture stands on: the "/" splash and the
@@ -183,9 +205,9 @@ export function LaunchStage({
  * up ("Miamus", then the real name). Static now: the same pixels every time,
  * from the first server-rendered frame.
  */
-export function RumahRules({ className }: { className?: string }) {
+export function RumahRules({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
-    <div className={cn("flex flex-col items-center text-center select-none", className)}>
+    <div className={cn("flex flex-col items-center text-center select-none", className)} style={style}>
       {/* Opened up for a screen of its own (Phase 132): larger, wider-set and
           more air between the lines, so the five rules read as a calm list
           rather than a block squeezed into the middle of the page. */}

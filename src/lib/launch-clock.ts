@@ -17,16 +17,10 @@ let launchStart: number | null = null;
 
 /**
  * Past this, a mark that appears is not part of a cold start (someone came in
- * through another page first). It starts settled, not from the opening frame.
+ * through another page first), and starts its own clock: the whole mark, still
+ * for its first 2.2s, like any launch.
  */
 const COLD_START_WINDOW_MS = 3000;
-
-/**
- * Where a late mark starts on the clock: just past the opening (which ends
- * 720ms in, see the mark-tile/mark-settle keyframes in globals.css), still
- * in the loop's rest, so its first frame is the whole, settled mark.
- */
-const LATE_MARK_OFFSET_MS = 760;
 
 /**
  * Picks the clock's start, in performance.now() milliseconds, for the first
@@ -50,7 +44,7 @@ export function pickLaunchStart({
   const own = ownStarts.filter((t) => Number.isFinite(t) && t <= now);
   if (own.length > 0) return Math.min(...own);
   if (firstPaint !== null && now - firstPaint <= COLD_START_WINDOW_MS) return firstPaint;
-  return now - LATE_MARK_OFFSET_MS;
+  return now;
 }
 
 function asMs(value: CSSNumberish | null | undefined): number | null {
@@ -83,7 +77,26 @@ export function alignToLaunchClock(el: Element): void {
   for (const animation of animations) animation.startTime = launchStart;
 }
 
-/** Whether a launch mark has been on screen in this page session. */
-export function launchMarkShown(): boolean {
-  return launchStart !== null;
+/**
+ * When a hand-over that waits `delayMs` on the launch clock should be counted
+ * from: from the launch, or from now if that moment has already passed, so a
+ * hand-over is never seen half done when its screen appears. Returns the
+ * start time to give an animation whose CSS delay is `delayMs`.
+ */
+export function handOverStart(delayMs: number, now: number = performance.now()): number {
+  return Math.max(launchStart ?? now, now - delayMs);
+}
+
+/**
+ * Starts the animations named `names` inside `el` on handOverStart(delayMs).
+ * Call before paint, after the launch mark inside `el` has set the clock.
+ */
+export function startHandOver(el: Element, names: string[], delayMs: number): void {
+  if (typeof el.getAnimations !== "function") return;
+  const start = handOverStart(delayMs);
+  for (const animation of el.getAnimations({ subtree: true })) {
+    if (animation instanceof CSSAnimation && names.includes(animation.animationName)) {
+      animation.startTime = start;
+    }
+  }
 }

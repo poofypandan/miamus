@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickLaunchStart } from "@/lib/launch-clock";
+import { handOverStart, pickLaunchStart } from "@/lib/launch-clock";
 import manifest from "@/app/manifest";
 import { IPHONE_SCREENS, iosStartupImages, markCentreY } from "@/lib/ios-launch-screens";
 
@@ -16,9 +16,15 @@ describe("pickLaunchStart (the launch mark's one clock)", () => {
     expect(pickLaunchStart({ ownStarts: [5000], firstPaint: 380, now: 1400 })).toBe(380);
   });
 
-  it("starts a mark seen long after launch settled, never from the opening frame", () => {
-    expect(pickLaunchStart({ ownStarts: [], firstPaint: 300, now: 20_000 })).toBe(20_000 - 760);
-    expect(pickLaunchStart({ ownStarts: [], firstPaint: null, now: 900 })).toBe(140);
+  it("gives a mark seen long after launch its own clock, starting now", () => {
+    expect(pickLaunchStart({ ownStarts: [], firstPaint: 300, now: 20_000 })).toBe(20_000);
+    expect(pickLaunchStart({ ownStarts: [], firstPaint: null, now: 900 })).toBe(900);
+  });
+});
+
+describe("handOverStart (the staff cover's mark-to-rules hand-over)", () => {
+  it("counts from now when no launch mark has set the clock, so the wait is served in full", () => {
+    expect(handOverStart(1500, 4000)).toBe(4000);
   });
 });
 

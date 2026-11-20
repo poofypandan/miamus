@@ -404,28 +404,35 @@
 
 /*
  * The Miamus mark drawing itself (MiamusMark, 20 Nov; the roof alone from
- * 2026-11-09). Ported from the film's end card, where the roof draws over
- * 14 frames, the M starts 10 frames after it and draws over 22, both on the
- * film's easeOut, cubic-bezier(0.16, 1, 0.3, 1). At 30 frames a second that
- * is 467ms, +333ms and 733ms. Fades use the motion kit's EVEN curve.
+ * 2026-11-09). Timings from the film's end card, where the roof draws over
+ * 14 frames and the M starts 10 frames after it and draws over 22: at 30
+ * frames a second, 467ms, +333ms and 733ms. Curves from Fable's look (20 Nov):
+ * the roof slides on the motion kit's draw curve (0.25, 0.1, 0.25, 1), which
+ * on a slide writes for about 270ms instead of popping; the M goes in pen
+ * order, one strip per part, handing on as each lands. Fades use the kit's
+ * EVEN curve.
  *
- * One 2.6s cycle on three layers, transform and opacity only:
+ * One 2.6s cycle, transform and opacity only:
  *     0–300ms   the strokes fade out (EVEN)
  *   300ms       ink strips cover each line, unseen (ink on ink)
  *   340ms       the strokes return under the strips
- *   400–867ms   the roof's strip slides off it, left to right (easeOut)
- *   733–1467ms  the M's strip slides off it, overlapping (easeOut)
+ *   400–867ms   the roof's strip slides off it, left to right
+ *   733–943ms   the M's left wall, upwards        (0.4, 0, 0.8, 0.8)
+ *   923–1273ms  the V, left to right              (linear: the hand-on)
+ *  1253–1467ms  the right wall, downwards         (0.2, 0.2, 0.2, 1)
  *  1500ms       the strips go (unseen); the whole house rests to 2.6s
  *
- * Started 1.5s in (-1500ms): the first frame is the whole house at rest, the
- * same picture as the icon just tapped, so a load under about 1.1s never
- * sees the mark come apart. The strips' positions are shares of the 512 box:
- * the roof runs 92–420, the M 132–380, each strip's soft edge 20 wide.
+ * First move 2.2s after launch (a 2200ms delay, `backwards`, so the delay
+ * shows the 0% frame: the whole house): the still mark, then the promise line
+ * at 1.5s, then the loop, never two at once. Shares of the 512 box: the roof
+ * runs 92–420; the roof strip's soft edge is 20 wide.
  */
 @theme inline {
-  --animate-mark-strokes: mark-strokes 2.6s -1.5s infinite;
-  --animate-mark-roof: mark-roof 2.6s -1.5s infinite;
-  --animate-mark-m: mark-m 2.6s -1.5s infinite;
+  --animate-mark-strokes: mark-strokes 2.6s 2200ms infinite backwards;
+  --animate-mark-roof: mark-roof 2.6s 2200ms infinite backwards;
+  --animate-mark-m-left: mark-m-left 2.6s 2200ms infinite backwards;
+  --animate-mark-m-v: mark-m-v 2.6s 2200ms infinite backwards;
+  --animate-mark-m-right: mark-m-right 2.6s 2200ms infinite backwards;
 
   @keyframes mark-strokes {
     0% {
@@ -455,7 +462,7 @@
     15.38% {
       opacity: 1;
       transform: translateX(14.06%);
-      animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
     }
     33.35% {
       opacity: 1;
@@ -469,71 +476,134 @@
     }
   }
 
-  @keyframes mark-m {
+  @keyframes mark-m-left {
     0% {
       opacity: 0;
-      transform: translateX(75%);
+      transform: translateY(-100%);
       animation-timing-function: step-end;
     }
     11.54% {
       opacity: 1;
-      transform: translateX(21.88%);
+      transform: translateY(0);
     }
     28.19% {
       opacity: 1;
-      transform: translateX(21.88%);
-      animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.4, 0, 0.8, 0.8);
     }
-    56.42% {
+    36.27% {
       opacity: 1;
-      transform: translateX(75%);
+      transform: translateY(-100%);
       animation-timing-function: step-end;
     }
     57.69%,
     100% {
       opacity: 0;
-      transform: translateX(75%);
+      transform: translateY(-100%);
+    }
+  }
+
+  @keyframes mark-m-v {
+    0% {
+      opacity: 0;
+      transform: translateX(100%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    35.5% {
+      opacity: 1;
+      transform: translateX(0);
+      animation-timing-function: linear;
+    }
+    48.96% {
+      opacity: 1;
+      transform: translateX(100%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes mark-m-right {
+    0% {
+      opacity: 0;
+      transform: translateY(100%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    48.19% {
+      opacity: 1;
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.2, 0.2, 0.2, 1);
+    }
+    56.42% {
+      opacity: 1;
+      transform: translateY(100%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateY(100%);
     }
   }
 }
 
 /*
- * The launch mark's opening (20 Nov): from the phone's own splash to the
- * rounded square.
- *
- * Android draws an installed web app's splash from the maskable icon cut to a
- * 160dp circle, the glyph at 192dp (the icon's 80% safe zone, on a 240dp
- * canvas). The first frame here is that picture, pixel for pixel on a 160px
- * mark: the circle under a transparent tile, the glyph at 1.2. After a beat
- * the tile fades in over the circle (its corners fill) while the glyph eases
- * to the icon's own proportions. Opacity and transform only.
+ * The launch mark on an installed Android app (20 Nov, Fable's look): the
+ * phone's own splash, held. Android draws that splash from the maskable icon
+ * cut to a 160dp circle, the glyph at 192dp (the icon's 80% safe zone on a
+ * 240dp canvas); on a 160px mark that is this circle and the glyph at 1.2.
+ * Nothing animates: the home icon and the splash are circles there, so the
+ * mark stays one, the loop drawing inside it, until the cover lifts. The
+ * circular clip also keeps the loop's ink strips inside the circle.
  *
  * Only where that splash exists: an installed app (display-mode: standalone)
  * that is not an iPhone (-webkit-touch-callout is iOS Safari's alone). iPhones
- * draw no icon on launch, and a browser tab has no splash, so there the mark
- * starts settled. In CSS rather than script so the very first server-rendered
- * frame is already right.
+ * and browser tabs keep the rounded square, which their launch screen and home
+ * icon show. In CSS rather than script so the very first server-rendered frame
+ * is already right. Static, so reduced motion needs nothing different.
  */
-@media (display-mode: standalone) and (prefers-reduced-motion: no-preference) {
+@media (display-mode: standalone) {
   @supports not (-webkit-touch-callout: none) {
-    .mark-opening-tile {
-      animation: mark-tile 480ms cubic-bezier(0.37, 0, 0.63, 1) 240ms both;
+    .mark-opening {
+      border-radius: 50% !important;
     }
     .mark-opening-glyph {
-      animation: mark-settle 600ms cubic-bezier(0.4, 0, 0.2, 1) 120ms both;
+      transform: scale(1.2);
     }
   }
 }
 
-@keyframes mark-tile {
-  from {
-    opacity: 0;
-  }
-}
+/*
+ * The staff cover taking over from the launch mark (20 Nov, Fable's look):
+ * the mark fades out over 200ms and the RUMAH rules fade in from 120ms later,
+ * so nothing leaves in one frame. When, is brand-cover.tsx's call (it sets
+ * each animation's start on the launch clock); these only say how.
+ */
+@theme inline {
+  --animate-staff-mark-out: staff-mark-out 200ms cubic-bezier(0.37, 0, 0.63, 1) both;
+  --animate-staff-rules-in: staff-rules-in 240ms cubic-bezier(0.25, 0.1, 0.25, 1) 120ms both;
 
-@keyframes mark-settle {
-  from {
-    transform: scale(1.2);
+  @keyframes staff-mark-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes staff-rules-in {
+    from {
+      opacity: 0;
+    }
   }
 }
 

@@ -1,14 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   LaunchStage,
   MiamusMark,
   MiamusPromise,
   PROMISE,
   RumahRules,
+  useLaunchClock,
 } from "@/components/brand/loading-screens";
-import { launchMarkShown } from "@/lib/launch-clock";
+import { LAUNCH_MARK_SIZE } from "@/components/brand/launch-mark-size";
+import { startHandOver } from "@/lib/launch-clock";
 import { readCachedOwnerLocale } from "@/lib/owner-locale";
 import {
   endNavigation,
@@ -138,19 +140,21 @@ export function LaunchCover({ variant, ready }: { variant: CoverVariant; ready: 
     return () => clearTimeout(timer);
   }, [phase]);
 
-  // Read once: whether the "/" splash's mark was on screen just before this.
-  const [afterSplash] = useState(launchMarkShown);
-
   if (phase === "done") return null;
-  return (
-    <CoverFace
-      variant={variant}
-      revealing={phase === "revealing"}
-      opening
-      fadeContent={variant === "staff" && afterSplash}
-    />
-  );
+  return <CoverFace variant={variant} revealing={phase === "revealing"} opening />;
 }
+
+/**
+ * When the staff launch cover trades the mark for the RUMAH rules, in ms on
+ * the launch clock (20 Nov). 1500: only on a slow load, like the owner's
+ * promise line, so a quick launch shows the mark alone instead of five rules
+ * that are gone before they can be read (the manager's recommendation; the
+ * owner's choice is pending). 0: the rules as soon as the staff cover takes
+ * over, as before.
+ */
+export const STAFF_RULES_AFTER_MS = 1500;
+
+const STAFF_HAND_OVER = ["staff-mark-out", "staff-rules-in"];
 
 /**
  * The cover itself: the launch stage (loading-screens.tsx), above everything
@@ -158,23 +162,21 @@ export function LaunchCover({ variant, ready }: { variant: CoverVariant; ready: 
  * through while it does. `fadeIn` for a cover that appears over a screen
  * already in use, where popping in at full opacity would itself be the jolt.
  *
- * `opening` for the launch cover: its mark keeps the launch clock, so it
- * carries on from the "/" splash it replaces without a jump. `fadeContent`
- * for the staff cover replacing that splash: the white stays, the mark gives
- * way, and the RUMAH rules come up softly instead of cutting in.
+ * `opening` for the launch cover: the big mark, on the launch clock, so it
+ * carries on from the "/" splash it replaces without a jump (the promise line
+ * keeps that clock too). Without it, a navigation cover: the mark at 88px.
+ * Big only where the phone has just shown the icon (Fable's look, 20 Nov).
  */
 function CoverFace({
   variant,
   revealing,
   fadeIn = false,
   opening = false,
-  fadeContent = false,
 }: {
   variant: CoverVariant;
   revealing: boolean;
   fadeIn?: boolean;
   opening?: boolean;
-  fadeContent?: boolean;
 }) {
   return (
     <LaunchStage
@@ -186,14 +188,55 @@ function CoverFace({
       )}
     >
       {variant === "owner" ? (
-        <div className="relative">
-          <MiamusMark opening={opening} />
-          <OwnerPromise />
-        </div>
+        <OwnerFace opening={opening} />
+      ) : opening ? (
+        <StaffLaunchFace />
       ) : (
-        <RumahRules className={cn(fadeContent && "animate-view-fade motion-reduce:animate-none")} />
+        <RumahRules />
       )}
     </LaunchStage>
+  );
+}
+
+/** The owner's cover: the mark, and the promise line under it. */
+function OwnerFace({ opening }: { opening: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLaunchClock(ref, opening);
+  return (
+    <div ref={ref} className="relative">
+      <MiamusMark opening={opening} size={opening ? LAUNCH_MARK_SIZE : 88} />
+      <OwnerPromise />
+    </div>
+  );
+}
+
+/**
+ * The staff launch cover (20 Nov, Fable's look). It opens on the launch mark,
+ * the same one the "/" splash was showing and on the same clock, so the
+ * hand-over from the splash is unseen. At STAFF_RULES_AFTER_MS the mark fades
+ * out over 200ms and the RUMAH rules fade in from 120ms later: nothing leaves
+ * in one frame. Both in one grid cell, so each stays on the screen's centre.
+ * Fades stay under reduced motion: they are opacity, and without them the two
+ * would sit on top of each other.
+ */
+function StaffLaunchFace() {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (ref.current) startHandOver(ref.current, STAFF_HAND_OVER, STAFF_RULES_AFTER_MS);
+  }, []);
+  return (
+    <div ref={ref} className="grid place-items-center">
+      <div
+        className="col-start-1 row-start-1 animate-staff-mark-out"
+        style={{ animationDelay: `${STAFF_RULES_AFTER_MS}ms` }}
+      >
+        <MiamusMark opening />
+      </div>
+      <RumahRules
+        className="col-start-1 row-start-1 animate-staff-rules-in"
+        style={{ animationDelay: `${STAFF_RULES_AFTER_MS + 120}ms` }}
+      />
+    </div>
   );
 }
 
