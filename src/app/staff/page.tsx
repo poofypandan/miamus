@@ -485,7 +485,15 @@ function TasksView() {
             // A chore or a pet routine done today (Codex, PR #174).
             anyDone={
               chores.some((c) => c.status === "completed") ||
-              logs.some((l) => !!staffId && l.staff_id === staffId && formatDateLocal(new Date(l.completed_at)) === dateStr)
+              // A walk's start and arrived photos leave it open (scheduleEngine): only a finish counts.
+              logs.some(
+                (l) =>
+                  !!staffId &&
+                  l.staff_id === staffId &&
+                  l.sub_type !== "check_in" &&
+                  l.sub_type !== "arrived" &&
+                  formatDateLocal(new Date(l.completed_at)) === dateStr
+              )
             }
           />
         )}

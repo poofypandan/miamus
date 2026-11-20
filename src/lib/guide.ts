@@ -158,8 +158,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "A new staff member's first day", id: "Hari pertama staf baru" },
     body: {
-      en: "They open the link in your welcome, or scan the QR code, tap Ya and choose a 4-digit PIN. Their tasks for the day are on the first screen. On each one they take a Sebelum photo, take a Sesudah photo, then tap Selesai. Their screens are in Bahasa Indonesia.",
-      id: "Staf membuka link di sambutan Anda, atau memindai kode QR, mengetuk Ya, dan membuat PIN 4 angka. Tugas hari itu langsung tampil di layar pertama. Di tiap tugas, mereka ambil foto Sebelum, ambil foto Sesudah, lalu ketuk Selesai. Layarnya berbahasa Indonesia.",
+      en: "They open the link in your welcome, or scan the QR code, tap Ya and choose a 4-digit PIN. On their first day one line says how: a Sebelum photo, a Sesudah photo, then Selesai; it goes once tapped or once a task is done. Their screens are in Bahasa Indonesia.",
+      id: "Staf membuka link di sambutan Anda, atau memindai kode QR, mengetuk Ya, dan membuat PIN 4 angka. Di hari pertama satu baris menjelaskan: foto Sebelum, foto Sesudah, lalu Selesai; hilang setelah diketuk atau satu tugas selesai. Layarnya berbahasa Indonesia.",
     },
     where: "settings_staff",
   },
