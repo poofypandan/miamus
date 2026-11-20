@@ -6,9 +6,10 @@
 import React from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import { H, W } from "../world/camera";
-import { ramp, springAt } from "./kit";
+import { easeIn, ramp, springAt } from "./kit";
 
-export const BUBBLE = { fill: "#fff6e8", line: "rgba(120,72,44,0.55)", ink: "#3a2418" };
+/** One look for every person's bubble (trailer-reset 25, 1.3): the same as Act 3's (stills/kit SPEECH). */
+export const BUBBLE = { fill: "#fff6e8", line: "rgba(120,72,44,0.35)", ink: "#3a2418" };
 
 export function SpeechBubble({
   cx,
@@ -36,13 +37,16 @@ export function SpeechBubble({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   if (frame < at - 1) return null;
+  // 25, 1.2: a spring with its small overshoot (scale 0.82 → 1, a little over), rising 28 px; out over 8 frames on
+  // easeIn, fading, shrinking to 0.92 and dropping 10 px toward the speaker.
   const pop = springAt(frame, fps, at, { damping: 14, stiffness: 170, mass: 0.7 });
-  const o = Math.min(1, pop * 1.8) * (out === undefined ? 1 : 1 - ramp(frame, out, out + 12));
+  const k = out === undefined ? 0 : ramp(frame, out, out + 8, easeIn);
+  const o = Math.min(1, Math.max(0, pop) * 1.8) * (1 - k);
   if (o <= 0) return null;
-  // It rises a little as it appears, like a thought leaving the speaker.
-  const y = cy + (1 - pop) * 12; // A3: a smaller rise, so the bubble never dips onto a head as it pops (frame check)
-  const s = 0.82 + 0.18 * Math.min(1, pop); // A3: no overshoot past its size (it grazed Mama's head for two frames)
-  const r = radius ?? Math.min(h / 2, 70);
+  const y = cy + (1 - pop) * 28 + 10 * k;
+  const s = (0.82 + 0.18 * pop) * (1 - 0.08 * k);
+  const moving = Math.abs(1 - pop) > 0.004 || k > 0;
+  const r = Math.min(radius ?? 44, h / 2, 44);
   const left = cx - w / 2;
   const top = y - h / 2;
   // The tail: from two points on the edge nearest the speaker to a tip most of the way toward the head.
@@ -54,25 +58,26 @@ export function SpeechBubble({
   // Where the line to the head leaves the rounded box (approximated by the ellipse inside it).
   const ex = cx + ux * (w / 2) * 0.86;
   const ey = y + uy * (h / 2) * 0.86;
-  const reach = Math.max(0, Math.min(150, dist - Math.hypot(ex - cx, ey - y) - 34));
+  // 25, 1.3: the tail 36 px wide at the bubble, at most 110 px long, its tip 34 px short of the head.
+  const reach = Math.max(0, Math.min(110, dist - Math.hypot(ex - cx, ey - y) - 34));
   const tip = { x: ex + ux * reach, y: ey + uy * reach };
-  const half = Math.min(46, w * 0.12);
+  const half = 18;
   const px = -uy;
   const py = ux;
   const a = { x: ex + px * half - ux * 30, y: ey + py * half - uy * 30 };
-  const b = { x: ex - px * half * 0.45 - ux * 30, y: ey - py * half * 0.45 - uy * 30 };
+  const b = { x: ex - px * half - ux * 30, y: ey - py * half - uy * 30 };
   // A gently curved tail (a comic tail leans), drawn as two quadratic sides.
   const bend = { x: (a.x + tip.x) / 2 + px * 10, y: (a.y + tip.y) / 2 + py * 10 };
   const bend2 = { x: (b.x + tip.x) / 2 + px * 4, y: (b.y + tip.y) / 2 + py * 4 };
   const tail = `M ${a.x} ${a.y} Q ${bend.x} ${bend.y} ${tip.x} ${tip.y} Q ${bend2.x} ${bend2.y} ${b.x} ${b.y} Z`;
   const box = { x: left, y: top, width: w, height: h, rx: r };
   return (
-    <div style={{ position: "absolute", inset: 0, opacity: o, transform: `scale(${s})`, transformOrigin: `${cx}px ${y + h / 2}px` }}>
+    <div data-moving={moving ? "" : undefined} style={{ position: "absolute", inset: 0, opacity: o, transform: `scale(${s})`, transformOrigin: `${cx}px ${y + h / 2}px` }}>
       {/* A3: the body's box, for the frame check (no bubble over a person; src/stills/readability.tsx). */}
       <div data-bubble="speech" style={{ position: "absolute", left, top, width: w, height: h, pointerEvents: "none" }} />
-      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0, overflow: "visible", filter: "drop-shadow(0 10px 22px rgba(40,18,10,0.28))" }}>
+      <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ position: "absolute", inset: 0, overflow: "visible", filter: "drop-shadow(0 8px 18px rgba(40,18,10,0.20))" }}>
         {/* The line under everything, then the cream over it, so tail and body read as one shape. */}
-        <g stroke={BUBBLE.line} strokeWidth={7} strokeLinejoin="round" fill={BUBBLE.line}>
+        <g stroke={BUBBLE.line} strokeWidth={6} strokeLinejoin="round" fill={BUBBLE.line}>
           <rect {...box} />
           <path d={tail} />
         </g>

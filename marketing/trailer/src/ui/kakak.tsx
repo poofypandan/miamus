@@ -140,16 +140,16 @@ function CaptionPlate({ cue, level, pulse = 0 }: { cue: CaptionCue; level: numbe
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 18,
-          maxWidth: 790,
-          padding: "15px 34px 16px 16px",
-          borderRadius: 44,
+          gap: 16,
+          maxWidth: 700,
+          padding: "13px 28px 13px 14px",
+          borderRadius: 30,
           background: "rgba(22,19,26,0.84)",
           boxShadow: "0 10px 30px rgba(10,8,20,0.28)",
         }}
       >
-        <KakakAvatar size={62} glow={level * (frame <= cue.to ? 1 : 0)} pulse={frame <= cue.to ? pulse : 0} />
-        <div style={{ fontFamily: FONT, fontSize: 50, fontWeight: 600, lineHeight: 1.18, letterSpacing: -0.3, color: "#fff", textWrap: "balance" } as React.CSSProperties}>
+        <KakakAvatar size={56} glow={0} pulse={frame <= cue.to ? pulse : 0} />
+        <div style={{ fontFamily: FONT, fontSize: 46, fontWeight: 600, lineHeight: 1.18, letterSpacing: -0.3, color: "#fff", textWrap: "balance" } as React.CSSProperties}>
           {words.map((w, i) => {
             const at = cue.from + (span * seen) / total;
             seen += w.length + 1;

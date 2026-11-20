@@ -50,6 +50,7 @@ const FACES: [string, string, string, string][] = [
   ["Mali", "500", "normal", "mali-latin-500-normal"],
   ["Mali", "600", "normal", "mali-latin-600-normal"],
   ["Mali", "700", "normal", "mali-latin-700-normal"],
+  ["Fraunces", "500", "normal", "fraunces-latin-500-normal"], // Mama's voice, upright (trailer-reset 25, 1.4)
   ["Fraunces", "400", "italic", "fraunces-latin-400-italic"],
   ["Fraunces", "500", "italic", "fraunces-latin-500-italic"],
   ["Fraunces", "600", "italic", "fraunces-latin-600-italic"],

@@ -211,7 +211,7 @@ function Shot07() {
           <circle key={r} cx={ph.x} cy={ph.y} r={r} fill="none" stroke={KAKAK} strokeWidth={4 - i} opacity={0.6 - i * 0.22} />
         ))}
       </svg>
-      <MamaSays lines={SAY} y={250} to={{ x: hd.x + 10, y: hd.y - 14 }} />
+      <MamaSays lines={SAY} x={120} y={250} w={620} to={{ x: hd.x + 10, y: hd.y - 14 }} />
       <AppBubble id="stop" x={c.x - d / 2 - 8} y={c.y - d / 2 - 8} scale={1.7} pad={8} r={999} inner={999} fill="#fafbfd" />
     </MamaMorning>
   );
@@ -534,7 +534,7 @@ function B1() {
   return (
     <Wide15 frame={100}>
       <Ghosts />
-      <MamaSays lines={SAY} y={232} to={{ x: h.x + 4, y: h.y + 4 }} />
+      <MamaSays lines={SAY} x={120} y={250} w={620} to={{ x: h.x + 4, y: h.y + 4 }} />
       <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB} tabSize={44} />
     </Wide15>
   );

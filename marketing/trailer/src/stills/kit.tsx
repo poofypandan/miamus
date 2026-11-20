@@ -6,7 +6,7 @@
 import React from "react";
 import { type Cam, project } from "../world/camera";
 import { FONT, HAND, SERIF } from "../theme";
-import { ease, easeOut, ramp } from "../ui/kit";
+import { ease, easeIn, easeOut, ramp, springAt } from "../ui/kit";
 
 export const W = 1080;
 export const H = 1920;
@@ -33,31 +33,53 @@ export const P = (cam: Cam, x: number, y: number) => project(cam, 0.92, x, y);
 
 const abs = (x: number, y: number, w?: number, h?: number): React.CSSProperties => ({ position: "absolute", left: x, top: y, width: w, height: h });
 
-/** A bubble: a rounded shape with a soft tail to whoever (or whichever phone) is speaking. */
-export function Bubble({ x, y, w, h, r = 48, to, fill = CREAM, edge = "rgba(120,80,50,0.16)", tailW = 54, label = "bubble", children }: { x: number; y: number; w: number; h: number; r?: number; to?: { x: number; y: number }; fill?: string; edge?: string; tailW?: number; label?: string; children?: React.ReactNode }) {
+/**
+ * One look for every person's speech bubble (trailer-reset 25, 1.3): cream, a 3 px warm edge, a light shadow, corners
+ * the smaller of half its height and 44 px; the tail 36 px wide, at most 110 px long, its tip 34 px short of the head.
+ */
+export const SPEECH = { fill: "#fff6e8", edge: "rgba(120,72,44,0.35)", edgeW: 3, shadow: "drop-shadow(0 8px 18px rgba(40,18,10,0.20))", r: 44, tailW: 36, tailMax: 110, short: 34, ink: INK };
+
+/** A bubble: a rounded shape with a soft tail to whoever (or whichever phone) is speaking. `speech`: a person's bubble. */
+export function Bubble({ x, y, w, h, r = 48, to, fill = CREAM, edge = "rgba(120,80,50,0.16)", tailW = 54, label = "bubble", speech = false, children }: { x: number; y: number; w: number; h: number; r?: number; to?: { x: number; y: number }; fill?: string; edge?: string; tailW?: number; label?: string; speech?: boolean; children?: React.ReactNode }) {
+  if (speech) {
+    fill = SPEECH.fill;
+    edge = SPEECH.edge;
+    tailW = SPEECH.tailW;
+    r = SPEECH.r;
+  }
   r = Math.min(r, w / 2, h / 2);
   let tail: string | null = null;
   if (to) {
     const below = to.y > y + h;
     const above = to.y < y;
+    // A speech tail stops 34 px short of the head and is at most 110 px long; an app card's tail reaches the phone.
+    const tipOf = (bx: number, by: number) => {
+      if (!speech) return to;
+      const d = Math.hypot(to.x - bx, to.y - by) || 1;
+      const len = Math.max(0, Math.min(SPEECH.tailMax, d - SPEECH.short));
+      return { x: bx + ((to.x - bx) / d) * len, y: by + ((to.y - by) / d) * len };
+    };
     if (below || above) {
       const yb = below ? y + h - 3 : y + 3;
       const bx = Math.max(x + r + tailW, Math.min(x + w - r - tailW, x + w / 2 + (to.x - (x + w / 2)) * 0.55));
-      const my = yb + (to.y - yb) * 0.55;
-      tail = `M ${bx - tailW / 2} ${yb} Q ${bx - tailW * 0.2} ${my} ${to.x} ${to.y} Q ${bx + tailW * 0.45} ${my} ${bx + tailW / 2} ${yb} Z`;
+      const tp = tipOf(bx, yb);
+      const my = yb + (tp.y - yb) * 0.55;
+      tail = `M ${bx - tailW / 2} ${yb} Q ${bx - tailW * 0.2} ${my} ${tp.x} ${tp.y} Q ${bx + tailW * 0.45} ${my} ${bx + tailW / 2} ${yb} Z`;
     } else {
       const left = to.x < x;
       const xb = left ? x + 3 : x + w - 3;
       const by = Math.max(y + r + tailW, Math.min(y + h - r - tailW, y + h / 2 + (to.y - (y + h / 2)) * 0.55));
-      const mx = xb + (to.x - xb) * 0.55;
-      tail = `M ${xb} ${by - tailW / 2} Q ${mx} ${by - tailW * 0.2} ${to.x} ${to.y} Q ${mx} ${by + tailW * 0.45} ${xb} ${by + tailW / 2} Z`;
+      const tp = tipOf(xb, by);
+      const mx = xb + (tp.x - xb) * 0.55;
+      tail = `M ${xb} ${by - tailW / 2} Q ${mx} ${by - tailW * 0.2} ${tp.x} ${tp.y} Q ${mx} ${by + tailW * 0.45} ${xb} ${by + tailW / 2} Z`;
     }
   }
+  const sw = speech ? SPEECH.edgeW : 2;
   return (
     <>
-      <svg width={W} height={H} style={{ position: "absolute", inset: 0, filter: "drop-shadow(0 14px 26px rgba(70,35,20,0.24))" }}>
-        {tail && <path d={tail} fill={fill} stroke={edge} strokeWidth={2} />}
-        <rect x={x} y={y} width={w} height={h} rx={r} fill={fill} stroke={edge} strokeWidth={2} />
+      <svg width={W} height={H} style={{ position: "absolute", inset: 0, filter: speech ? SPEECH.shadow : "drop-shadow(0 14px 26px rgba(70,35,20,0.24))" }}>
+        {tail && <path d={tail} fill={fill} stroke={edge} strokeWidth={sw} />}
+        <rect x={x} y={y} width={w} height={h} rx={r} fill={fill} stroke={edge} strokeWidth={sw} />
         {tail && <path d={tail} fill={fill} />}
       </svg>
       <div data-bubble={label} style={{ ...abs(x, y, w, h), boxSizing: "border-box", borderRadius: r, overflow: "hidden" }}>{children}</div>
@@ -66,23 +88,52 @@ export function Bubble({ x, y, w, h, r = 48, to, fill = CREAM, edge = "rgba(120,
 }
 
 /**
- * Mama's type (owner, A4 notes, 20 Nov): upright, the film's sans at 600 like every other bubble and plate. The
- * italic serif was hard to read. One place to change.
+ * A speech bubble's life (25, 1.2), in frames: a spring in with a little overshoot (scale 0.82 → 1, rising 28 px),
+ * out over 8 frames on easeIn (fading, shrinking to 0.92, dropping 10 px toward the speaker).
  */
-export const mamaFont = (size: number) => `600 ${size}px/1.16 ${FONT}`;
-export const MAMA_TRACK = -0.6;
+export function speechLife(frame: number, fps: number, at: number, out = Infinity) {
+  if (frame < at - 1) return null;
+  const pop = springAt(frame, fps, at, { damping: 14, stiffness: 170, mass: 0.7 });
+  const k = ramp(frame, out, out + 8, easeIn);
+  const o = Math.min(1, Math.max(0, pop) * 1.8) * (1 - k);
+  if (o <= 0.001) return null;
+  return { o, s: (0.82 + 0.18 * pop) * (1 - 0.08 * k), dy: (1 - pop) * 28 + 10 * k, moving: Math.abs(1 - pop) > 0.004 || k > 0 };
+}
 
-/** Mama's words: upright on cream paper. */
-export function MamaSays({ lines, x = 120, y = 236, w = 798, size = 72, to }: { lines: React.ReactNode[]; x?: number; y?: number; w?: number; size?: number; to: { x: number; y: number } }) {
-  const h = Math.round(lines.length * size * 1.16 + 100);
+/**
+ * Mama's type (owner, A4 notes; trailer-reset 25, 1.4): Fraunces upright 500, in every line she says. Her voice is the
+ * warm serif on cream; Kakak is the app's type on her dark plate; the girl is handwriting.
+ */
+export const mamaFont = (size: number, lh = 1.18) => `500 ${size}px/${lh} ${SERIF}`;
+export const MAMA_TRACK = -0.3;
+
+/**
+ * Mama's words in her bubble (25, 1.3): hugging the words (pass w, h from the spec), padding 30 / 32 / 40. With
+ * `say` (frames), each word fades in and rises 12 px on easeOut over 7 frames at its share of the line's letters.
+ */
+export function MamaSays({ lines, x, y, w, h, size = 62, lh = 1.18, to, say, frame = 0 }: { lines: string[]; x: number; y: number; w: number; h?: number; size?: number; lh?: number; to: { x: number; y: number }; say?: { from: number; to: number }; frame?: number }) {
+  const bh = h ?? Math.round(lines.length * size * lh + 62);
+  const rows = lines.map((l) => l.split(" "));
+  const at = say ? wordTimes(rows, say.from, say.to) : null;
   return (
-    <Bubble x={x} y={y} w={w} h={h} to={to} label="Mama's words">
-      <div style={{ padding: "50px 56px", font: mamaFont(size), color: INK, letterSpacing: MAMA_TRACK }}>
-        {lines.map((l, i) => (
-          <div key={i}>{l}</div>
+    <Bubble x={x} y={y} w={w} h={bh} to={to} speech label="Mama's words">
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", justifyContent: "center", padding: "30px 40px 32px", boxSizing: "border-box", font: mamaFont(size, lh), color: SPEECH.ink, letterSpacing: MAMA_TRACK, whiteSpace: "nowrap" }}>
+        {rows.map((r, i) => (
+          <div key={i}>{r.map((wd, j) => (at ? <SayWord key={j} w={wd} f={frame} at={at[i][j]} gap={j < r.length - 1} /> : <React.Fragment key={j}>{wd}{j < r.length - 1 ? " " : ""}</React.Fragment>))}</div>
         ))}
       </div>
     </Bubble>
+  );
+}
+
+/** One of Mama's words arriving (25, 1.2): fades in and rises 12 px, easeOut, 7 frames, from just before its moment. Frames. */
+export function SayWord({ w, f, at, gap = true }: { w: string; f: number; at: number; gap?: boolean }) {
+  const k = ramp(f, at - 1, at + 6, easeOut);
+  return (
+    <>
+      <span style={{ display: "inline-block", opacity: k, transform: `translateY(${((1 - k) * 12).toFixed(2)}px)` }}>{w}</span>
+      {gap ? " " : ""}
+    </>
   );
 }
 
@@ -98,12 +149,12 @@ export const KAKAK_LINE = "#f1ddd7";
  * fuller heart with a rounded tip, no walls, on the pale blush disc with its hairline. The roof never moves; the
  * heart is alive (`pulse`: 0 still, 1 = +6 %, her speaking beat).
  */
-export function KakakMark({ size, pulse = 0, glow = 0 }: { size: number; pulse?: number; /** 0–1: her voice's loudness, a soft warm glow (v17). */ glow?: number }) {
+export function KakakMark({ size, pulse = 0 }: { size: number; pulse?: number }) {
   const k = 0.64;
   const g = size * k;
   const hs = 1 + 0.06 * pulse;
   return (
-    <div style={{ width: size, height: size, flex: "none", borderRadius: "50%", background: KAKAK_TINT, border: `${Math.max(1, size * 0.025).toFixed(2)}px solid ${KAKAK_LINE}`, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: glow > 0.02 ? `0 0 ${(size * (0.25 + 0.5 * glow)).toFixed(1)}px ${(size * 0.06 * glow).toFixed(1)}px rgba(214,128,116,${(0.55 * glow).toFixed(3)})` : undefined }}>
+    <div style={{ width: size, height: size, flex: "none", borderRadius: "50%", background: KAKAK_TINT, border: `${Math.max(1, size * 0.025).toFixed(2)}px solid ${KAKAK_LINE}`, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <svg width={g} height={g} viewBox="92 78 328 328" style={{ display: "block" }}>
         <polyline points="112,214 256,104 400,214" stroke={KAKAK} strokeWidth={40} strokeLinecap="round" strokeLinejoin="round" fill="none" />
         <path d={heartPath(160, 204, 192, 176)} fill={KAKAK} transform={`translate(256 292) scale(${hs}) translate(-256 -292)`} />
@@ -118,13 +169,14 @@ export const PLATE_TOP = CLEAR.bottom - 96;
  * Kakak's spoken line: one warm near-black plate on the caption line, readable from its first frame. At most two lines.
  * A3: the plate hangs from PLATE_TOP (its tab, if any, sits above that line), so it never rises into people's feet.
  */
-export function Caption({ text, tab, tabSize = 38, y = PLATE_TOP, mark = true, pulse = 0, glow = 0, lit }: { text: React.ReactNode; tab?: string; tabSize?: number; y?: number; mark?: boolean; pulse?: number; glow?: number; /** A4 (v17's motion): with a string `text` ("\n" breaks a line), each word brightens as she says it. Seconds. */ lit?: Lit }) {
+export function Caption({ text, tab, tabSize = 40, y = PLATE_TOP, mark = true, pulse = 0, lit }: { text: React.ReactNode; tab?: string; tabSize?: number; y?: number; mark?: boolean; pulse?: number; /** With a string `text` ("\n" breaks a line), each word brightens as she says it (25, 1.2). Seconds. */ lit?: Lit }) {
+  // 25, 1.3: trimmed beside the smaller bubbles: 46 px words, her mark 56 px, at most 700 px wide and two lines.
   return (
     <div style={{ position: "absolute", left: CLEAR.left, width: CLEAR.right - CLEAR.left, top: y, display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: "100%" }}>
-        {tab && <div style={{ position: "absolute", bottom: "100%", left: 30, marginBottom: -2, padding: "10px 24px 12px", borderRadius: "18px 18px 0 0", background: CREAM, color: INK, font: `600 ${tabSize}px/1 ${FONT}`, whiteSpace: "nowrap" }}>{tab}</div>}
-        <div data-bubble="caption" style={{ display: "flex", alignItems: "center", gap: 20, padding: mark ? "16px 34px 16px 18px" : "18px 34px", borderRadius: 34, background: "rgba(38,29,26,0.93)", color: CREAM, font: `600 50px/1.18 ${FONT}`, letterSpacing: -0.4, boxShadow: "0 12px 30px rgba(40,20,10,0.28)" }}>
-          {mark && <KakakMark size={64} pulse={pulse} glow={glow} />}
+      <div style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: 700 }}>
+        {tab && <div style={{ position: "absolute", bottom: "100%", left: 26, marginBottom: -2, padding: "9px 22px 11px", borderRadius: "16px 16px 0 0", background: CREAM, color: INK, font: `600 ${tabSize}px/1 ${FONT}`, whiteSpace: "nowrap" }}>{tab}</div>}
+        <div data-bubble="caption" style={{ display: "flex", alignItems: "center", gap: 16, padding: mark ? "13px 28px 13px 14px" : "15px 28px", borderRadius: 30, background: "rgba(38,29,26,0.93)", color: CREAM, font: `600 46px/1.18 ${FONT}`, letterSpacing: -0.4, boxShadow: "0 12px 30px rgba(40,20,10,0.28)" }}>
+          {mark && <KakakMark size={56} pulse={pulse} />}
           <div>{typeof text === "string" ? <LitWords text={text} lit={lit} /> : text}</div>
         </div>
       </div>
@@ -152,21 +204,21 @@ export function wordTimes(rows: string[][], from: number, to: number): number[][
   );
 }
 
-/** Kakak's words on her plate: readable from the first frame (0.62), each brightening as it is said, eased. */
+/** Kakak's words on her plate (25, 1.2, v17's CaptionPlate): each word 50 % → 100 % over 7 frames as she says it. */
 export function LitWords({ text, lit }: { text: string; lit?: Lit }) {
   const rows = text.split("\n").map((l) => l.split(" "));
-  const at = lit ? wordTimes(rows, lit.from, lit.to - (lit.to - lit.from) * 0.08) : null;
+  const at = lit ? wordTimes(rows, lit.from, lit.to) : null;
   return (
     <>
       {rows.map((r, i) => (
         <React.Fragment key={i}>
           {i > 0 && <br />}
           {r.map((w, j) => {
-            const k = at && lit ? ramp(lit.t, at[i][j] - 0.1, at[i][j] + 0.14, ease) : 1;
+            const k = at && lit ? ramp(lit.t, at[i][j] - 3 / 30, at[i][j] + 4 / 30, ease) : 1;
             return (
               <React.Fragment key={j}>
                 {j > 0 && " "}
-                <span style={{ opacity: 0.62 + 0.38 * k }}>{w}</span>
+                <span style={{ opacity: 0.5 + 0.5 * k }}>{w}</span>
               </React.Fragment>
             );
           })}
@@ -180,8 +232,9 @@ export function LitWords({ text, lit }: { text: string; lit?: Lit }) {
  * Words that arrive one by one (v17's BigLine): each rises a little and eases in on its own moment, so a line
  * flows on instead of appearing as a block. `t` and `at` in seconds; `rise` in px.
  */
-export function RiseWord({ w, t, at, rise = 26, dur = 0.37, gap = true, style }: { w: React.ReactNode; t: number; at: number; rise?: number; dur?: number; gap?: boolean; style?: React.CSSProperties }) {
-  const k = ramp(t, at - 0.07, at + dur - 0.07, easeOut);
+export function RiseWord({ w, t, at, rise = 25, gap = true, style }: { w: React.ReactNode; t: number; at: number; rise?: number; gap?: boolean; style?: React.CSSProperties }) {
+  // 25, 1.2: fades in and rises 0.3 em, easeOut, 11 frames, starting 2 frames before its moment.
+  const k = ramp(t, at - 2 / 30, at + 9 / 30, easeOut);
   return (
     <>
       <span style={{ display: "inline-block", opacity: k, transform: `translateY(${((1 - k) * rise).toFixed(2)}px)`, ...style }}>{w}</span>

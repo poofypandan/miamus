@@ -14,7 +14,7 @@ import { lightAt } from "../world/tod";
 import { COPY, type Locale } from "./copy";
 import { CARDS, CARDS15, ENDING, ENDING15, FPS, HOOK, HOOK15, QUIET, S15, S60, SARI15, STAFF, type Span, TELL, TELL15, len } from "./timeline";
 import { CaptureCard, ListeningPulse, Thumb } from "../ui/cards";
-import { MamaSays } from "../stills/kit";
+import { MAMA_TRACK, MamaSays, SayWord, mamaFont, speechLife, wordTimes } from "../stills/kit";
 import voData from "./vo-data.json";
 
 /** v15, the brand lock: the frame (in the scene) where she says "Miamus", from the end line's measured onset. */
@@ -148,9 +148,11 @@ const GIRL_HEAD = { x: 370, y: 1292 };
 const MAMA_HEAD = { x: 284, y: 1170 };
 const head = (cam: Cam, p: { x: number; y: number }) => project(cam, 0.92, p.x, p.y);
 /** The girl's bubble: in the close two-shot, up in the sky right of Mama; in the wide shot, above and right of her. */
-const GIRL_BUBBLE = { two: { cx: 726, cy: 470, w: 390, h: 250 }, wide: { cx: 700, cy: 770, w: 372, h: 236 } };
+// 25, 1.3: bubbles hug their words (hand 72 px, Mama 54 px) and rest 20 px further from the heads, so the spring's
+// overshoot never touches one.
+const GIRL_BUBBLE = { two: { cx: 726, cy: 450, w: 316, h: 200 }, wide: { cx: 700, cy: 750, w: 300, h: 190 } };
 /** Mama's bubble (wide shot only): up and left, above her head, beside the girl's. */
-const MAMA_BUBBLE = { cx: 296, cy: 600, w: 440, h: 214 };
+const MAMA_BUBBLE = { cx: 296, cy: 580, w: 372, h: 174 };
 
 /** A line of the girl's handwriting inside a bubble, writing itself on. */
 function Written({ text, at, dur, size }: { text: string; at: number; dur: number; size: number }) {
@@ -167,9 +169,9 @@ function Written({ text, at, dur, size }: { text: string; at: number; dur: numbe
 function GirlBubble({ lines, at, out, cam, box }: { lines: [string, string]; at: number; out?: number; cam: Cam; box: { cx: number; cy: number; w: number; h: number } }) {
   return (
     <SpeechBubble {...box} to={head(cam, GIRL_HEAD)} at={at - 3} out={out}>
-      <Written text={lines[0]} at={at} dur={19} size={90} />
-      <div style={{ marginLeft: 70 }}>
-        <Written text={lines[1]} at={at + 20} dur={9} size={90} />
+      <Written text={lines[0]} at={at} dur={19} size={72} />
+      <div style={{ marginLeft: 56 }}>
+        <Written text={lines[1]} at={at + 20} dur={9} size={72} />
       </div>
     </SpeechBubble>
   );
@@ -207,17 +209,24 @@ export function Hook({ locale, t0, fast }: SceneProps) {
       {/* v17: Mama's "In a minute, sweetie…" in her own bubble, from her first word, rising above her head (60 s only). */}
       {!fast && mama && (
         <SpeechBubble {...MAMA_BUBBLE} to={head(cam, MAMA_HEAD)} at={mama.from} out={T.fall - 2}>
-          {splitAtComma(copy.lines.M1).map((l, i) => (
-            <div key={i} style={{ fontFamily: FONT, fontWeight: 600, fontSize: 60, lineHeight: 1.12, letterSpacing: -0.4 }}>{l}</div>
-          ))}
+          {/* 25: Fraunces upright 500 at 54 px; each word rises in with her voice (share of letters across her line). */}
+          {(() => {
+            const rows = splitAtComma(copy.lines.M1).map((l) => l.split(" "));
+            const at = wordTimes(rows, mama.from, mama.to);
+            return rows.map((r, i) => (
+              <div key={i} style={{ font: mamaFont(54, 1.14), letterSpacing: MAMA_TRACK, whiteSpace: "nowrap" }}>
+                {r.map((w, j) => <SayWord key={j} w={w} f={frame} at={at[i][j]} gap={j < r.length - 1} />)}
+              </div>
+            ));
+          })()}
         </SpeechBubble>
       )}
       {/* The questions pile up and bury both bubbles: mother and daughter, trying to talk under the notifications. */}
       <Pile bubbles={copy.bubbles} slam={copy.slam} at={T.at} slamAt={T.slam} fall={T.fall} from={{ x: origin.x, y: origin.y }} />
       {/* Her last, small "Mama…?", on top of the pile, unanswered (60 s only). */}
       {!fast && (
-        <SpeechBubble cx={598} cy={936} w={300} h={128} to={head(cam, GIRL_HEAD)} at={110} out={128} radius={52}>
-          <Written text={copy.lines.G3} at={110} dur={8} size={66} />
+        <SpeechBubble cx={598} cy={926} w={250} h={104} to={head(cam, GIRL_HEAD)} at={110} out={128}>
+          <Written text={copy.lines.G3} at={110} dur={8} size={56} />
         </SpeechBubble>
       )}
     </AbsoluteFill>
@@ -755,7 +764,8 @@ export function Ending({ locale, t0, fast, a2 = false }: SceneProps & { a2?: boo
   const home = project(TWO_SHOT, 0.92, 284, 1170);
   const bx = 478 + head.x - home.x;
   const by = 230 + head.y - home.y;
-  const say = answer ? ramp(frame, answer.from - 4, answer.from + 8, easeOut) * (1 - ramp(frame, answer.to, answer.to + 10)) : 0;
+  // 25: her answer's bubble springs in and leaves on easeIn; with her voice (the 60) each word rises in as she says it.
+  const sb = answer ? speechLife(frame, 30, answer.from - 2, answer.to) : null;
   return (
     <AbsoluteFill style={{ backgroundColor: NIGHT }}>
       {/* Out of the cards' blur (22 px, as the backdrop was) into focus; the slight scale matches the backdrop's. */}
@@ -766,13 +776,13 @@ export function Ending({ locale, t0, fast, a2 = false }: SceneProps & { a2?: boo
       <Vignette />
       {/* v15: her handwriting is gone by the time the name arrives (they shared the same place on screen). */}
       <GirlBubble lines={copy.call} cam={cam} at={E.bell} out={girlOut} box={GIRL_BUBBLE.two} />
-      {say > 0.01 && (
-        <div style={{ position: "absolute", inset: 0, opacity: say, transform: `translateY(${(1 - say) * 18}px)` }}>
-          <MamaSays lines={splitAtComma(copy.lines.M2)} x={bx} y={by} w={440} size={72} to={{ x: head.x + 30, y: head.y - 10 }} />
+      {sb && (
+        <div data-moving={sb.moving ? "" : undefined} style={{ position: "absolute", inset: 0, opacity: sb.o, transform: `translateY(${sb.dy.toFixed(2)}px) scale(${sb.s.toFixed(4)})`, transformOrigin: `${bx + 60}px ${by + 230}px` }}>
+          <MamaSays lines={splitAtComma(copy.lines.M2)} x={bx} y={by - 20} w={350} to={{ x: head.x + 30, y: head.y - 10 }} say={m2 ? { from: m2.from - t0, to: m2.to - t0 } : undefined} frame={frame} />
         </div>
       )}
       {/* v15: the mark and the name arrive together on her spoken "Miamus"; the line on the bell and the address as before. */}
-      <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={brand} name={brand} lineAt={lineAt} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} spoken={a2 && end ? { text: copy.lines[fast ? "S3t" : "L11t"], from: end.from - t0 } : undefined} />
+      <EndCard line={copy.end.line} em={copy.end.em} call={copy.end.call} url={copy.end.url} mark={brand} name={brand} lineAt={lineAt} callAt={"call" in E ? (E as { call: number }).call : undefined} urlAt={E.url} spoken={a2 && end ? { text: copy.lines[fast ? "S3t" : "L11t"], from: end.from - t0, to: end.to - t0 } : undefined} />
     </AbsoluteFill>
   );
 }
