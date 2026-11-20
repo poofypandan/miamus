@@ -230,8 +230,17 @@ export const LEGAL = {
   // 35 days, migrations/172), and asks ElevenLabs to delete each generation
   // from its history right after (zero retention is Enterprise-only); it may
   // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
-  policyVersion: "2026-11-15.1",
-  effectiveDate: { en: "15 November 2026", id: "15 November 2026" },
+  // 2026-11-20.1: who at Poofy Labs can see household data (security audit,
+  // 20 Nov 2026, finding S7) — section 5 now says that the operator can
+  // technically open a household's data and photos through Supabase and
+  // Vercel, that today this is one person signed in with two-step
+  // verification, when we look, and that the full-access keys never leave
+  // the database provider. The Indonesian photo line now also says the
+  // photo's own location data is removed on the phone (the English already
+  // did; PR #159 makes that true when compression fails, too). Nothing
+  // stored, collected or shared changes. Set effectiveDate to the merge day.
+  policyVersion: "2026-11-20.1",
+  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

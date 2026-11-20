@@ -197,6 +197,7 @@ const COPY: Record<
               `Requests to set up a household — only ${operator}, who runs Miamus.`,
               `Feedback you send — ${operator}, who runs Miamus, and your household's admins. Staff can't read anyone's feedback, not even their own once sent.`,
               `Usage counts — only ${operator}, who runs Miamus, as totals across households, without names.`,
+              `Everything else in your household, photos included — ${operator} can technically open it through our providers' admin tools (Supabase and Vercel). Today that is one person, our founder, who signs in with two-step verification. We look only when you ask us for help, to fix a fault or keep Miamus secure, or when the law requires it. Miamus's own screens never show us a household's data, and the keys that can read everything stay with our database provider, never in the app.`,
               `Supabase — database, sign-in and photo storage, on servers in ${LEGAL.dataRegion.en}.`,
               "Vercel — hosts the app, on servers in Singapore. Photos pass through its servers when they're shown, but aren't stored there.",
               "Google — sign-in for admins.",
@@ -399,7 +400,7 @@ const COPY: Record<
           {
             ul: [
               "Tugas, pekerjaan rumah, rutinitas, jadwal, dan catatan.",
-              "Foto yang diambil di aplikasi: foto bukti tugas, foto sebelum dan sesudah, foto cek stok, foto hewan peliharaan, dan scan dokumen hewan. Foto jalan-jalan diambil di tempat yang dilalui, jadi bisa memperlihatkan tempat umum dan staf yang mengajak jalan; Miamus tidak mencatat lokasi. Untuk setiap tugas yang disimpan, Miamus juga mencatat kapan tugas itu sampai di server kami.",
+              "Foto yang diambil di aplikasi: foto bukti tugas, foto sebelum dan sesudah, foto cek stok, foto hewan peliharaan, dan scan dokumen hewan. Foto jalan-jalan diambil di tempat yang dilalui, jadi bisa memperlihatkan tempat umum dan staf yang mengajak jalan; Miamus tidak mencatat lokasi (data lokasi bawaan foto dihapus di HP sebelum diunggah). Untuk setiap tugas yang disimpan, Miamus juga mencatat kapan tugas itu sampai di server kami.",
               "Data hewan peliharaan Anda, termasuk catatan dokter hewan dan kesehatannya.",
               "Daftar belanja rumah: barang yang hampir habis atau habis, siapa yang memberi tahu, dan, untuk barang yang jumlahnya dipilih admin untuk dicatat, sisa jumlahnya, jumlah terakhir yang dibeli, serta kapan dan oleh siapa jumlah itu terakhir diubah. Untuk bahan masakan, tempat penyimpanannya (kulkas, freezer, lemari, atau meja) dan tanggal kedaluwarsanya, jika sudah dicatat. Kalau admin menambahkan yang kurang untuk menu minggu ini, berapa banyak barang itu perlu dibeli.",
               "Makanan yang dicatat rumah tangga: makanan apa, foto (boleh tidak ada), dari mana (dimasak di rumah, dari orang, atau dibeli), disimpan di mana, kapan kedaluwarsa (atau belum ada yang tahu), dari siapa (nama yang Anda ketik), catatan, sisa porsinya (jika dihitung), siapa yang menambahkan, dan apakah sudah dimakan, diberikan, atau dibuang. Kalau staf menambahkan makanan, admin rumah tangga mendapat notifikasi, dan setiap pagi ada notifikasi berisi makanan yang kedaluwarsa hari ini atau besok.",
@@ -480,6 +481,7 @@ const COPY: Record<
               `Permintaan membuat rumah tangga — hanya ${operator}, pengelola Miamus.`,
               `Masukan yang Anda kirim — ${operator}, pengelola Miamus, dan admin rumah tangga Anda. Staf tidak dapat membaca masukan siapa pun, termasuk miliknya sendiri setelah terkirim.`,
               `Hitungan pemakaian — hanya ${operator}, pengelola Miamus, sebagai jumlah gabungan dari semua rumah tangga, tanpa nama.`,
+              `Data rumah tangga Anda lainnya, termasuk foto — secara teknis ${operator} dapat membukanya lewat alat admin penyedia kami (Supabase dan Vercel). Saat ini hanya satu orang, pendiri kami, yang masuk dengan verifikasi dua langkah. Kami hanya melihatnya jika Anda meminta bantuan, untuk memperbaiki gangguan atau menjaga keamanan Miamus, atau jika diwajibkan hukum. Layar Miamus sendiri tidak pernah menampilkan data rumah tangga kepada kami, dan kunci yang dapat membaca semua data tetap di penyedia database kami, tidak pernah ada di aplikasi.`,
               `Supabase — database, login, dan penyimpanan foto, di server yang berada di ${LEGAL.dataRegion.id}.`,
               "Vercel — hosting aplikasi, di server yang berada di Singapura. Foto melewati servernya saat ditampilkan, tetapi tidak disimpan di sana.",
               "Google — login untuk admin.",
