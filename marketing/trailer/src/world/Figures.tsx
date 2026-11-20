@@ -71,6 +71,8 @@ export interface MamaPose {
   phone?: number;
   /** C1.6: reading, 0–1: the phone held out in front of her shoulder, her head tipped to it (trailer-reset 20, fix 12). */
   read?: number;
+  /** Motion kit: how much she is stepping, 0–1, when the scene moves her itself (it can ease in and out; without it she steps until she has arrived). */
+  stride?: number;
 }
 
 export function Mama({ light, frame, flat, arrive = 1, pose }: FigureProps & { arrive?: number; pose?: MamaPose }) {
@@ -80,7 +82,7 @@ export function Mama({ light, frame, flat, arrive = 1, pose }: FigureProps & { a
   const skin = c("#d9a27c", 0.25);
   const shoe = c("#b98b5e", 0.2);
   // She walks out, then stands: one hand finds the child's shoulder, the other shades her eyes.
-  const walking = arrive < 0.97 ? 1 : 0;
+  const walking = pose?.stride ?? (arrive < 0.97 ? 1 : 0);
   const step = Math.sin(frame * 0.5) * 8 * walking;
   const up = pose ? clamp01(pose.shade ?? 0) : clamp01((arrive - 0.82) / 0.18);
   const reach = pose ? 0 : clamp01((arrive - 0.7) / 0.3);
