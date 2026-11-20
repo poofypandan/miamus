@@ -48,7 +48,7 @@ export function TodayStatus({
     // The done and attention tokens, no outline (21 Nov, PR 3). Waiting is
     // never said by the tint alone: its icon and dark text carry it.
     "flex w-full items-start gap-3 rounded-2xl px-4 py-3.5 text-left animate-view-fade motion-reduce:animate-none",
-    ok ? "bg-done-tint/70" : "bg-attention-tint/70"
+    ok ? "bg-done-tint" : "bg-attention-tint/70"
   );
 
   return onPress ? (

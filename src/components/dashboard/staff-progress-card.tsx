@@ -52,7 +52,7 @@ export function StaffProgressCard({
         </button>
       </div>
       {/* One surface, rows parted by hairlines (21 Nov, PR 3): lists, not boxes. */}
-      <ul className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card shadow-card">
+      <ul className="inset-rows flex flex-col overflow-hidden rounded-2xl bg-card shadow-card [--row-inset:3.75rem]">
         {progress.people.map((person) => (
           <li key={person.id}>
             <PersonRow person={person} onPress={() => workload.openPerson(person.id)} />
