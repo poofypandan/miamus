@@ -28,7 +28,7 @@ export function OverdueSection({
   return (
     <section
       aria-label={`${t.title} (${count})`}
-      className="flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50/70 p-2"
+      className="flex flex-col gap-2 rounded-2xl bg-urgent-tint/70 p-2"
     >
       <header className="flex items-center gap-1.5 px-1 pt-0.5">
         <AlertTriangle className="size-4 shrink-0 text-red-600" />

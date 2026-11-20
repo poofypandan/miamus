@@ -51,7 +51,8 @@ export function StaffProgressCard({
           {t("Who did what", "Siapa mengerjakan apa")} <ChevronRight className="size-3.5" />
         </button>
       </div>
-      <ul className="flex flex-col gap-2">
+      {/* One surface, rows parted by hairlines (21 Nov, PR 3): lists, not boxes. */}
+      <ul className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card shadow-card">
         {progress.people.map((person) => (
           <li key={person.id}>
             <PersonRow person={person} onPress={() => workload.openPerson(person.id)} />
@@ -68,9 +69,9 @@ export function StaffProgressCard({
 }
 
 export const TONE_ROW: Record<ProgressTone, string> = {
-  neutral: "bg-card",
-  amber: "border-amber-200 bg-amber-50/70",
-  red: "border-red-200 bg-red-50/70",
+  neutral: "",
+  amber: "bg-attention-tint/40",
+  red: "bg-urgent-tint/70",
 };
 
 export const TONE_TEXT: Record<ProgressTone, string> = {
@@ -155,7 +156,7 @@ function PersonRow({ person, onPress }: { person: PersonProgress; onPress: () =>
       data-tone={tone}
       aria-label={t(`${person.name}: ${line}. Open their day`, `${person.name}: ${line}. Buka harinya`)}
       className={cn(
-        "flex min-h-14 w-full items-center gap-3 rounded-xl border p-3 text-left active:bg-muted/60",
+        "flex min-h-14 w-full items-center gap-3 p-3 text-left active:bg-muted/60",
         TONE_ROW[tone]
       )}
     >
@@ -206,7 +207,7 @@ function AnyoneRow({ anyone, onPress }: { anyone: AnyoneProgress; onPress: () =>
       data-tone={anyone.tone}
       aria-label={t(`${label}: ${anyone.open}. Open the list`, `${label}: ${anyone.open}. Buka daftarnya`)}
       className={cn(
-        "flex min-h-11 w-full items-center gap-3 rounded-xl border px-3 py-2 text-left text-sm active:bg-muted/60",
+        "flex min-h-11 w-full items-center gap-3 px-3 py-2 text-left text-sm active:bg-muted/60",
         TONE_ROW[anyone.tone]
       )}
     >

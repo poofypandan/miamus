@@ -128,7 +128,7 @@ export function FoodView({
           <h2 id="food-containers" className="text-sm font-semibold text-gray-900">
             {tr("Containers to return", "Wadah yang perlu dikembalikan")}
           </h2>
-          <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
+          <div className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card shadow-card">
             {containers.map((item) => (
               <div key={item.id} className="flex min-h-14 items-center gap-1 pr-3">
                 <button
@@ -167,7 +167,7 @@ export function FoodView({
             <h2 id={`food-${group}`} className="text-sm font-semibold text-gray-900">
               {FOOD_GROUP_LABELS[locale][group]}
             </h2>
-            <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
+            <div className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card shadow-card">
               {groups[group].map((item) => (
                 <FoodRow
                   key={item.id}

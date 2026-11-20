@@ -135,7 +135,7 @@ function RepairSection({
         {title}
         <span className="text-xs font-normal text-muted-foreground">{repairs.length}</span>
       </h2>
-      <div className="flex flex-col overflow-hidden rounded-xl border bg-card">
+      <div className="flex flex-col overflow-hidden rounded-2xl bg-card shadow-card">
         {repairs.map((repair, index) => (
           <RepairRow key={repair.id} repair={repair} onOpen={onOpen} first={index === 0} />
         ))}
