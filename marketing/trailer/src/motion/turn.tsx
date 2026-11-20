@@ -118,7 +118,7 @@ export function Turn({ base, lead }: { base: number; lead: number }) {
   const landed = after(riseAt, 1); // ...as the one light lands in it
   const cross = after(landed, -27); // the light leaves the window for Mama's phone
   const gathered = after(cross, -2); // the last firefly has reached the window
-  const line2Out = after(once, 22); // "once?" and its underline have been read
+  const line2Out = after(once, 23); // "once?" has been up half a second (25, 1.5), its underline written
   const home = after(l3.to, -6); // her last word has been said: she goes back into the phone
 
   // Mama: she comes with the night, at its darkest, so first light finds her already there with her phone (a person
@@ -153,8 +153,8 @@ export function Turn({ base, lead }: { base: number; lead: number }) {
 
   const p3 = plate(F, l3);
   const foot = footnote(F, l3);
-  const line1 = leave(F, line1Out, { frames: 11, rise: 30 });
-  const line2 = leave(F, line2Out, { frames: 12, rise: 30 });
+  const line1 = leave(F, line1Out, { frames: 10, rise: 30 });
+  const line2 = leave(F, line2Out, { frames: 10, rise: 30 });
   const stroke = draw(F, after(once, 6), 14);
 
   return (

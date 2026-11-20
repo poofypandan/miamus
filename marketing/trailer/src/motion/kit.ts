@@ -8,7 +8,8 @@
  *  1. A move is a phrase: it starts soft, travels, lands soft, and rests. The curves below are the only ones there
  *     are, and none of them is a straight line. There is no easing argument to pass.
  *  2. Parts overlap: use `after(anchor, n)` so the next part starts before the last one has landed.
- *  3. Nothing readable arrives or leaves in under 8 frames (`arrive`, `leave` and `word` will not go shorter).
+ *  3. Nothing readable arrives or leaves in under 8 frames (`arrive` and `leave` will not go shorter). The one
+ *     exception is a single spoken word on a plate or in a bubble: 6 frames, so it keeps up with the voice (25, 1.5).
  *  4. One camera on one clock: `path()` runs smoothly through its keys and never changes speed at a key.
  *
  * Everything is in frames at 30 a second. Start values are trailer-reset 25, Part 1.
@@ -117,9 +118,9 @@ export const breathe = (f: number, period = 90, phase = 0) => 0.5 - 0.5 * Math.c
 
 export type WordSize = "plate" | "sky";
 const WORD = {
-  // Type of 46–72 px on a plate or in a bubble; the big lines in the sky.
-  plate: { fade: 8, rise: 10, em: 0.14 },
-  sky: { fade: 9, rise: 14, em: 0.2 },
+  // 25, 1.5. Type of 46–72 px on a plate or in a bubble: 6 frames, 0.14 em. The big lines in the sky: 10 frames, 0.2 em.
+  plate: { fade: 6, rise: 6, em: 0.14 },
+  sky: { fade: 10, rise: 10, em: 0.2 },
 } as const;
 
 /**
@@ -161,10 +162,19 @@ export function spoken(rows: string[][], cue: { from: number; to: number }, onse
 /* Kakak's plate and the quiet lines (25, 1.2 and 1.6)                 */
 /* ------------------------------------------------------------------ */
 
-/** Her plate on a voice cue: in from 5 frames before her first word, rising 16 px; out from 2 frames after her last. */
-export const plate = (f: number, cue: { from: number; to: number }) => life(f, after(cue.from, -5), after(cue.to, 2), { in: { frames: 12, rise: 16 }, out: { frames: 9, rise: -6 } });
-/** A quiet line that is up with a spoken one (the AI footnote): the same clock as the plate, and it does not move. */
-export const footnote = (f: number, cue: { from: number; to: number }) => life(f, after(cue.from, -5), after(cue.to, 2), { in: { frames: 12, rise: 0 }, out: { frames: 10, rise: 0 } });
+/**
+ * Her plate on a voice cue (25, 1.2): in from 5 frames before her first word to 7 after, rising 16 px; out from 2 to
+ * 10 frames after her last, in place.
+ */
+export const plate = (f: number, cue: { from: number; to: number }) => life(f, after(cue.from, -5), after(cue.to, 2), { in: { frames: 12, rise: 16 }, out: { frames: 8, rise: 0 } });
+/**
+ * A quiet line that is up with a spoken one (the AI footnote, 25, 1.6): in over 12 frames from 5 before the cue, out
+ * over 10 from 2 after it. It does not move.
+ */
+export function footnote(f: number, cue: { from: number; to: number }): Shown {
+  const a = after(cue.from, -5), b = after(cue.to, 2);
+  return { o: drift(f, a, a + 12) * (1 - drift(f, b, b + 10)), y: 0, s: 1, moving: (f >= a && f < a + 12) || (f >= b && f < b + 10) };
+}
 
 /* ------------------------------------------------------------------ */
 /* One clock: a smooth path through keys                               */
