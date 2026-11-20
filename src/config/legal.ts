@@ -238,7 +238,9 @@ export const LEGAL = {
   // and how they hear about Miamus; only Poofy Labs sees them (the approvals
   // page); never in a notification. Cleared 12 months after the request by
   // the nightly prune, or deleted sooner with the request (a rejected one
-  // after 30 days, an account that is deleted). No new service.
+  // after 30 days, an account that is deleted). Short anonymous summaries
+  // of the answers (no names or contact details) may be kept to decide what
+  // to improve (owner, 2026-11-20). No new service.
   policyVersion: "2026-11-20.1",
   effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
   /**
