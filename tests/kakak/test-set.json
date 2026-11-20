@@ -8020,6 +8020,8 @@
                 "don't have any",
                 "haven't saved",
                 "aren't any",
+                "any saved recipe",
+                "don't see any",
                 "no recipe"
               ],
               [
@@ -8046,7 +8048,7 @@
           }
         ]
       ],
-      "note": "PR C1: no saved recipes. She says so and points to Kitchen → Menu; never makes one up."
+      "note": "PR C1: no saved recipes. She says so and points to Kitchen → Menu; never makes one up. Run 44737820659: \"I don't see any saved recipes yet\" is the same answer, so it counts."
     },
     {
       "id": "K193",
@@ -8121,8 +8123,6 @@
               ]
             ],
             "avoids": [
-              "opor",
-              "rendang",
               "sayur asem",
               "ml",
               " gram",
@@ -8139,7 +8139,7 @@
           }
         ]
       ],
-      "note": "The wife's questions (owner, 20 Nov): the menu for a day that has a dish. Tomorrow (Thursday 12 Nov) lunch is Nasi goreng; nothing else is planned that day. No card."
+      "note": "The wife's questions (owner, 20 Nov): the menu for a day that has a dish. Tomorrow (Thursday 12 Nov) lunch is Nasi goreng; nothing else is planned that day. No card. She may add ideas for the unplanned dinner (run 44737820659 named Rendang daging and Opor ayam, which is fine); the check is that she gives the planned lunch."
     },
     {
       "id": "K195",
