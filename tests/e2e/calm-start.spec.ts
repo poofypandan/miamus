@@ -63,9 +63,10 @@ test("a brand-new household: the checklist alone, nothing above it, no tips", as
   await expect(whatsNew(page)).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Turn on notifications" })).toHaveCount(0);
   await expect(page.getByText("Add Miamus to your Home Screen for notifications.")).toHaveCount(0);
-  // Directly under the date ribbon: the next thing after the ribbon's block.
-  const before = await card.evaluate((el) => el.previousElementSibling?.querySelector("button")?.textContent ?? "");
-  expect(before).not.toBe("");
+  // The first thing on Today (Today v3: the date is a pill at the bottom now,
+  // so nothing sits above the checklist).
+  const before = await card.evaluate((el) => el.previousElementSibling?.textContent?.trim() ?? "");
+  expect(before).toBe("");
   expect(await page.evaluate((id) => localStorage.getItem(`miamus.setup-stage.${id}`), HOUSEHOLD_ID)).toBe("new");
 });
 
@@ -147,7 +148,7 @@ test("with a first task given, the prompts wait while the checklist asks itself;
 test("an established household sees one What's new card a week, not the backlog", async ({ context, page }) => {
   // Ari is on the roster, so both the couldn't-do and the bills cards apply.
   await installStub(context, { owner: { locale: "en" } });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   await expect(whatsNew(page)).toHaveCount(1, { timeout: 20_000 });
   await whatsNew(page).getByRole("button", { name: "Got it" }).last().click();

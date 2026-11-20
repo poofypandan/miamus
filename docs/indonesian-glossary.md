@@ -356,7 +356,11 @@ people are **staf** and **admin**.
 | See the first task done | **Lihat tugas pertama selesai** | Phase 175. Was "See it done / Lihat hasilnya". |
 | Ready for your staff today | **Siap untuk staf hari ini** | Phase 175: a new home, above the progress rows. |
 | Phone not linked yet | **HP belum terhubung** | Phase 175, on a person's row. |
-| Next up | **Berikutnya** | Phase 175, the folded day (later). |
+| Next up / Next | **Berikutnya** | Phase 175; Today v3 (21 Nov): the three rows after the circles. |
+| See all / Show less (Today's whole day) | **Lihat semua** / **Tampilkan lebih sedikit** | Today v3: the door beside Berikutnya. |
+| Latest (what has been finished today, behind Today's status) | **Terbaru** | Today v3: the sheet's title. "Finished today, the latest first." **Selesai hari ini, yang terbaru di atas.** |
+| Choose a day (the date pill's sheet) | **Pilih hari** | Today v3: "Sen 16" pill at the bottom left; while another day shows, **Hari ini** beside it. |
+| Nothing more today. | **Tidak ada lagi hari ini.** | Today v3: Next when the day has nothing left. |
 | How Miamus works here (Settings group) | **Cara Miamus bekerja di sini** | Phase 175: Features, Notifications, Kakak, Language, App lock. |
 | Activity and data (Settings group) | **Aktivitas dan data** | Phase 175. Not "Catatan", which already means Notes. |
 | Edit rooms | **Ubah ruangan** | Phase 175: the link on Rumah → Ruangan to the rooms editor. |

@@ -9,7 +9,7 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 
 // Indexed by Date.getDay(), so both start on Sunday.
-const DAY_LABELS = {
+export const DAY_LABELS = {
   id: ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"],
   en: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
 } as const;

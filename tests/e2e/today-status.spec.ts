@@ -87,13 +87,13 @@ test("all clear: All on track first, no Waiting group, the pill down with the li
     chores: [sweep(), mop()],
   });
   await at10(page);
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   await expect(status(page)).toBeVisible({ timeout: 20_000 });
   await expect(status(page)).toHaveAttribute("data-state", "ok");
   await expect(status(page)).toContainText("All on track");
   // Nothing is late at 10.00: the mop has the whole day.
-  await expect(status(page)).toContainText("1 of 2 done · nothing late");
+  await expect(status(page)).toHaveAttribute("aria-label", /1\ of\ 2\ done\ ·\ nothing\ late/);
 
   // Nothing waits, so the whole group is gone.
   await expect(page.getByTestId("waiting-for-you")).toBeHidden();
@@ -106,10 +106,9 @@ test("all clear: All on track first, no Waiting group, the pill down with the li
   expect(await top(page, status(page))).toBeLessThan(await top(page, progress));
   expect(await top(page, progress)).toBeLessThan(await top(page, pill));
 
-  // A tap on the status line opens Who did what.
+  // A tap on the status line opens Latest: what has been finished (Today v3).
   await status(page).click();
-  await expect(page).toHaveURL(/workload=/);
-  await expect(page.getByRole("dialog", { name: "Who did what" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Latest" })).toBeVisible();
   await page.keyboard.press("Escape");
 
   // Week keeps its pill on top; back on Day it is with the list again.
@@ -130,13 +129,13 @@ test("Bahasa Indonesia, a busy day: the rows waiting are counted once, in one gr
     repairs: [report()],
   });
   await at10(page);
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   await expect(status(page)).toBeVisible({ timeout: 20_000 });
   await expect(status(page)).toHaveAttribute("data-state", "waiting");
   // Two rows: what is late, and the repair report.
   await expect(status(page)).toContainText("2 menunggu Anda");
-  await expect(status(page)).toContainText("1 dari 3 selesai · 1 terlambat");
+  await expect(status(page)).toHaveAttribute("aria-label", /1\ dari\ 3\ selesai\ ·\ 1\ terlambat/);
 
   const waiting = page.getByTestId("waiting-for-you");
   await expect(waiting).toBeVisible();
@@ -207,7 +206,7 @@ test("an older home whose finished work is weeks back still gets its status line
 
   await expect(status(page)).toBeVisible({ timeout: 20_000 });
   await expect(status(page)).toContainText("All on track");
-  await expect(status(page)).toContainText("0 of 1 done · nothing late");
+  await expect(status(page)).toHaveAttribute("aria-label", /0\ of\ 1\ done\ ·\ nothing\ late/);
   await expect(page.getByRole("region", { name: "Set up your home" })).toHaveCount(0);
 });
 

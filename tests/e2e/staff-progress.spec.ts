@@ -83,7 +83,7 @@ test("a chores-only maid and a pets-only maid each show only their own kind, nev
     logs: [walkLog()],
   });
   await at10(page);
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   const card = progress(page);
   await expect(card).toBeVisible({ timeout: 20_000 });
@@ -151,7 +151,7 @@ test("someone on approved leave shows Libur, and their chore waits for anyone", 
     ],
   });
   await at10(page);
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   const dewi = row(page, "Dewi");
   await expect(dewi).toBeVisible({ timeout: 20_000 });
@@ -168,7 +168,7 @@ test("someone on approved leave shows Libur, and their chore waits for anyone", 
 test("Anyone tasks sit on their own small row, red once some are late", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, staff: [person(STAFF_ID, "Ari")], chores: [chore({ title: "Water the plants", assigned_to: null })] });
   await at10(page);
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   // The fixture's 13 routine slots are anyone's, plus the plants. At 10.00 the
   // two 07.00 potties and the 08.00 medicine are past their hour's grace.
@@ -216,7 +216,7 @@ test("amber when something couldn't be done, red only when late", async ({ conte
     ],
   });
   await at10(page);
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   const ari = row(page, "Ari");
   await expect(ari).toHaveAttribute("data-tone", "red", { timeout: 20_000 });
@@ -264,7 +264,7 @@ test("with Pets switched off, no pet counts and no pet routines on the Anyone ro
     logs: [walkLog()],
   });
   await at10(page);
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   await expect(row(page, "Ari").getByTestId("progress-house")).toHaveText("House 1/2", { timeout: 20_000 });
   await expect(page.getByTestId("progress-pets")).toHaveCount(0);
@@ -293,7 +293,7 @@ test("a routine added after its time today isn't late, counted or listed until t
     schedules: [newWalk(), WATER],
   });
   await at10(page);
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   const syam = row(page, "Syam");
   await expect(syam.getByTestId("progress-pets")).toHaveText("Pets 0/1", { timeout: 20_000 });

@@ -112,7 +112,7 @@ test("Bahasa Indonesia: Coming up on Today, the tutorial, and a yearly bill's fo
   });
   // One What's new card a week (Phase 172): this test is about this one.
   const stub = await installStub(context, { owner: { locale: "id" }, chores: [pbb, stnk], whatsNewWeek: "bills-2026-11" });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   // Two days out, inside its 3-day window; the yearly one isn't yet.
   const line = page.getByRole("button", { name: /^Segera: PBB · / });
@@ -193,7 +193,7 @@ test("Coming up leaves out a day ahead that's already done (Codex, PR #60)", asy
     completed_by: OWNER_PROFILE_ID,
   });
   await installStub(context, { owner: { locale: "en" }, chores: [internet, water, paidEarly] });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
   await expect(page.getByRole("button", { name: /^Coming up: Water \(PDAM\) · / })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: /^Coming up:.*Internet/ })).toHaveCount(0);
 });

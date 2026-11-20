@@ -147,7 +147,10 @@ test("tomorrow's own chores show read-only; an admin with none sees no card", as
   await expect(myTasks(page)).toHaveCount(0);
 
   // Tomorrow: the card, without circles.
+  // The week is in the date pill's sheet (Today v3).
+  await page.getByTestId("date-pill").click();
   await page
+    .getByRole("dialog")
     .getByRole("button")
     .filter({ hasText: new RegExp(`^\\D*${tomorrow.getDate()}$`) })
     .first()
@@ -263,8 +266,11 @@ test("a carried-over chore finished today can be marked not done from its own da
   await expect(page.getByText("Done: Pay the electricity bill")).toBeVisible();
   expect(bill).toMatchObject({ status: "completed", completed_by: OWNER_PROFILE_ID });
 
-  // Its own day: no circles, but the sheet can still reopen it.
+  // Its own day: no circles, but the sheet can still reopen it. The week is
+  // in the date pill's sheet (Today v3).
+  await page.getByTestId("date-pill").click();
   await page
+    .getByRole("dialog")
     .getByRole("button")
     .filter({ hasText: new RegExp(`^\\D*${yesterday.getDate()}$`) })
     .first()
