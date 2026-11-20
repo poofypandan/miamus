@@ -72,7 +72,7 @@ export function MenuTodayCard({ day, enabled = true }: { day: string; enabled?: 
                   </span>
                   {/* Can we cook it? (D18): "Kurang 1: Serai" before the cook starts. */}
                   {recipe && !dish.cooked_at && day >= today && (
-                    <CookStatus check={checkOf(recipe, servings)} lang="id" later={day > today} size="sm" />
+                    <CookStatus check={checkOf(recipe, servings)} lang="id" later={day > today} size="sm" max={2} />
                   )}
                 </span>
                 {servings !== null && <span className="shrink-0 text-sm text-muted-foreground">{servingsLabel(servings, "id")}</span>}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { CalendarPlus, Languages, Minus, Pencil, Plus } from "lucide-react";
+import { CalendarPlus, Languages, Minus, Pencil, Plus, ShoppingBasket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -183,6 +183,8 @@ export function RecipeBody({
           ) : (
             <ul className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
               {recipe.ingredients.map((line) => {
+                // The missing row itself, marked as the line above says (Fable S4).
+                const short = !!cook && check.missingLines.includes(line.id);
                 const amount =
                   line.amount === null ? null : scaleAmount(line.amount, line.unit, recipe.servings, servings);
                 return (
@@ -200,6 +202,13 @@ export function RecipeBody({
                     <span className={cn("min-w-0 flex-1 text-gray-900", big ? "text-lg" : "text-sm")}>
                       {lineName(line, inventoryItems, forStaff, recipe.written_in)}
                     </span>
+                    {short && (
+                      <ShoppingBasket
+                        className={cn("shrink-0 self-center", big ? "size-5" : "size-4", check.missing.every((m) => m.listed) ? "text-muted-foreground" : "text-amber-700")}
+                        strokeWidth={2}
+                        aria-label={readLang === "id" ? "Kurang" : "Missing"}
+                      />
+                    )}
                   </li>
                 );
               })}

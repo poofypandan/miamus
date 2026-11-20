@@ -1,7 +1,7 @@
 // Can we cook it? (D18, owner 20 Nov): the per-line rules, the lines shown
 // and the Recipes pill's order.
 import { describe, expect, it } from "vitest";
-import { cookCheck, cookLine, readyFirst, uncheckedLine } from "@/lib/can-cook";
+import { cookCheck, cookLine, cookTone, readySplit, uncheckedLine, type CookCheck } from "@/lib/can-cook";
 import type { RecipeWithLines } from "@/lib/recipes";
 import type { InventoryItem, RecipeIngredient } from "@/types/database";
 
@@ -68,22 +68,24 @@ const on = { amounts: true, forStaff: false };
 describe("cookCheck by status (Kitchen amounts off)", () => {
   it("is ready when every linked item is Enough", () => {
     const r = recipe([line({ item_id: "ayam", name: "Ayam", amount: 1, unit: "kg" })]);
-    expect(cookCheck(r, null, [ayam], off)).toEqual({ state: "ready", missing: [], unchecked: [] });
+    expect(cookCheck(r, null, [ayam], off)).toEqual({ state: "ready", missing: [], unchecked: [], missingLines: [] });
   });
 
   it("lists Out and Running low as missing, once each, in the recipe's order", () => {
     const r = recipe([
-      line({ item_id: "serai", name: "Serai" }),
-      line({ item_id: "ayam", name: "Ayam" }),
-      line({ item_id: "santan", name: "Santan", amount: 400, unit: "ml" }),
-      line({ item_id: "serai", name: "Serai lagi" }),
+      line({ id: "a", item_id: "serai", name: "Serai" }),
+      line({ id: "b", item_id: "ayam", name: "Ayam" }),
+      line({ id: "c", item_id: "santan", name: "Santan", amount: 400, unit: "ml" }),
+      line({ id: "d", item_id: "serai", name: "Serai lagi" }),
     ]);
     const check = cookCheck(r, null, [ayam, santanOut, seraiLow], off);
     expect(check.state).toBe("missing");
     expect(check.missing).toEqual([
-      { itemId: "serai", name: "Serai" },
-      { itemId: "santan", name: "Santan" },
+      { itemId: "serai", name: "Serai", listed: true },
+      { itemId: "santan", name: "Santan", listed: true },
     ]);
+    // The rows themselves, for marking them in the ingredient list (Fable S4).
+    expect(check.missingLines).toEqual(["a", "d", "c"]);
   });
 
   it("ignores amounts while Kitchen amounts is off, even on a tracked item", () => {
@@ -94,14 +96,14 @@ describe("cookCheck by status (Kitchen amounts off)", () => {
 
   it("checks a free name that is exactly one item's name, by that item's status", () => {
     const r = recipe([line({ name: "  santan " })]);
-    expect(cookCheck(r, null, [santanOut], off).missing).toEqual([{ itemId: "santan", name: "santan" }]);
+    expect(cookCheck(r, null, [santanOut], off).missing).toEqual([{ itemId: "santan", name: "santan", listed: true }]);
   });
 
   it("leaves a free name with no item, or two items of that name, not checked", () => {
     const twice = [item({ id: "a", name: "Daun salam" }), item({ id: "b", name: "Daun salam" })];
     const r = recipe([line({ name: "Lengkuas" }), line({ name: "Daun salam" }), line({ name: "lengkuas" }), line({ item_id: "ayam", name: "Ayam" })]);
     const check = cookCheck(r, null, [ayam, ...twice], off);
-    expect(check).toEqual({ state: "ready", missing: [], unchecked: ["Lengkuas", "Daun salam"] });
+    expect(check).toMatchObject({ state: "ready", missing: [], unchecked: ["Lengkuas", "Daun salam"] });
   });
 
   it("is unknown with no lines, or only lines it cannot check", () => {
@@ -111,7 +113,7 @@ describe("cookCheck by status (Kitchen amounts off)", () => {
 
   it("reads a linked line whose item was deleted (item_id kept but gone) as not checked", () => {
     const r = recipe([line({ item_id: "gone", name: "Kemiri" })]);
-    expect(cookCheck(r, null, [ayam], off)).toEqual({ state: "unknown", missing: [], unchecked: ["Kemiri"] });
+    expect(cookCheck(r, null, [ayam], off)).toMatchObject({ state: "unknown", missing: [], unchecked: ["Kemiri"] });
   });
 });
 
@@ -127,7 +129,7 @@ describe("cookCheck with Kitchen amounts on", () => {
   });
 
   it("scales to the servings", () => {
-    expect(cookCheck(opor, 8, [ayamTracked], on).missing).toEqual([{ itemId: "ayam", name: "Ayam" }]);
+    expect(cookCheck(opor, 8, [ayamTracked], on).missing).toEqual([{ itemId: "ayam", name: "Ayam", listed: true }]);
     expect(cookCheck(opor, 2, [ayamTracked], on).state).toBe("ready");
   });
 
@@ -142,7 +144,7 @@ describe("cookCheck with Kitchen amounts on", () => {
   it("checks both a counted line and a by-status line of one item (Codex, PR #155)", () => {
     const rice = item({ id: "beras", name: "Beras", track_amount: true, quantity: 0.2, unit: "kg", stock_status: "ok" });
     const r = recipe([line({ item_id: "beras", name: "Beras", amount: 1, unit: "kg" }), line({ name: "Beras" })]);
-    expect(cookCheck(r, null, [rice], on).missing).toEqual([{ itemId: "beras", name: "Beras" }]);
+    expect(cookCheck(r, null, [rice], on).missing).toEqual([{ itemId: "beras", name: "Beras", listed: false }]);
     const plenty = { ...rice, quantity: 5 } as InventoryItem;
     expect(cookCheck(r, null, [plenty], on).state).toBe("ready");
   });
@@ -159,9 +161,9 @@ describe("names as the phone reads them", () => {
       written_in: "en",
     });
     const coconut = item({ id: "santan", name: "Coconut milk", stock_status: "out" });
-    expect(cookCheck(r, null, [coconut], { amounts: false, forStaff: true })).toEqual({
+    expect(cookCheck(r, null, [coconut], { amounts: false, forStaff: true })).toMatchObject({
       state: "missing",
-      missing: [{ itemId: "santan", name: "Santan kara" }],
+      missing: [{ itemId: "santan", name: "Santan kara", listed: true }],
       unchecked: ["Serai"],
     });
     expect(cookCheck(r, null, [coconut], off).missing[0].name).toBe("Coconut milk");
@@ -169,15 +171,17 @@ describe("names as the phone reads them", () => {
 });
 
 describe("the lines", () => {
-  const ready = { state: "ready" as const, missing: [], unchecked: [] };
-  const missing = {
-    state: "missing" as const,
+  const ready: CookCheck = { state: "ready", missing: [], unchecked: [], missingLines: [] };
+  const missing: CookCheck = {
+    state: "missing",
     missing: [
-      { itemId: "a", name: "Santan" },
-      { itemId: "b", name: "Serai" },
+      { itemId: "a", name: "Santan", listed: false },
+      { itemId: "b", name: "Serai", listed: true },
     ],
     unchecked: ["Lengkuas"],
+    missingLines: [],
   };
+  const listed: CookCheck = { ...missing, missing: missing.missing.map((m) => ({ ...m, listed: true })) };
   it("reads in both languages, with 'now' for a later day", () => {
     expect(cookLine(ready, "en")).toBe("Ready to cook");
     expect(cookLine(ready, "id")).toBe("Bahan lengkap");
@@ -185,25 +189,37 @@ describe("the lines", () => {
     expect(cookLine(ready, "id", { later: true })).toBe("Bahan lengkap saat ini");
     expect(cookLine(missing, "en")).toBe("Missing 2: Santan, Serai");
     expect(cookLine(missing, "id", { later: true })).toBe("Kurang 2: Santan, Serai");
-    expect(cookLine({ state: "unknown", missing: [], unchecked: [] }, "en")).toBeNull();
+    expect(cookLine({ ...ready, state: "unknown" }, "en")).toBeNull();
   });
-  it("names what it couldn't check", () => {
-    expect(uncheckedLine(missing, "en")).toBe("Not checked: Lengkuas");
-    expect(uncheckedLine(missing, "id")).toBe("Belum dicek: Lengkuas");
+  it("is a calm To buy once everything missing is on the shopping list (Fable S2)", () => {
+    expect(cookTone(missing)).toBe("missing");
+    expect(cookTone(listed)).toBe("listed");
+    expect(cookLine(listed, "en")).toBe("To buy: Santan, Serai");
+    expect(cookLine(listed, "id")).toBe("Perlu dibeli: Santan, Serai");
+  });
+  it("caps the names where space is short (Fable S5)", () => {
+    const five: CookCheck = { ...missing, missing: ["A", "B", "C", "D", "E"].map((n) => ({ itemId: n, name: n, listed: false })) };
+    expect(cookLine(five, "en", { max: 2 })).toBe("Missing 5: A, B +3");
+    expect(cookLine(five, "en")).toBe("Missing 5: A, B, C, D, E");
+  });
+  it("says what isn't on the list (Fable W1)", () => {
+    expect(uncheckedLine(missing, "en")).toBe("Not on your list: Lengkuas");
+    expect(uncheckedLine(missing, "id")).toBe("Belum ada di daftar: Lengkuas");
     expect(uncheckedLine(ready, "id")).toBeNull();
   });
 });
 
-describe("readyFirst", () => {
-  it("puts ready first, then fewest missing, unknown last, keeping the order within each", () => {
-    const checks: Record<string, Parameters<typeof cookLine>[0]> = {
-      a: { state: "missing", missing: [{ itemId: "1", name: "x" }, { itemId: "2", name: "y" }], unchecked: [] },
-      b: { state: "unknown", missing: [], unchecked: [] },
-      c: { state: "ready", missing: [], unchecked: [] },
-      d: { state: "missing", missing: [{ itemId: "1", name: "x" }], unchecked: [] },
-      e: { state: "ready", missing: [], unchecked: [] },
+describe("readySplit (the Recipes pill filters, Fable S3)", () => {
+  it("keeps the ready recipes, in order, and counts the ones that need shopping", () => {
+    const m = (n: number): CookCheck => ({ state: "missing", missing: Array.from({ length: n }, (_, i) => ({ itemId: String(i), name: "x", listed: true })), unchecked: [], missingLines: [] });
+    const checks: Record<string, CookCheck> = {
+      a: m(2),
+      b: { state: "unknown", missing: [], unchecked: [], missingLines: [] },
+      c: { state: "ready", missing: [], unchecked: [], missingLines: [] },
+      d: m(1),
+      e: { state: "ready", missing: [], unchecked: [], missingLines: [] },
     };
-    expect(readyFirst(["a", "b", "c", "d", "e"], (k) => checks[k])).toEqual(["c", "e", "d", "a", "b"]);
+    expect(readySplit(["a", "b", "c", "d", "e"], (k) => checks[k])).toEqual({ ready: ["c", "e"], needShopping: 2 });
   });
 });
 

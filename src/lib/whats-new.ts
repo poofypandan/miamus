@@ -37,12 +37,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     steps: {
       en: [
         "Every recipe and planned dish now shows Ready to cook, or what is missing, such as Missing 1: coconut milk. It checks what is at home now.",
-        "It reads Enough, Running low and Out, and the amounts when Kitchen amounts is on. Ingredients linked to your list are checked; a typed-in one Miamus can't match to your list shows as Not checked.",
+        "It goes by Enough, Running low and Out. An ingredient that isn't on your list shows as Not on your list.",
         "Recipes and the menu are now in every home's Kitchen. In Recipes, Ready to cook now puts what you can cook first.",
       ],
       id: [
         "Setiap resep dan masakan di menu sekarang menunjukkan Bahan lengkap, atau yang kurang, misalnya Kurang 1: santan. Yang dicek adalah stok di rumah saat ini.",
-        "Yang dibaca adalah Masih ada, Hampir habis, dan Habis, juga jumlahnya kalau Jumlah bahan menyala. Bahan yang terhubung ke daftar Anda dicek; bahan ketikan yang tidak cocok dengan daftar Anda tampil sebagai Belum dicek.",
+        "Dasarnya Masih ada, Hampir habis, dan Habis. Bahan yang belum ada di daftar Anda tampil sebagai Belum ada di daftar.",
         "Resep dan menu sekarang ada di Dapur setiap rumah. Di Resep, Bahan lengkap menaruh yang bisa dimasak di paling atas.",
       ],
     },
@@ -740,7 +740,7 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
     title: "Baru: bahannya lengkap?",
     lines: [
       "Di Menu hari ini, setiap masakan menunjukkan Bahan lengkap, atau yang kurang, misalnya Kurang 1: santan. Jadi Anda tahu sebelum mulai masak.",
-      "Bahan yang kurang? Tandai Hampir habis atau Habis supaya masuk daftar Belanja.",
+      "Bahan yang kurang biasanya sudah ada di daftar Belanja. Belum ada? Tandai Hampir habis atau Habis.",
     ],
   },
   {

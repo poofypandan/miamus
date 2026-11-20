@@ -11,7 +11,7 @@ import { RecipeDetailSheet } from "@/components/kitchen/recipe-detail-sheet";
 import { RecipeFormSheet } from "@/components/kitchen/recipe-form-sheet";
 import { CookStatus, useCookCheck } from "@/components/kitchen/cook-status";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { readyFirst } from "@/lib/can-cook";
+import { readySplit } from "@/lib/can-cook";
 import { pushInPlace } from "@/lib/in-place-navigation";
 import { useHousehold } from "@/context/household-context";
 import { useRecipes } from "@/hooks/use-recipes";
@@ -46,8 +46,8 @@ export function RecipesView({
   const [editing, setEditing] = useState<{ recipe: RecipeWithLines | null; focus?: "indonesian" } | null>(null);
 
   // Can we cook it? (D18): each recipe at its own servings, against what's
-  // at home now; the pill "Ready to cook now" puts the ready ones first, in
-  // the URL as &ready=1 like every toggle (CLAUDE.md, State Persistence).
+  // at home now; the pill "Ready to cook now" shows only those (Fable S3),
+  // in the URL as &ready=1 like every toggle (CLAUDE.md, State Persistence).
   const checkOf = useCookCheck(!owner);
   const params = useSearchParams();
   const pathname = usePathname();
@@ -64,10 +64,10 @@ export function RecipesView({
   const showPill = recipes.length > 1 && anyChecked;
 
   const shownName = (r: RecipeWithLines) => (owner ? r.name : staffText(r).name);
-  const sorted = useMemo(() => {
-    const byName = sortRecipes(recipes, owner ? (r) => r.name : (r) => staffText(r).name);
-    return readyView && showPill ? readyFirst(byName, (r) => checks.get(r.id)!) : byName;
-  }, [recipes, owner, readyView, showPill, checks]);
+  const byName = useMemo(() => sortRecipes(recipes, owner ? (r) => r.name : (r) => staffText(r).name), [recipes, owner]);
+  const split = useMemo(() => readySplit(byName, (r) => checks.get(r.id)!), [byName, checks]);
+  const filtering = readyView && showPill;
+  const sorted = filtering ? split.ready : byName;
   const q = query.trim().toLowerCase();
   const shown = q
     ? sorted.filter((r) => r.name.toLowerCase().includes(q) || (r.name_id ?? "").toLowerCase().includes(q))
@@ -168,7 +168,7 @@ export function RecipesView({
                     {shownName(recipe)}
                   </span>
                   <span className="truncate text-xs text-muted-foreground">{detail}</span>
-                  <CookStatus check={checks.get(recipe.id) ?? checkOf(recipe)} lang={lang} size={owner ? "xs" : "sm"} />
+                  <CookStatus check={checks.get(recipe.id) ?? checkOf(recipe)} lang={lang} size={owner ? "xs" : "sm"} max={2} />
                   {missing && (
                     <span className="flex items-center gap-1 truncate text-xs font-medium text-amber-700">
                       <Languages className="size-3 shrink-0" />
@@ -182,7 +182,17 @@ export function RecipesView({
           })}
           {shown.length === 0 && (
             <p className="px-3 py-5 text-center text-sm text-muted-foreground">
-              {tr("No recipe by that name.", "Tidak ada resep dengan nama itu.")}
+              {filtering && !q
+                ? tr("Nothing is ready to cook right now.", "Belum ada yang bahannya lengkap saat ini.")
+                : tr("No recipe by that name.", "Tidak ada resep dengan nama itu.")}
+            </p>
+          )}
+          {filtering && split.needShopping > 0 && (
+            <p className="px-3 py-3 text-center text-xs text-muted-foreground">
+              {tr(
+                split.needShopping === 1 ? "1 more needs shopping first" : `${split.needShopping} more need shopping first`,
+                `${split.needShopping} resep lagi perlu belanja dulu`
+              )}
             </p>
           )}
         </div>

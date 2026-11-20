@@ -123,15 +123,15 @@ test("an owner sees what each dish is missing on the week, with Kitchen amounts 
   await installStub(context, { owner: { locale: "en" }, features: { kitchen: false }, items, recipes, menu });
   await page.goto("/dashboard?module=inventory&kitchen=menu");
   const today = page.locator(`section[data-day="${day(0)}"]`);
-  await expect(today.getByText("Missing 1: Santan")).toBeVisible({ timeout: 20_000 });
+  await expect(today.getByText("To buy: Santan")).toBeVisible({ timeout: 20_000 });
   // A later day says "now", so it isn't read as a promise for that day.
   await expect(page.locator(`section[data-day="${day(1)}"]`).getByText("Ready to cook now")).toBeVisible();
   await shot(page, "owner-en-week");
 
   await today.getByRole("button", { name: /Opor ayam/ }).click();
   const sheet = page.getByRole("dialog");
-  await expect(sheet.getByText("Missing 1: Santan")).toBeVisible();
-  await expect(sheet.getByText("Not checked: Serai")).toBeVisible();
+  await expect(sheet.getByText("To buy: Santan")).toBeVisible();
+  await expect(sheet.getByText("Not on your list: Serai")).toBeVisible();
   await shot(page, "owner-en-dish");
 });
 
@@ -140,19 +140,32 @@ test("the Recipes pill puts what can be cooked now first, in the URL", async ({ 
   await page.goto("/dashboard?module=inventory&kitchen=menu&recipes=1");
   const rows = page.getByRole("button", { name: /Opor ayam|Nasi goreng/ });
   await expect(rows.first()).toContainText("Nasi goreng", { timeout: 20_000 });
-  await expect(page.getByRole("button", { name: /Opor ayam/ })).toContainText("Missing 1: Santan");
+  await expect(page.getByRole("button", { name: /Opor ayam/ })).toContainText("To buy: Santan");
   await expect(page.getByRole("button", { name: /Nasi goreng/ })).toContainText("Ready to cook");
-  // Alphabetical under All; ready first under Ready to cook now.
+  // Alphabetical under All; only what is ready under Ready to cook now (Fable S3).
   await page.getByRole("tab", { name: "Ready to cook now" }).click();
   await expect(page).toHaveURL(/ready=1/);
-  await expect(rows.first()).toContainText("Nasi goreng");
+  await expect(page.getByRole("button", { name: /Nasi goreng/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Opor ayam/ })).toHaveCount(0);
+  await expect(page.getByText("1 more needs shopping first")).toBeVisible();
   await shot(page, "owner-en-recipes-ready");
+});
+
+test("amber Missing while something isn't on the shopping list yet (Kitchen amounts on, a short amount still Enough)", async ({ context, page }) => {
+  const ayamCounted = { ...ayam, track_amount: true, unit: "kg", quantity: 0.3, stock_status: "ok" };
+  await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [ayamCounted, santan, bawang], recipes, menu });
+  await page.goto("/dashboard?module=inventory&kitchen=menu");
+  await expect(page.locator(`section[data-day="${day(0)}"]`).getByText("Missing 2: Ayam, Santan")).toBeVisible({ timeout: 20_000 });
+  await page.locator(`section[data-day="${day(0)}"]`).getByRole("button", { name: /Opor ayam/ }).click();
+  // The rows themselves are marked (Fable S4).
+  await expect(page.getByRole("dialog").getByLabel("Missing")).toHaveCount(2);
+  await shot(page, "owner-en-missing-amber");
 });
 
 test("in Bahasa Indonesia for an owner who chose it", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" }, features: { kitchen: false }, items, recipes, menu });
   await page.goto("/dashboard?module=inventory&kitchen=menu");
-  await expect(page.locator(`section[data-day="${day(0)}"]`).getByText("Kurang 1: Santan")).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(`section[data-day="${day(0)}"]`).getByText("Perlu dibeli: Santan")).toBeVisible({ timeout: 20_000 });
   await expect(page.locator(`section[data-day="${day(1)}"]`).getByText("Bahan lengkap saat ini")).toBeVisible();
   await shot(page, "owner-id-week");
 });
@@ -161,13 +174,13 @@ test("a staff phone sees what is missing on Menu hari ini, in Indonesian, with n
   await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: false }, items, recipes, menu });
   await page.goto("/staff");
   const card = page.getByRole("region", { name: "Menu hari ini", exact: true });
-  await expect(card.getByText("Kurang 1: Santan")).toBeVisible({ timeout: 20_000 });
+  await expect(card.getByText("Perlu dibeli: Santan")).toBeVisible({ timeout: 20_000 });
   await expect(card).not.toContainText(/Rp|Missing|Ready/);
   await shot(page, "staff-id-menu-today");
   await card.getByRole("button", { name: /Opor ayam/ }).click();
   const sheet = page.getByRole("dialog");
-  await expect(sheet.getByText("Kurang 1: Santan")).toBeVisible();
-  await expect(sheet.getByText("Belum dicek: Serai")).toBeVisible();
+  await expect(sheet.getByText("Perlu dibeli: Santan")).toBeVisible();
+  await expect(sheet.getByText("Belum ada di daftar: Serai")).toBeVisible();
   await shot(page, "staff-id-dish");
 });
 

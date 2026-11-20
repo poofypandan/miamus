@@ -467,7 +467,7 @@ function DayCard({
                         {dish.notes && <span className="truncate text-xs text-muted-foreground">{dish.notes}</span>}
                         {/* Can we cook it? (D18): uncooked dishes today or later, against what's there now. */}
                         {recipe && !dish.cooked_at && !past && (
-                          <CookStatus check={checkOf(recipe, servings)} lang={lang} later={day > today} size="xs" />
+                          <CookStatus check={checkOf(recipe, servings)} lang={lang} later={day > today} size="xs" max={2} />
                         )}
                       </span>
                       {servings !== null && (
