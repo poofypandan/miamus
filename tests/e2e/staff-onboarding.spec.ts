@@ -533,6 +533,7 @@ test("en: a trial for someone who does Chores: chores that fail to load say so, 
   fail = false;
   await sheet.getByRole("button", { name: "Try again" }).click();
   await expect(sheet.getByRole("button", { name: "Add Wati" })).toBeEnabled();
+});
 
 // Step 6: the trial reminder's two answers on Today (decision 3), and step 8:
 // the first-day line on Tugas Hari Ini (decision 4).
@@ -670,6 +671,32 @@ test("staff: a walk's start photo doesn't end the first-day line; only a finishe
         staff_id: STAFF_ID,
         completed_at: new Date().toISOString(),
         sub_type: "check_in",
+      },
+    ],
+  });
+  await page.addInitScript(
+    ([staffId, day]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day })),
+    [STAFF_ID, localDay()]
+  );
+  await page.goto("/staff");
+  await expect(page.getByTestId("first-day-line")).toBeVisible({ timeout: 20_000 });
+});
+
+test("staff: a chore someone else finished doesn't end the first-day line (Codex, PR #174)", async ({ context, page }) => {
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    chores: [
+      {
+        ...trialTask("Sapu teras"),
+        id: "00000000-0000-4000-8000-0000000006c1",
+        category: "cleaning",
+        assigned_to: null,
+        status: "completed",
+        completed_by: OWNER_PROFILE_ID,
+        completed_at: new Date().toISOString(),
+        before_photo_url: "a.jpg",
+        after_photo_url: "b.jpg",
       },
     ],
   });

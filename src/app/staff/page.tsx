@@ -484,7 +484,8 @@ function TasksView() {
             staffId={staffId}
             // A chore or a pet routine done today (Codex, PR #174).
             anyDone={
-              chores.some((c) => c.status === "completed") ||
+              // Finished by them, not by someone else (Codex, PR #174).
+              chores.some((c) => c.status === "completed" && !!staffId && c.task.completed_by === staffId) ||
               // A walk's start and arrived photos leave it open (scheduleEngine): only a finish counts.
               logs.some(
                 (l) =>
