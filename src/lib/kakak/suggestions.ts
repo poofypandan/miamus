@@ -701,7 +701,7 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         s.entries.length <= 10 &&
         s.entries.every((e: Record<string, unknown>) =>
           e?.type === "item"
-            ? okId(e.itemId, false) && (e.status === "low" || e.status === "out")
+            ? okId(e.itemId, false) && (e.status === "low" || e.status === "out" || e.status === "ok")
             : e?.type === "note" && okText(e.note, 120, false) && okId(e.petId, true),
         )
       );

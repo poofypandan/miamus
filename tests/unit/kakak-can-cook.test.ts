@@ -754,6 +754,8 @@ describe("\"I bought it\" and what is running low (E2)", () => {
     const [card] = toSuggestions(household, refs, names, "add_to_shopping_list", { items: [{ item: "I2", status: "ok", note: null, pet: null }] });
     expect(card).toMatchObject({ kind: "shopping", entries: [{ type: "item", name: "Santan", status: "ok" }] });
     expect(clientVersionFor(card)).toBe(5);
+    // The page's own check before saving lets it through (Codex, PR #168).
+    expect(isSaveableSuggestion(card)).toBe(true);
     expect(needsNewerApp(card, 4)).toBe(true);
     const shown = describeSuggestion(card, "id");
     expect(shown.rows).toEqual([{ label: "Sudah dibeli", value: "Santan · Masih ada" }]);
