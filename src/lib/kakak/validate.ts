@@ -401,7 +401,11 @@ export function validateToolCall(
       }
       bool(errors, "add_missing", input.add_missing);
       const recipe = (household.recipes ?? []).find((r) => r.ref === input.recipe);
-      if (recipe && input.add_missing === true && recipe.missing.length === 0) {
+      // With amounts on, another number of servings is checked again on the
+      // server (suggestions.ts), so only the recipe's own servings can be
+      // known to need nothing.
+      const recheck = !household.kitchenOff && input.servings !== 0;
+      if (recipe && input.add_missing === true && recipe.missing.length === 0 && !recheck) {
         errors.push(`${recipe.ref} is missing nothing: set add_missing false`);
       }
       const planned = (household.menu ?? []).find(

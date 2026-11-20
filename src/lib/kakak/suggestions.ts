@@ -321,7 +321,8 @@ export function toSuggestions(
   const title = recipe ? recipe.name : typed && typed !== NONE ? typed.slice(0, 80) : null;
   if (!title || !isDay(input.day) || !(DISH_MEALS as readonly unknown[]).includes(input.meal)) return [];
   const servings = Number.isInteger(input.servings) && (input.servings as number) >= 1 && (input.servings as number) <= 50 ? (input.servings as number) : null;
-  const missing = recipe?.missing ?? [];
+  // At the servings asked for, when the owner gave a number (Codex, PR #156).
+  const missing = (recipe && servings && recipe.missingFor ? recipe.missingFor(servings) : recipe?.missing) ?? [];
   const add = input.add_missing === true && missing.length > 0;
   const dish: MenuDishSuggestion = {
     kind: "menu_dish",

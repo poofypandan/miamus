@@ -139,6 +139,12 @@ export interface RecipeRef {
   id: string;
   name: string;
   missing: { itemId: string; name: string; status: "low" | "out" }[];
+  /**
+   * The same check at another number of servings (Codex, PR #156): with
+   * Kitchen amounts on, 8 servings may need more than the recipe's 4.
+   * Server only; absent on refs built elsewhere (the eval).
+   */
+  missingFor?: (servings: number) => { itemId: string; name: string; status: "low" | "out" }[];
 }
 
 /**
@@ -412,7 +418,15 @@ function kitchenFor(
       updated_at: "",
       ingredients: [...row.ingredients].sort((a, b) => a.position - b.position),
     } as unknown as RecipeWithLines;
-    const check = cookCheck(recipe, null, items, { amounts, forStaff: false });
+    const checkAt = (servings: number | null) => cookCheck(recipe, servings, items, { amounts, forStaff: false });
+    const check = checkAt(null);
+    const missingOf = (found: typeof check) =>
+      found.missing.map((m) => {
+        const item = items.find((i) => i.id === m.itemId)!;
+        const status: "low" | "out" =
+          item.stock_status === "low" || item.stock_status === "out" ? item.stock_status : item.quantity > 0 ? "low" : "out";
+        return { itemId: m.itemId, name: cleanName(m.name, 60), status };
+      });
     const name = cleanName(row.name, 60);
     const nameId = row.name_id && cleanName(row.name_id, 60) !== name ? cleanName(row.name_id, 60) : null;
     recipes.push({
@@ -427,11 +441,8 @@ function kitchenFor(
       id: row.id,
       // The dish's title on the card: the whole name (recipes allow 80).
       name: cleanName(row.name, 80),
-      missing: check.missing.map((m) => {
-        const item = items.find((i) => i.id === m.itemId)!;
-        const status = item.stock_status === "low" || item.stock_status === "out" ? item.stock_status : item.quantity > 0 ? "low" : "out";
-        return { itemId: m.itemId, name: cleanName(m.name, 60), status };
-      }),
+      missing: missingOf(check),
+      missingFor: (servings) => missingOf(checkAt(servings)),
     };
     byId.set(row.id, ref);
   }

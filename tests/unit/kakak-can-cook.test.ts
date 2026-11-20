@@ -111,7 +111,7 @@ describe("what Kakak is told", () => {
     const on = built({ kitchenOn: true, featuresRead: true });
     expect(on.household.recipes?.[0].missing).toEqual(["Ayam", "Santan"]);
     // The server keeps the ids and the status each goes on the list with.
-    expect(on.refs.recipes?.D1).toEqual({
+    expect(on.refs.recipes?.D1).toMatchObject({
       id: id(41),
       name: "Opor ayam",
       missing: [
@@ -239,6 +239,20 @@ describe("the cards", () => {
     expect(shopping).toMatchObject({ kind: "shopping" });
     expect((shopping as Extract<KakakSuggestion, { kind: "shopping" }>).entries).toHaveLength(10);
     expect(dish).toMatchObject({ missing: ["Bahan 10", "Bahan 11"] });
+  });
+
+  it("checks again at the servings asked for, while Kitchen amounts is on (Codex, PR #156)", () => {
+    const rice = item(70, "Beras merah", { track_amount: true, unit: "g", quantity: 600 });
+    const nasi = recipe(71, "Nasi merah", [line({ item_id: rice.id, name: "Beras merah", amount: 500, unit: "g" })]);
+    const b = built({ items: [rice], recipes: [nasi], menu: [], kitchenOn: true, featuresRead: true });
+    expect(b.household.recipes?.[0].state).toBe("ready");
+    // The recipe's own 4 servings need nothing; 8 need 1 kg.
+    expect(validateToolCall(b.household, "plan_dish", plan({ servings: 0 })).ok).toBe(false);
+    expect(validateToolCall(b.household, "plan_dish", plan({ servings: 8 }))).toEqual({ ok: true });
+    const cards = toSuggestions(b.household, b.refs, b.names, "plan_dish", plan({ servings: 8 }));
+    expect(cards[1]).toEqual({ kind: "shopping", entries: [{ type: "item", itemId: rice.id, name: "Beras merah", status: "low" }] });
+    // Fewer servings than the recipe: nothing more to buy, so the Menu card alone.
+    expect(toSuggestions(b.household, b.refs, b.names, "plan_dish", plan({ servings: 2 })).map((c) => c.kind)).toEqual(["menu_dish"]);
   });
 
   it("other tools still make one card", () => {
