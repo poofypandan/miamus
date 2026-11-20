@@ -422,6 +422,7 @@ people are **staf** and **admin**.
 | Get tomorrow's ingredients ready · Take out the kitchen rubbish · Clean the freezer | **Siapkan bahan untuk besok · Buang sampah dapur · Bersihkan freezer** | Staff onboarding (owner decision 6): three more chore titles for whoever has the kitchen, unticked. Staff read the Indonesian. |
 | Sri is added · {n} chores are Sri's from today. | **Sri sudah ditambahkan** · **{n} tugas jadi milik Sri mulai hari ini.** | Staff onboarding step 2: the sheet after Add. |
 | Sri is already on the staff list. | **Sri sudah ada di daftar staf.** | Staff onboarding step 2: the same name typed again. |
+| A name can't have < or > in it. | **Nama tidak boleh berisi < atau >.** | Staff onboarding step 2: under the name. The first-run card's button is **Tambah staf** too (was Tambah Orang). |
 
 ## Formatting
 

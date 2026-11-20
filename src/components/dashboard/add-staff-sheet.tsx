@@ -95,7 +95,7 @@ function AddStaffForm({
   const { repairs: repairsOn } = useHouseholdFeatures();
   const { locations } = useHouseholdLocations();
   const today = formatDateLocal(useToday());
-  const { rows: chores, loaded: choresLoaded } = useSetUpChores(today);
+  const { rows: chores, loaded: choresLoaded, failed: choresFailed, reload: reloadChores } = useSetUpChores(today);
   const [name, setName] = useState("");
   const [jobs, setJobs] = useState<Set<StaffArea>>(() => new Set());
   // The owner's own changes to the ticks, by chore key; the rest follow the defaults.
@@ -107,6 +107,8 @@ function AddStaffForm({
 
   const clean = cleanStaffName(name);
   const taken = staffWithName(clean, roster);
+  // The roster refuses these (migrations/147): said here, not as a failed save.
+  const badName = /[<>]/.test(clean);
   const kitchen = jobs.has("kitchen");
   const shownJobs = STAFF_JOBS.filter((job) => (job === "pets" ? petsOn || jobs.has(job) : job === "repairs" ? repairsOn || jobs.has(job) : true));
 
@@ -120,7 +122,7 @@ function AddStaffForm({
   );
   // Until every set-up chore is read, a "move" can't be told from a new one: wait.
   const startersReady = !kitchen || (choresLoaded && locations !== null);
-  const canAdd = clean.length > 0 && jobs.size > 0 && !taken && !saving && startersReady;
+  const canAdd = clean.length > 0 && jobs.size > 0 && !taken && !badName && !saving && startersReady;
 
   const ownerOf = useMemo(() => {
     const byId = new Map(roster.map((p) => [p.id, p.name]));
@@ -273,7 +275,11 @@ function AddStaffForm({
             autoComplete="off"
             enterKeyHint="done"
           />
-          {taken ? (
+          {badName ? (
+            <p className="text-[11px] text-destructive" role="status">
+              {t("A name can't have < or > in it.", "Nama tidak boleh berisi < atau >.")}
+            </p>
+          ) : taken ? (
             <p className="text-[11px] text-destructive" role="status">
               {t(`${taken.name} is already on the staff list.`, `${taken.name} sudah ada di daftar staf.`)}
             </p>
@@ -326,7 +332,18 @@ function AddStaffForm({
         {kitchen && (
           <div className="flex flex-col gap-1">
             <p className="text-xs font-medium">{t(`Kitchen chores for ${shown}`, `Tugas dapur untuk ${shown}`)}</p>
-            {!startersReady ? (
+            {!startersReady && choresFailed ? (
+              // Without every chore read, a move can't be told from a new one
+              // (as the starter list, code review PR #90).
+              <div className="flex items-center justify-between gap-3 py-2">
+                <p className="text-xs text-muted-foreground">
+                  {t("Couldn't load your chores.", "Tugas Anda gagal dimuat.")}
+                </p>
+                <Button type="button" variant="outline" size="sm" className="min-h-10 rounded-lg" onClick={reloadChores}>
+                  {t("Try again", "Coba lagi")}
+                </Button>
+              </div>
+            ) : !startersReady ? (
               <div className="flex justify-center py-4">
                 <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
