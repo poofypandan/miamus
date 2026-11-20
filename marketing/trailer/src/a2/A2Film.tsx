@@ -18,7 +18,7 @@ import { loadFonts } from "../theme";
 import { Captions } from "../ui/kakak";
 import { Grain, ramp } from "../ui/kit";
 import { Act2 } from "./act2";
-import { Act3 } from "../a3/act3";
+import { Act3, Act3Short } from "../a3/act3";
 import { FrameCheck } from "../stills/readability";
 
 loadFonts();
@@ -101,7 +101,13 @@ export const A2Film: React.FC<A2Props> = ({ cut, audio, act3 = false, check }) =
         ) : (
           <>
             <Scene span={S15.hook}><Hook {...p} t0={0} fast /></Scene>
-            <StillsStretch cut="15" from={3} to={10} />
+            {act3 ? (
+              <Sequence from={S15.cards[0]} durationInFrames={len(S15.cards)} layout="none">
+                <Act3Short from={S15.cards[0]} />
+              </Sequence>
+            ) : (
+              <StillsStretch cut="15" from={3} to={10} />
+            )}
             <Scene span={S15.ending}><Ending {...p} t0={S15.ending[0]} fast a2 /></Scene>
           </>
         )}

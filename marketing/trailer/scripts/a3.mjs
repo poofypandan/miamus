@@ -20,6 +20,8 @@ const only = (argv.find((a) => a.startsWith("--only=")) ?? "").split("=")[1];
 const at = (argv.find((a) => a.startsWith("--at=")) ?? "").split("=")[1];
 const cuts = ["60", "15"].filter((c) => !only || c === only);
 const strict = argv.includes("--strict");
+// A4: --name=a4 writes a4-<cut>-en.mp4 on public/audio/a4-<cut>-en.wav (same compositions).
+const name = (argv.find((a) => a.startsWith("--name=")) ?? "--name=a3").split("=")[1];
 const FPS = 30;
 
 const cache = path.join(os.homedir(), "Library/Caches/ms-playwright");
@@ -32,7 +34,7 @@ fs.mkdirSync(out, { recursive: true });
 const serveUrl = await bundle({ entryPoint: path.join(root, "src/index.ts"), publicDir: path.join(root, "public") });
 
 for (const cut of cuts) {
-  const audio = `audio/a3-${cut}-en.wav`;
+  const audio = `audio/${name}-${cut}-en.wav`;
   const inputProps = { cut, audio: fs.existsSync(path.join(root, "public", audio)) ? audio : null, act3: true, check: strict ? "strict" : "log" };
   const fails = new Map();
   const onBrowserLog = (log) => {
@@ -67,7 +69,7 @@ for (const cut of cuts) {
     report(cut, fails);
     continue;
   }
-  const file = path.join(out, `a3-${cut}-en.mp4`);
+  const file = path.join(out, `${name}-${cut}-en.mp4`);
   await renderMedia({ composition, serveUrl, codec: "h264", outputLocation: file, inputProps, browserExecutable, scale: 0.5, crf: 20, concurrency: 6, onBrowserLog });
   console.log("wrote", path.relative(out, file));
   report(cut, fails);

@@ -203,28 +203,49 @@ function MamaTells({ t }: { t: number }) {
         </div>
       )}
       <AppCard parts={[{ id: "stop", scale: 1.13 }]} x={stopC.x - sdy / 2 - 8} y={stopC.y - sdy / 2 - 8} pad={8} r={999} inner={999} fill="#fafbfd" open={life(t, fps, 16.78, 20.42)} t={t} />
-      {/* 8 · Kakak's short card: rows in turn, the button rises, one press, folds to "Saved". */}
+      {/* 8 · Kakak's short card: rows in by 21.5, the button up at 21.9, one press at 22.6, "Saved" 22.9–24.0 (A4 fix A). */}
       <AppCard
         parts={[
-          { id: "cardRows2", scale: 2.72, reveal: lerp(0, 0.533, rs(t, 20.86, 21.02)) + 0.234 * rs(t, 21.26, 21.4) + 0.233 * rs(t, 21.66, 21.8) },
-          { id: "looksBtn", scale: 2.72, vis: rs(t, 22.36, 22.62, easeOut) },
+          { id: "cardRows2", scale: 2.72, reveal: lerp(0, 0.533, rs(t, 20.84, 20.98)) + 0.234 * rs(t, 21.08, 21.2) + 0.233 * rs(t, 21.34, 21.48) },
+          { id: "looksBtn", scale: 2.72, vis: rs(t, 21.66, 21.9, easeOut) },
         ]}
         x={33}
         y={200}
         to={phoneOf(cam, 1)}
-        open={life(t, fps, 20.7, 23.24)}
-        press={{ at: 23.0, part: 1 }}
+        open={life(t, fps, 20.7, 22.76)}
+        press={{ at: 22.6, part: 1 }}
         t={t}
       />
-      <AppCard parts={[{ id: "savedLine", scale: 2.95 }]} x={170} y={560} pad={14} fill="#ffffff" inner={0} to={phoneOf(cam, 1)} open={life(t, fps, 23.32)} t={t} />
+      {/* "Saved" holds, then closes into the firefly's light at her phone (23.82–24.0), the thing that travels. */}
+      <AppCard parts={[{ id: "savedLine", scale: 2.95 }]} x={170} y={560} pad={14} fill="#ffffff" inner={0} to={phoneOf(cam, 1)} open={life(t, fps, 22.9, 23.82)} t={t} />
+      <SeedLight t={t} at={phoneOf(cam, 1)} from={23.8} />
       <Plate t={t} from={l4.from} to={l4.to} text="I'll take it from there." pulse={pulse} />
       <Grade />
     </>
   );
 }
 
+/** The saved task becoming the light, at the phone, in the last frames before the cut to the hand-over. */
+function SeedLight({ t, at, from }: { t: number; at: { x: number; y: number }; from: number }) {
+  const k = rs(t, from, from + 0.2);
+  if (k <= 0) return null;
+  return (
+    <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
+      <defs>
+        <radialGradient id="a3seed">
+          <stop offset="0%" stopColor="#fff4d0" stopOpacity={1} />
+          <stop offset="35%" stopColor="#ffd890" stopOpacity={0.75} />
+          <stop offset="100%" stopColor="#ffb860" stopOpacity={0} />
+        </radialGradient>
+      </defs>
+      <circle cx={at.x} cy={at.y - 10} r={46 * k} fill="url(#a3seed)" opacity={k} />
+      <circle cx={at.x} cy={at.y - 10} r={7 * k} fill="#fffaf0" opacity={k} />
+    </svg>
+  );
+}
+
 /* ------------------------------------------------------------------ */
-/* 9–11 · 24.0–32.0 · the hand-over, Sari's work                       */
+/* 9–11 · the hand-over, Sari's work (the 60: 24.0–32.0; the 15: 5.7–10.0) */
 /* ------------------------------------------------------------------ */
 
 const SARI = { x: 668, y: 1314 };
@@ -235,18 +256,36 @@ const K0 = camFor(1.2, MAMA9, { x: 330, y: 1270 });
 const K1 = camFor(1.3, { x: 430, y: 1300 }, { x: 540, y: 1060 });
 const SARI_AT = { x: 600, y: 1290 };
 const KZ = (z: number) => camFor(z, SARI, SARI_AT);
-/** One camera: the pan lands at 26.0 on Sari, then a slow push-in to 32.0 (fix 4). */
-function camAt(t: number): Cam {
-  if (t < 26) {
-    const u = rs(t, 24, 26, ease);
-    const K2 = KZ(2.0);
+
+/** The beat's times (s). The 60 and the 15 play the same pieces on different clocks. */
+export type Beat = {
+  t0: number; land: number; end: number; push: [number, number];
+  fly: [number, number]; card: [number, number]; press: number; shutter: number;
+  strokes: [number, number][]; up: [number, number][]; blink: number; ring: number; toast: number;
+  tod: [number, number]; plates: boolean;
+};
+export const BEAT60: Beat = {
+  t0: 24, land: 26, end: 32, push: [2.0, 2.62], fly: [24.05, 26.4], card: [27.0, 28.42], press: 28.2, shutter: 28.3,
+  strokes: [[28.8, 29.5], [29.62, 30.34], [30.4, 30.8]], up: [[26.08, 28.66], [30.84, 99]], blink: 30.9, ring: 31.0, toast: 31.05,
+  tod: [7.2, 7.46], plates: true,
+};
+/** The 15 (trailer-reset 24, fix D): the light to Sari, her card, two strokes, the lift, the press sign, the toast a full second. */
+export const BEAT15: Beat = {
+  t0: 5.7, land: 6.45, end: 10, push: [2.0, 2.45], fly: [5.74, 6.5], card: [6.66, 7.4], press: 7.15, shutter: 7.25,
+  strokes: [[7.6, 8.12], [8.18, 8.6]], up: [[6.38, 7.44], [8.64, 99]], blink: 8.7, ring: 8.8, toast: 8.86,
+  tod: [17.42, 17.38], plates: false,
+};
+
+/** One camera: the pan lands on Sari, then a slow push-in to the end (fix 4). */
+function camAt(b: Beat, t: number): Cam {
+  if (t < b.land) {
+    const u = rs(t, b.t0, b.land, ease);
+    const K2 = KZ(b.push[0]);
     const mid = { x: 2 * K1.x - (K0.x + K2.x) / 2, y: 2 * K1.y - (K0.y + K2.y) / 2, z: 2 * K1.z - (K0.z + K2.z) / 2 };
-    const b = (k: keyof Cam) => (1 - u) * (1 - u) * K0[k] + 2 * u * (1 - u) * mid[k] + u * u * K2[k];
-    const z = lerp(K0.z, 2.0, u * u * (3 - 2 * u));
-    // Keep the bezier's path for x and y, but let the zoom ease on its own.
-    return { x: b("x"), y: b("y"), z };
+    const q = (k: keyof Cam) => (1 - u) * (1 - u) * K0[k] + 2 * u * (1 - u) * mid[k] + u * u * K2[k];
+    return { x: q("x"), y: q("y"), z: lerp(K0.z, b.push[0], u * u * (3 - 2 * u)) };
   }
-  return KZ(lerp(2.0, 2.62, rs(t, 26, 32, (x) => x * x * (3 - 2 * x))));
+  return KZ(lerp(b.push[0], b.push[1], rs(t, b.land, b.end, (x) => x * x * (3 - 2 * x))));
 }
 /** The firefly's way, garden px: from Mama's phone, over the laundry, into Sari's raised phone. */
 const FLY = { p0: { x: MAMA9.x - 40, y: MAMA9.y - 222 }, p1: { x: 150, y: 1020 }, p2: { x: 560, y: 960 }, p3: { x: SARI.x - 42 * SARI_S, y: SARI.y - 208 * SARI_S } };
@@ -257,43 +296,43 @@ function flyAt(u: number) {
     y: a * a * a * FLY.p0.y + 3 * a * a * u * FLY.p1.y + 3 * a * u * u * FLY.p2.y + u * u * u * FLY.p3.y,
   };
 }
-const flyU = (t: number) => rs(t, 24.05, 26.4, (x) => x * x * (3 - 2 * x));
 
-/** Sari's strokes: three long ones from 28.8 (the second carries "They run the home."), gentle ones before. */
-const STROKES: [number, number][] = [[28.8, 29.5], [29.62, 30.34], [30.4, 30.8]];
-function sariMop(t: number) {
-  for (let i = 0; i < STROKES.length; i++) {
-    const [a, b] = STROKES[i];
-    if (t >= a && t <= b) {
-      const u = (t - a) / (b - a);
+/** Sari's strokes (long ones; gentle ones before them). */
+function sariMop(b: Beat, t: number) {
+  const S = b.strokes;
+  for (let i = 0; i < S.length; i++) {
+    const [a, e] = S[i];
+    if (t >= a && t <= e) {
+      const u = (t - a) / (e - a);
       const dir = i % 2 === 0 ? 1 : -1;
       return { lean: 0.75 + 0.3 * Math.sin(u * Math.PI), sweep: -dir * Math.cos(u * Math.PI) };
     }
   }
-  if (t > STROKES[0][0] && t < STROKES[2][1]) {
-    const i = STROKES.findIndex(([a]) => a > t);
+  if (t > S[0][0] && t < S[S.length - 1][1]) {
+    const i = S.findIndex(([a]) => a > t);
     return { lean: 0.75, sweep: i % 2 === 1 ? 1 : -1 };
   }
   return { lean: 0.28, sweep: Math.sin(t * 2.4) * 0.55 };
 }
 /** How far along the deck the mop has wiped (sweep units), for the sheen. */
-function wiped(t: number) {
-  if (t < STROKES[0][0]) return null;
-  const s = sariMop(t);
-  return t < STROKES[0][1] ? { a: -1, b: Math.max(-1, s.sweep) } : { a: -1, b: 1 };
+function wiped(b: Beat, t: number) {
+  if (t < b.strokes[0][0]) return null;
+  const s = sariMop(b, t);
+  return t < b.strokes[0][1] ? { a: -1, b: Math.max(-1, s.sweep) } : { a: -1, b: 1 };
 }
 
-function HandOver({ t }: { t: number }) {
+export function HandOver({ t, beat: b = BEAT60 }: { t: number; beat?: Beat }) {
   const { fps } = useVideoConfig();
   const { cue, pulse } = useVoice();
   const frame = Math.round(t * FPS);
-  const light = lightAt(lerp(7.2, 7.46, rs(t, 24, 32, lin)));
-  const cam = camAt(t);
-  const phoneUp = (t >= 26.08 && t < 28.66) || t >= 30.84;
-  const mop = sariMop(t);
+  const light = lightAt(lerp(b.tod[0], b.tod[1], rs(t, b.t0, b.end, lin)));
+  const cam = camAt(b, t);
+  const phoneUp = b.up.some(([a, e]) => t >= a && t < e);
+  const mop = sariMop(b, t);
+  const flyU = (tt: number) => rs(tt, b.fly[0], b.fly[1], (x) => x * x * (3 - 2 * x));
   // The wet sheen on the deck she stands on, wiped along it behind the mop (in her own layer, so it stays under her).
-  const w = wiped(t);
-  const wk = w ? rs(t, 28.85, 29.05) * (0.85 + 0.15 * rs(t, 30.8, 31.4)) : 0;
+  const w = wiped(b, t);
+  const wk = w ? rs(t, b.strokes[0][0] + 0.05, b.strokes[0][0] + 0.25) : 0;
   const sheen = mix(light.sun, [255, 255, 255], 0.45);
   const sari = (
     <g transform={`translate(${SARI.x} ${SARI.y}) scale(${SARI_S})`}>
@@ -308,22 +347,24 @@ function HandOver({ t }: { t: number }) {
     </g>
   );
   const sPhone = P(cam, FLY.p3.x, FLY.p3.y);
-  // The light: born at her phone at 24.0, across the garden, into Sari's phone at 26.4, where it glows and settles.
+  // The light: born at her phone, across the garden, into Sari's phone, where it glows and settles.
   const u = flyU(t);
   const fly = (uu: number) => P(cam, flyAt(uu).x, flyAt(uu).y);
-  const born = rs(t, 24.0, 24.18);
-  const landed = rs(t, 26.4, 26.9);
+  const born = rs(t, b.t0, b.t0 + 0.18);
+  const landed = rs(t, b.fly[1], b.fly[1] + 0.5);
   const head = fly(u);
   const r = 15 + 3 * layerScale(cam, 0.92);
   const tail = [...Array(9).keys()].map((k) => ({ ...fly(flyU(t - (k + 1) * 0.03)), k: (k + 1) / 10 }));
   const l5 = cue("L5");
   const l7 = cue("L7a");
-  const card = life(t, fps, 27.0, 28.42);
+  // The press sign on her phone: the film's small terracotta ring, once (A4 fix B: no "Selesai" bar).
+  const rd = t - b.ring;
+  const ring = rd >= 0 && rd < 0.32 ? (rd < 0.05 ? rd / 0.05 : 1 - (rd - 0.05) / 0.27) : 0;
   return (
     <>
       <World light={light} frame={760 + frame - 720} cam={cam} mama={1} mamaAt={{ ...MAMA9, s: 1 }} mamaPose={{ shade: 0, phone: 1, read: 1 }} laundry={1} birds={1} extra={sari} />
       <Shafts k={0.9} />
-      {t < 27.2 && (
+      {t < b.card[0] + 0.2 && (
         <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
           <defs>
             <radialGradient id="a3fly">
@@ -334,19 +375,23 @@ function HandOver({ t }: { t: number }) {
           </defs>
           {/* The tail: a short glow that tapers and fades behind it, never a line (fix 3). */}
           {u > 0.002 && u < 0.999 && tail.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={r * 1.6 * (1 - p.k * 0.85)} fill="url(#a3fly)" opacity={0.5 * (1 - p.k) * born} />)}
-          <circle cx={head.x} cy={head.y} r={r * 2.4 * (1 + 0.5 * landed)} fill="url(#a3fly)" opacity={born * (1 - 0.55 * rs(t, 26.9, 27.2, lin))} />
+          <circle cx={head.x} cy={head.y} r={r * 2.4 * (1 + 0.5 * landed)} fill="url(#a3fly)" opacity={born * (1 - 0.55 * rs(t, b.card[0] - 0.1, b.card[0] + 0.2, lin))} />
           <circle cx={head.x} cy={head.y} r={r * 0.32} fill="#fffaf0" opacity={born * (1 - landed)} />
         </svg>
       )}
-      {/* 10 · her card from the phone: "Pel teras", 09.00, the Sebelum place; the press at 28.2, the shutter. */}
-      <AppCard parts={[{ id: "sariCard", scale: 3.2 }]} x={250} y={196} pad={12} r={40} inner={18} fill="#ffffff" to={{ x: sPhone.x, y: sPhone.y - 14 }} open={card} press={{ at: 28.2 }} t={t} />
-      <Blink t={t} at={28.3} x={sPhone.x} y={sPhone.y - 6} />
-      {/* 11b · the after photo, one tap on Selesai, the toast. */}
-      <Blink t={t} at={30.9} x={sPhone.x} y={sPhone.y - 6} />
-      <AppCard parts={[{ id: "selesai", scale: 2.72 }]} x={69} y={560} pad={14} r={40} inner={14} fill="#ffffff" to={{ x: sPhone.x, y: sPhone.y - 14 }} open={life(t, fps, 30.94, 31.2)} press={{ at: 31.12 }} t={t} />
-      <AppCard parts={[{ id: "sariSelesai", scale: 2.95 }]} x={278} y={600} pad={14} fill="#ffffff" inner={0} to={{ x: sPhone.x, y: sPhone.y - 14 }} open={life(t, fps, 31.22)} t={t} />
-      <Plate t={t} from={l5.from} to={l5.to} text={<>And everyone at home<br />knows what to do.</>} pulse={pulse} />
-      <Plate t={t} from={l7.from} to={l7.to} until={31.98} text="They run the home." pulse={pulse} />
+      {/* 10 · her card from the phone: "Pel teras", 09.00, the Sebelum place; the press, the shutter. */}
+      <AppCard parts={[{ id: "sariCard", scale: 3.2 }]} x={250} y={196} pad={12} r={40} inner={18} fill="#ffffff" to={{ x: sPhone.x, y: sPhone.y - 14 }} open={life(t, fps, b.card[0], b.card[1])} press={{ at: b.press }} t={t} />
+      <Blink t={t} at={b.shutter} x={sPhone.x} y={sPhone.y - 6} />
+      {/* 11b · the after photo, the press sign once on her phone, the toast (no "Selesai" bar: it read as a glitch). */}
+      <Blink t={t} at={b.blink} x={sPhone.x} y={sPhone.y - 6} />
+      {ring > 0 && (
+        <svg width={W} height={H} style={{ position: "absolute", inset: 0 }}>
+          <circle cx={sPhone.x} cy={sPhone.y - 8} r={22 + 10 * (1 - ring)} fill="none" stroke={KAKAK} strokeWidth={6} opacity={0.9 * ring} />
+        </svg>
+      )}
+      <AppCard parts={[{ id: "sariSelesai", scale: 2.95 }]} x={278} y={600} pad={14} fill="#ffffff" inner={0} to={{ x: sPhone.x, y: sPhone.y - 14 }} open={life(t, fps, b.toast)} t={t} />
+      {b.plates && <Plate t={t} from={l5.from} to={l5.to} text={<>And everyone at home<br />knows what to do.</>} pulse={pulse} />}
+      {b.plates && <Plate t={t} from={l7.from} to={l7.to} until={31.98} text="They run the home." pulse={pulse} />}
       <Grade />
     </>
   );
@@ -365,12 +410,24 @@ function PersonBox({ label, box }: { label: string; box: { l: number; t: number;
   return <div data-person={label} style={{ position: "absolute", left: box.l, top: box.t, width: box.r - box.l, height: box.b - box.t, pointerEvents: "none" }} />;
 }
 
+/** Two lights mixed directly, key by key (colours mixed, numbers eased): no hours in between. */
+function blendLight(a: Light, b: Light, k: number): Light {
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(a) as (keyof Light)[]) {
+    const x = a[key] as unknown;
+    const y = b[key] as unknown;
+    out[key] = Array.isArray(x) ? mix(x as [number, number, number], y as [number, number, number], k) : typeof x === "number" ? lerp(x, y as number, k) : k < 0.5 ? x : y;
+  }
+  return out as unknown as Light;
+}
+
 function Household({ t }: { t: number }) {
   const { cue, pulse } = useVoice();
   const frame = Math.round(t * FPS);
   const k = rs(t, 32, 35, ease);
-  // The light swings to late afternoon: the crossfade from the morning carries the change, so no cold blue noon shows.
-  const light = lightAt(lerp(16.45, 17.2, rs(t, 32, 33.6, ease)));
+  // A4 fix C: a hard cut at 32.0, then the light goes from the morning to gold as a direct blend of the two, never
+  // through the blue of midday.
+  const light = blendLight(lightAt(7.46), lightAt(17.2), rs(t, 32, 33.0, ease));
   const cam: Cam = { x: lerp(-24, -52, k), y: lerp(336, 322, k), z: lerp(1.3, 1.15, k) };
   const walk = rs(t, 32, 34.6, lin);
   const bob = Math.abs(Math.sin(t * 6.5)) * 4 * (1 - rs(t, 34.4, 34.6));
@@ -539,15 +596,85 @@ function QuietPhone({ t }: { t: number }) {
 /** Act 3 of the 60, 15.0 to 41.0 s. Rendered inside a sequence from 15.0 s; frames here are absolute. */
 export function Act3({ from }: { from: number }) {
   const t = (useCurrentFrame() + from) / FPS;
-  const fade12 = rs(t, 32.0, 32.4, lin);
   return (
     <AbsoluteFill style={{ backgroundColor: "#0e0f24" }}>
       {t < 24 && <AbsoluteFill><MamaTells t={t} /></AbsoluteFill>}
-      {t >= 24 && t < 32.4 && <AbsoluteFill><HandOver t={t} /></AbsoluteFill>}
-      {t >= 32 && t < 35 && <AbsoluteFill style={{ opacity: fade12 }}><Household t={t} /></AbsoluteFill>}
+      {t >= 24 && t < 32 && <AbsoluteFill><HandOver t={t} /></AbsoluteFill>}
+      {t >= 32 && t < 35 && <AbsoluteFill><Household t={t} /></AbsoluteFill>}
       {t >= 35 && t < 39 && <AbsoluteFill><MamaGolden t={t} /></AbsoluteFill>}
       {t >= 39 && <AbsoluteFill><QuietPhone t={t} /></AbsoluteFill>}
     </AbsoluteFill>
   );
 }
 
+
+/* ------------------------------------------------------------------ */
+/* The 15's middle, 3.0–10.0 (trailer-reset 13; 24, fix D)             */
+/* ------------------------------------------------------------------ */
+
+const WIDE15: Cam = { x: -30, y: 300, z: 1.07 };
+const SAY15 = ["Kak, have Sari", "mop the terrace", "every Monday at 9."];
+const TAB15 = "Kakak · Miamus's AI helper";
+
+/** 3.0–5.7: her sentence whole; at 4.8 it dims and the whole "Looks right" button rises beneath it; one press; both fold. */
+function ShortTell({ t }: { t: number }) {
+  const { fps } = useVideoConfig();
+  const frame = Math.round(t * FPS);
+  const light = lightAt(17.62);
+  const head = P(WIDE15, MAMA.x + 8, MAMA.y - 286);
+  const ph = P(WIDE15, MAMA.x - 23, MAMA.y - 259);
+  const say = life(t, fps, 2.9, 5.5);
+  const dim = 1 - 0.55 * rs(t, 4.8, 5.0);
+  const h = Math.round(3 * 78 * 1.16 + 100);
+  return (
+    <>
+      <World light={light} frame={100 + frame - 90} cam={WIDE15} child={1} mama={1} mamaPose={{ shade: 1, phone: 1 }} dogs={1} kite={1} birds={1} />
+      {say > 0.01 && (
+        <div data-moving={say < 0.995 ? "" : undefined} style={{ position: "absolute", inset: 0, opacity: Math.min(1, say * 1.6) * dim, transform: `scale(${0.88 + 0.12 * say})`, transformOrigin: `${head.x}px ${head.y}px` }}>
+          <Bubble x={120} y={232} w={798} h={h} to={{ x: head.x + 4, y: head.y + 4 }} label="Mama's words">
+            <div style={{ padding: "50px 56px", font: `italic 500 78px/1.16 ${SERIF}`, color: INK, letterSpacing: -0.6 }}>
+              {SAY15.map((l) => <div key={l}>{l}</div>)}
+            </div>
+          </Bubble>
+        </div>
+      )}
+      <AppCard parts={[{ id: "looksBtn", scale: 2.72 }]} x={33} y={640} to={ph} open={life(t, fps, 4.86, 5.5)} press={{ at: 5.3 }} t={t} />
+      <Grade />
+    </>
+  );
+}
+
+/** Kakak's plate in the 15: the tab at 44 px, held through both her lines (3.15–7.63), the words following her voice. */
+function ShortPlate({ t }: { t: number }) {
+  const { cue, pulse } = useVoice();
+  const s1 = cue("S1");
+  const s2 = cue("S2");
+  const o = rs(t, (s1.from || 3.15) - 0.15, (s1.from || 3.15) + 0.05) * (1 - rs(t, (s2.to || 7.63) + 0.1, (s2.to || 7.63) + 0.3, lin));
+  if (o < 0.01) return null;
+  const k = rs(t, (s2.from || 5.72) - 0.08, (s2.from || 5.72) + 0.08, lin);
+  return (
+    <div style={{ position: "absolute", inset: 0, opacity: o }}>
+      {k < 1 && (
+        <div style={{ position: "absolute", inset: 0, opacity: 1 - k }}>
+          <Caption text="Hi, I'm Kakak. Tell me once," tab={TAB15} tabSize={44} pulse={pulse} />
+        </div>
+      )}
+      {k > 0 && (
+        <div style={{ position: "absolute", inset: 0, opacity: k }}>
+          <Caption text={<>and everyone at home<br />knows what to do.</>} tab={TAB15} tabSize={44} pulse={pulse} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The 15's middle: 3.0 to 10.0 s. Rendered inside a sequence from 3.0 s; `from` is that frame. */
+export function Act3Short({ from }: { from: number }) {
+  const t = (useCurrentFrame() + from) / FPS;
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#0e0f24" }}>
+      {t < BEAT15.t0 ? <AbsoluteFill><ShortTell t={t} /></AbsoluteFill> : <AbsoluteFill><HandOver t={t} beat={BEAT15} /></AbsoluteFill>}
+      <ShortPlate t={t} />
+    </AbsoluteFill>
+  );
+}

@@ -155,8 +155,11 @@ export const ENDING15 = { tug: 0, point: 6, bell: 1, shade: [16, 30] as Span, ho
 // A3 (Act 3 moving, src/a3/act3.tsx): Kakak's disc lands at 10.72 (fix 11); the mic press 16.3; the card opens 20.7;
 // "Saved" 23.32; the firefly leaves 24.05 and lands 26.4; Sari's Sebelum shutter 28.3; the after photo 30.9; her tap on
 // Selesai and the toast 31.22.
-export const A2_60 = { kakak: 10.72, listen: 16.3, card: 20.75, saved: 23.32, handOver: 24.05, lands: 26.4, before: 28.3, after: 30.9, done: 31.22 };
-export const A2_15 = { card: 4.85, saved: 5.2, toSari: 5.7, done: 7.7 };
+// A4 (trailer-reset 24): "Saved" from 22.9 (fix A); the toast at 31.05 after the press sign at 31.0 (fix B).
+export const A2_60 = { kakak: 10.72, listen: 16.3, card: 20.75, saved: 22.9, handOver: 24.05, lands: 26.4, before: 28.3, after: 30.9, done: 31.05 };
+// A4 (fix D, the 15's middle moving, src/a3/act3.tsx BEAT15): the button rises 4.86, pressed 5.3; the light leaves 5.75 and
+// lands 6.5; the Sebelum shutter 7.25; the after photo 8.7; the toast 8.86.
+export const A2_15 = { card: 4.86, saved: 5.3, toSari: 5.75, lands: 6.5, before: 7.25, after: 8.7, done: 8.86 };
 
 /** Where the sounds go, in seconds from the start of each cut: read by audio/cues.mjs. */
 export function soundCues(cut: "60" | "15") {
@@ -206,9 +209,9 @@ export function soundCues(cut: "60" | "15") {
     // A2: the 15's stills B1 (3.0), B2 (4.8, the press), C (5.7, to Sari), D (7.6, her toast).
     cards: [A2_15.card],
     saved: [A2_15.saved, A2_15.done],
-    shutters: [],
+    shutters: [A2_15.before, A2_15.after],
     whooshes: [sec(S.cards[0]), A2_15.toSari, sec(S.ending[0])],
-    arrive: null,
+    arrive: A2_15.lands,
     sleep: null,
     ping: null,
     kakak: null,
