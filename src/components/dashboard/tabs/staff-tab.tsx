@@ -502,7 +502,7 @@ function StaffRoster({
     [allProfiles]
   );
   // Who is away today (Phase 140): a red badge on their row.
-  const { leaveRequests } = useHousehold();
+  const { leaveRequests, refresh: refreshHousehold } = useHousehold();
   // Who has notifications on a phone (Phase 166): owners see it, never set it.
   const staffPush = useStaffPushOverview();
   const today = formatDateLocal(useToday());
@@ -512,6 +512,8 @@ function StaffRoster({
     try {
       await dataProvider.archiveStaffProfile(profile.id, choice.giveTo);
       await reload();
+      // Their chores and routines changed hands: Today and Home show it now.
+      void refreshHousehold({ silent: true });
       setRemoveTarget(null);
       // Archiving also gives the house a new code (migrations/146), but
       // phones already signed in stay signed in, so there is nothing to

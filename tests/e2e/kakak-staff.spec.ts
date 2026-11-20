@@ -145,9 +145,15 @@ test("id: Syam sudah tidak kerja di sini: the card, and Hapus Syam gives his wor
   await shot(page, "pr5-id-1-kakak-remove-card");
   expect(calls).toEqual([]);
 
+  // Today reads the chores again once the work has changed hands (Codex, PR #173).
+  let choreReads = 0;
+  page.on("request", (request) => {
+    if (request.method() === "GET" && request.url().includes("/rest/v1/household_tasks")) choreReads += 1;
+  });
   await page.getByRole("button", { name: "Hapus Syam" }).click();
   await expect(page.getByText("Syam dihapus. Tugasnya sekarang milik Ari. HP staf lain tetap masuk.")).toBeVisible();
   expect(calls).toEqual([["archive", { p_staff_id: SYAM, p_give_to: STAFF_ID }]]);
+  await expect.poll(() => choreReads).toBeGreaterThan(0);
   await expect.poll(() => outcomes).toEqual(["confirmed"]);
 });
 

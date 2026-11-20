@@ -149,7 +149,7 @@ function Conversation({
 }) {
   const t = useT();
   const locale = useOwnerLocale();
-  const { activeHouseholdId } = useHousehold();
+  const { activeHouseholdId, refresh } = useHousehold();
   const save = useKakakSave();
   // Staff cards (staff onboarding step 5) save through the Free sheets'
   // own paths: Add staff, pre-filled, and archive_staff_profile with give_to.
@@ -299,6 +299,8 @@ function Conversation({
     }
     await dataProvider.archiveStaffProfile(person.id, to?.staffId ?? null);
     void reloadStaffProfiles();
+    // Their chores and routines changed hands on the server: Today shows it now (Codex, PR #173).
+    void refresh({ silent: true });
     toast.success(
       to
         ? t(
