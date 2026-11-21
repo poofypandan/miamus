@@ -360,6 +360,7 @@ people are **staf** and **admin**.
 | Phone not linked yet | **HP belum terhubung** | Phase 175, on a person's row. |
 | Next up / Next | **Berikutnya** | Phase 175; Today v3 (21 Nov): the three rows after the circles. |
 | See all / Show less (Today's whole day) | **Lihat semua** / **Tampilkan lebih sedikit** | Today v3: the door beside Berikutnya. |
+| Symbols for what they look after (under each face on Today) | **Simbol yang ia urus** | Today v3: the person's own areas (05, section d), in the guide. "Urus", not "tanggung jawab". |
 | Latest (what has been finished today, behind Today's status) | **Terbaru** | Today v3: the sheet's title. "Finished today, the latest first." **Selesai hari ini, yang terbaru di atas.** |
 | Choose a day (the date pill's sheet) | **Pilih hari** | Today v3: "Sen 16" pill at the bottom left; while another day shows, **Hari ini** beside it. |
 | Nothing more today. | **Tidak ada lagi hari ini.** | Today v3: Next when the day has nothing left. |
