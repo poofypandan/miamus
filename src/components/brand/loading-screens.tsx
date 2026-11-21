@@ -188,7 +188,7 @@ export function LaunchStage({
     <div
       aria-hidden
       className={cn(
-        "fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-background px-6",
+        "launch-stage fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-background px-6",
         className
       )}
     >

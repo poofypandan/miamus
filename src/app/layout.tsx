@@ -9,6 +9,7 @@ import { NewVoiceSwitch } from "@/components/kakak/new-voice-switch";
 import { iosStartupImages } from "@/lib/ios-launch-screens";
 import { LAUNCH_BACKGROUND } from "@/components/brand/brand-mark";
 import "./globals.css";
+import { LAUNCH_LIFT_SCRIPT } from "@/lib/android-launch";
 
 // Named "--font-sans" (not the font's own "--font-plus-jakarta-sans") to
 // match the `--font-sans: var(--font-sans)` theme token in globals.css —
@@ -88,6 +89,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${fontSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Before the first paint: on an installed Android app, lift the
+            launch stage to the screen's centre, where the phone's own splash
+            drew the mark (lib/android-launch). Sets one CSS variable. */}
+        <script dangerouslySetInnerHTML={{ __html: LAUNCH_LIFT_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         {/* The mobile frame (Phase 113). Every screen in this app is a phone
             screen, so on a desktop it is drawn as one: a single centred column
