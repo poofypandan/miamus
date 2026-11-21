@@ -123,8 +123,8 @@ test("a chores-only maid and a pets-only maid each show only their own kind, nev
   await expect(page.getByTestId("staff-progress-row")).toHaveCount(0);
   await expect(page.getByText("Today's progress")).toHaveCount(0);
   await page.goto("/dashboard?module=pets");
-  // Its own per-pet card stays; no staff rows.
-  await expect(page.getByRole("heading", { name: "Photos" })).toBeVisible({ timeout: 20_000 });
+  // The wall of pets (21 Nov); no staff rows.
+  await expect(page.getByRole("list", { name: "Your pets" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("staff-progress-row")).toHaveCount(0);
 });
 
