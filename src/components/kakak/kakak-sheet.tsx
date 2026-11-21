@@ -731,6 +731,9 @@ function ProblemBubble({ icon: Icon, children }: { icon: LucideIcon; children: R
   );
 }
 
+/** Whether the typing field had the focus, so the compact one takes it back only after typing. */
+const fieldFocus = { had: false };
+
 function TypingBox({
   draft,
   setDraft,
@@ -762,7 +765,9 @@ function TypingBox({
       <form onSubmit={submit} className={cn("grid items-end gap-2.5", words ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)]")}>
         <Textarea
           ref={box}
-          autoFocus
+          // Only if the field had the focus when it went (a typed send): never
+          // after the mic, so the keyboard doesn't jump up over a spoken turn.
+          autoFocus={fieldFocus.had}
           value={draft}
           maxLength={MAX_TYPED}
           rows={1}
@@ -774,6 +779,8 @@ function TypingBox({
           // alone, about 1.5 px (Fable, #192).
           className="max-h-[7.5rem] min-h-[52px] w-full min-w-0 resize-none overflow-y-auto rounded-2xl py-3.5 text-base focus-visible:border-foreground focus-visible:shadow-[inset_0_0_0_0.5px_var(--foreground)] focus-visible:ring-0"
           onChange={(event) => setDraft(event.target.value)}
+          onFocus={() => (fieldFocus.had = true)}
+          onBlur={() => (fieldFocus.had = false)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
@@ -810,6 +817,8 @@ function TypingBox({
           placeholder={placeholder}
           className="min-h-[52px] flex-1 resize-none rounded-xl text-base"
           onChange={(event) => setDraft(event.target.value)}
+          onFocus={() => (fieldFocus.had = true)}
+          onBlur={() => (fieldFocus.had = false)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();

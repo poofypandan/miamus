@@ -226,14 +226,15 @@ function Voice({
           </p>
         )}
         {/* minmax(0, 1fr): a long typed line never pushes the row sideways. */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2.5">
-          {state.canListen || phase === "speaking" ? (
+        {state.canListen || phase === "speaking" ? (
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2.5">
             <RowButton phase={phase} quiet={hasWords && phase === "idle"} disabled={!listenHere && phase !== "speaking"} onListen={start} onStop={stop} />
-          ) : (
-            <span />
-          )}
+            <div className="min-w-0">{field}</div>
+          </div>
+        ) : (
+          // No mic in this browser: the field alone, full width.
           <div className="min-w-0">{field}</div>
-        </div>
+        )}
         {state.problem && phase === "idle" && state.canListen && (
           <p className="text-center text-sm text-muted-foreground">{problemText(state.problem, t)}</p>
         )}
@@ -332,7 +333,13 @@ function BigButton({ phase, onListen, onStop }: { phase: string; onListen: () =>
   // when idle on the first screen; after listening the panel folds back in place).
   useLayoutEffect(() => {
     const el = disc.current;
-    if (el && phase === "idle") lastBigDisc.rect = el.getBoundingClientRect();
+    if (!el || phase !== "idle") return;
+    lastBigDisc.rect = el.getBoundingClientRect();
+    // Again once her sheet has come to rest (420 ms), in case nothing renders before a send.
+    const settled = setTimeout(() => {
+      if (el.isConnected) lastBigDisc.rect = el.getBoundingClientRect();
+    }, 450);
+    return () => clearTimeout(settled);
   });
   const active = phase === "listening" || phase === "speaking";
   const done = t("Done", "Selesai");
@@ -459,6 +466,8 @@ function RowButton({
     const from = lastBigDisc.rect;
     lastBigDisc.rect = null;
     if (!el || !from || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Never fly in from off the screen.
+    if (from.bottom < 0 || from.top > innerHeight) return;
     const to = el.getBoundingClientRect();
     const dx = from.left + from.width / 2 - (to.left + to.width / 2);
     const dy = from.top + from.height / 2 - (to.top + to.height / 2);
