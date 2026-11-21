@@ -58,9 +58,9 @@ export function PetsTab() {
   ) : null;
 
   return (
-    // pb-6: the wall ends clear of the fade above Kakak's band, its corners
-    // whole (Fable's look, #197).
-    <div className="flex flex-1 flex-col gap-3 px-4 pb-6">
+    // No bottom padding: the wall itself reaches down to about 12 px above
+    // Kakak's band (PetWall), more of the pet (Fable's look, #197).
+    <div className="flex flex-1 flex-col gap-3 px-4">
       {addDialog}
       {/* Outside the wall: the first pet's sheet opens while the empty state is still showing. */}
       {canManagePets && <StarterRoutinesSheet pet={starterPet} onClose={() => setStarterPet(null)} />}
