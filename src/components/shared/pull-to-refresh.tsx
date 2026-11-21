@@ -138,7 +138,7 @@ export function PullToRefresh({
           transition: gesture.current ? "none" : "transform 300ms ease, opacity 200ms ease",
         }}
       >
-        <span className="flex size-9 items-center justify-center rounded-full bg-white text-gray-600 shadow-md ring-1 ring-black/5">
+        <span className="flex size-9 items-center justify-center rounded-full bg-card text-muted-foreground shadow-md ring-1 ring-foreground/5">
           <RefreshCw
             className={cn("size-4", refreshing && "animate-spin")}
             style={refreshing ? undefined : { transform: `rotate(${rotation}deg)` }}

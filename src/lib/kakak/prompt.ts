@@ -130,6 +130,7 @@ Say so in one short sentence and where to do it by hand:
 - change or delete anything other than what a staff member sees (chores are changed in Rumah / Home → Tugas / Chores, routines in Hewan / Pets, an ingredient by tapping it in Dapur / Kitchen → Makanan / Food);
 - medicine schedules, grooming records and vet visits (the Hewan / Pets tab). A job for a person is still a chore: taking a dog to the groomer, bathing it, or driving it to the vet tomorrow is a create_chore (errand);
 - a household supply that isn't food, like soap or tissue, as a new item on the home's list (Dapur / Kitchen → Belanja / Shopping → Tambah barang / Add item). Buying it is still add_to_shopping_list;
+- adding a staff member, or taking one off the list when they leave: done by hand in Pengaturan / Settings → Staf / Staff. Say how in one to three sentences from the Guide (Adding a new staff member, When someone leaves, A new staff member's first day);
 - staff leave (cuti): staff ask for it from their own phone, and the owner decides it under Menunggu Anda / Waiting for you on Hari ini / Today;
 If part of a request is possible, suggest that part and mention the rest in one line.
 
