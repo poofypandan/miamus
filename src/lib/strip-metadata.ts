@@ -12,15 +12,20 @@
  * and all, while the privacy policy says the phone removes it.
  *
  * This removes, without decoding the image:
- *   JPEG  keeps only the segments that make the picture (keptJpegSegment),
- *         before the first scan and between the scans of a progressive JPEG,
- *         with the JFIF header's thumbnail cut off; every APPn else (EXIF,
- *         XMP, ICC, IPTC, C2PA), comments, and anything after the end marker
- *         (phones append depth maps and second pictures there) goes.
- *   PNG   keeps only the picture's own chunks (PNG_KEPT): eXIf, text, caBX
- *         and every other ancillary chunk go, and anything after IEND.
- *   WebP  keeps only VP8X, VP8, VP8L and ALPH: EXIF, XMP, ICCP, C2PA and the
+ *   JPEG  keeps only the segments that make the picture and its colour
+ *         profile (keptJpegSegment), before the first scan and between the
+ *         scans of a progressive JPEG, with the JFIF header's thumbnail cut
+ *         off; every APPn else (EXIF, XMP, IPTC, MPF, C2PA), comments, and
+ *         anything after the end marker (phones append depth maps and second
+ *         pictures there) goes.
+ *   PNG   keeps only the picture's own chunks and its colour signalling
+ *         (PNG_KEPT): eXIf, text, caBX and every other ancillary chunk go,
+ *         and anything after IEND.
+ *   WebP  keeps only VP8X, ICCP, VP8, VP8L and ALPH: EXIF, XMP, C2PA and the
  *         rest go, with their VP8X flags; anything past the RIFF size.
+ * Colour profiles and colour-space chunks stay: they say how to read the
+ * pixels (a Display-P3 or HDR photo would otherwise show wrong colours),
+ * and are not where a phone writes location or who took it (Codex, PR #161).
  * Kept by name, never by a list of what to drop, so a metadata container
  * nobody listed yet is dropped too.
  * The one EXIF field that changes how a photo looks, its orientation, is
@@ -145,6 +150,8 @@ function scanEnd(b: Uint8Array, i: number): number {
  *   APP0 "JFIF"    its density, with the optional thumbnail cut off (a JFXX
  *                  extension's thumbnail is a whole JPEG of its own, with
  *                  room for its own comments and EXIF: dropped);
+ *   APP2 "ICC_PROFILE"  the colour profile (APP2 also carries MPF, the
+ *                  index of pictures appended after the end: dropped);
  *   APP14 "Adobe"  the 12-byte colour-transform note, nothing longer.
  * Every other APPn, comments and the reserved JPGn markers are dropped.
  */
@@ -156,7 +163,8 @@ function keptJpegSegment(marker: number, segment: Uint8Array): Uint8Array | null
     return concat([Uint8Array.from([0xff, 0xe0, 0x00, 0x10]), payload.subarray(0, 12), Uint8Array.from([0, 0])]);
   }
   if (marker === 0xee) return payload.length === 12 && ascii(payload, 0, 5) === "Adobe" ? segment : null;
-  if (marker >= 0xe1 && marker <= 0xef) return null; // APP1-APP15: EXIF, XMP, ICC, IPTC, MPF, C2PA...
+  if (marker === 0xe2) return ascii(payload, 0, 12) === "ICC_PROFILE\0" ? segment : null;
+  if (marker >= 0xe1 && marker <= 0xef) return null; // APP1-APP15: EXIF, XMP, IPTC, MPF, C2PA...
   if (marker === 0xfe) return null; // comments
   if (marker >= 0xf0 && marker <= 0xfd) return null; // JPGn, reserved extensions
   if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc8) return segment; // SOFn, DHT, DAC
@@ -232,13 +240,16 @@ function stripJpeg(b: Uint8Array): Uint8Array | null {
 
 /**
  * Chunks kept by name: the picture, its palette and transparency, and how
- * its colours and pixels are meant to be read. Everything else ancillary
- * goes (eXIf, tEXt, zTXt, iTXt, tIME, caBX Content Credentials, iCCP, and
- * any chunk not invented yet; Codex, PR #161). An unknown critical chunk
- * (capital first letter) means a file this can't vouch for: refused.
- * Animation chunks are ancillary, so an animated PNG becomes its still frame.
+ * its colours and pixels are meant to be read (gAMA, cHRM, sRGB, iCCP, and
+ * PNG 3's cICP, mDCV and cLLI for wide-gamut and HDR photos, each at its
+ * fixed size). Everything else ancillary goes (eXIf, tEXt, zTXt, iTXt,
+ * tIME, caBX Content Credentials, and any chunk not invented yet; Codex,
+ * PR #161). An unknown critical chunk (capital first letter) means a file
+ * this can't vouch for: refused. Animation chunks are ancillary, so an
+ * animated PNG becomes its still frame.
  */
-const PNG_KEPT = new Set(["IHDR", "PLTE", "IDAT", "IEND", "tRNS", "gAMA", "cHRM", "sRGB", "sBIT", "bKGD", "pHYs"]);
+const PNG_KEPT = new Set(["IHDR", "PLTE", "IDAT", "IEND", "tRNS", "gAMA", "cHRM", "sRGB", "iCCP", "sBIT", "bKGD", "pHYs"]);
+const PNG_KEPT_FIXED: Record<string, number> = { cICP: 4, mDCV: 24, cLLI: 8 };
 
 function stripPng(b: Uint8Array): Uint8Array | null {
   const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -249,7 +260,7 @@ function stripPng(b: Uint8Array): Uint8Array | null {
     const end = i + 12 + length;
     if (end > b.length) return null;
     const type = ascii(b, i + 4, 4);
-    if (PNG_KEPT.has(type)) parts.push(b.subarray(i, end));
+    if (PNG_KEPT.has(type) || PNG_KEPT_FIXED[type] === length) parts.push(b.subarray(i, end));
     else if (type.charCodeAt(0) < 0x61) return null; // unknown critical chunk
     i = end;
     if (type === "IEND") return concat(parts);
@@ -277,6 +288,7 @@ function stripWebp(b: Uint8Array): Uint8Array | null {
   const parts: Uint8Array[] = [];
   let vp8x: Uint8Array | null = null;
   let orientation: number | null = null;
+  let hasIcc = false;
   let i = 12;
   while (i + 8 <= riffEnd) {
     const type = ascii(b, i, 4);
@@ -294,20 +306,26 @@ function stripWebp(b: Uint8Array): Uint8Array | null {
       if (orientation === null) orientation = tiffOrientation(tiff);
     } else if (type === "VP8 " || type === "VP8L" || type === "ALPH") {
       parts.push(b.subarray(i, Math.min(end, riffEnd)));
+    } else if (type === "ICCP") {
+      // The colour profile, where the container puts it (right after VP8X).
+      hasIcc = true;
+      parts.push(b.subarray(i, Math.min(end, riffEnd)));
     } else if (type === "ANIM" || type === "ANMF") {
       // An animation's frames nest chunks of their own: not vouched for here
       // (photos never are animated); refused, so the server re-encodes it.
       return null;
     }
-    // Anything else (XMP, ICCP, C2PA Content Credentials, chunks not
+    // Anything else (XMP, C2PA Content Credentials, chunks not
     // invented yet) is dropped: kept by name only (Codex, PR #161).
     i = end;
   }
   if (vp8x) {
-    // The flags say which optional chunks exist: ICC and XMP never do now,
-    // EXIF only when an orientation is written back.
+    // The flags say which optional chunks exist: XMP never does now, ICC
+    // when the profile was there, EXIF only when an orientation is written
+    // back.
     const keepOrientation = orientation !== null && orientation !== 1;
-    vp8x[8] &= ~(VP8X_ICC | VP8X_XMP);
+    vp8x[8] &= ~VP8X_XMP;
+    vp8x[8] = hasIcc ? vp8x[8] | VP8X_ICC : vp8x[8] & ~VP8X_ICC;
     vp8x[8] = keepOrientation ? vp8x[8] | VP8X_EXIF : vp8x[8] & ~VP8X_EXIF;
     if (keepOrientation) parts.push(webpChunk("EXIF", orientationTiff(orientation!)));
   }

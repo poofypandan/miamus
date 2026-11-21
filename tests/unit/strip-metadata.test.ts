@@ -148,6 +148,43 @@ describe("stripImageMetadata", () => {
     expect(Buffer.compare(Buffer.from(out), png)).toBe(0);
   });
 
+  it("keeps a PNG's colour space (cICP, iCCP), so a Display-P3 or HDR photo keeps its colours", async () => {
+    const p3 = await pixels().withIccProfile("p3").png().toBuffer();
+    expect((await sharp(p3).metadata()).icc).toBeDefined();
+    const iend = p3.length - 12;
+    const cicp = pngChunk("cICP", "\x0c\x0d\x00\x01"); // Display P3, sRGB transfer, full range
+    const badCicp = pngChunk("cICP", "\x0c\x0d\x00\x01GPS"); // not its fixed size: dropped
+    const input = Buffer.concat([p3.subarray(0, 33), cicp, badCicp, p3.subarray(33, iend), p3.subarray(iend)]);
+    const out = Buffer.from(stripImageMetadata(input)!);
+    expect(out.includes(cicp)).toBe(true);
+    expect(text(out)).not.toContain("GPS");
+    expect((await sharp(out).metadata()).icc).toBeDefined();
+  });
+
+  it("keeps a JPEG's colour profile and drops MPF from APP2", async () => {
+    const p3 = await pixels().withIccProfile("p3").withExif({ ...CAMERA, ...GPS }).jpeg().toBuffer();
+    const note = Buffer.from("MPF\0 GPS -6.2088 106.8456");
+    const mpf = Buffer.concat([Buffer.from([0xff, 0xe2, 0, note.length + 2]), note]);
+    const input = Buffer.concat([p3.subarray(0, 2), mpf, p3.subarray(2)]);
+    const out = stripImageMetadata(input)!;
+    expect(text(out)).not.toContain("GPS");
+    expect(text(out)).not.toContain("PhoneCo");
+    const meta = await sharp(out).metadata();
+    expect(meta.icc).toBeDefined();
+    expect(meta.exif).toBeUndefined();
+  });
+
+  it("keeps a WebP's colour profile, flagged in its header", async () => {
+    const p3 = await pixels().withIccProfile("p3").withExif({ ...CAMERA, ...GPS }).webp().toBuffer();
+    const out = stripImageMetadata(p3)!;
+    expect(text(out)).not.toContain("PhoneCo");
+    expect(out[20] & 0x20).toBe(0x20);
+    const meta = await sharp(out).metadata();
+    expect(meta.icc).toBeDefined();
+    expect(meta.exif).toBeUndefined();
+    expect([meta.width, meta.height]).toEqual([40, 20]);
+  });
+
   it("refuses a PNG with a critical chunk it doesn't know", async () => {
     const png = await pixels().png().toBuffer();
     const iend = png.length - 12;
@@ -156,7 +193,7 @@ describe("stripImageMetadata", () => {
 
   it("drops Content Credentials (C2PA) and any unlisted chunk from a WebP", async () => {
     const webp = await pixels().withMetadata({ orientation: 1 }).webp().toBuffer();
-    const body = Buffer.concat([webp.subarray(12), riffChunk("C2PA", "c2pa GPS -6.2088 106.8456"), riffChunk("ICCP", "profile GPS")]);
+    const body = Buffer.concat([webp.subarray(12), riffChunk("C2PA", "c2pa GPS -6.2088 106.8456"), riffChunk("XMP ", "<x:xmpmeta>GPS</x:xmpmeta>")]);
     const header = Buffer.from(webp.subarray(0, 12));
     header.writeUInt32LE(body.length + 4, 4);
     const out = stripImageMetadata(Buffer.concat([header, body]))!;
