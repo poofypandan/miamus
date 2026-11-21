@@ -441,7 +441,7 @@ function ingredientLine(item: KakakHousehold["items"][number]): string {
  */
 function foodLines(foods: KakakFood[], today: string): string[] {
   if (foods.length === 0) return ["Ready to eat at home (Dapur / Kitchen → Makanan / Food): nothing."];
-  const lines = ["Ready to eat at home (Dapur / Kitchen → Makanan / Food), soonest first:"];
+  const lines = ["Ready to eat at home (Dapur / Kitchen → Makanan / Food), soonest first, past its date last:"];
   for (const food of foods.slice(0, MAX_FOODS_IN_BLOCK)) {
     const parts = [food.name ?? "a dish saved with a photo only, no name"];
     if (food.keptIn) parts.push(food.keptIn);
@@ -452,6 +452,10 @@ function foodLines(foods: KakakFood[], today: string): string[] {
     } else parts.push(food.expiryUnknown ? "date not known" : "no date noted");
     lines.push(`- ${parts.join(" · ")}`);
   }
-  if (foods.length > MAX_FOODS_IN_BLOCK) lines.push(`- and ${foods.length - MAX_FOODS_IN_BLOCK} more not listed here`);
+  // Past its date is listed last (context.ts), so what is cut is mostly that.
+  const rest = foods.slice(MAX_FOODS_IN_BLOCK);
+  const restPast = rest.filter((food) => food.expiresOn !== null && food.expiresOn < today).length;
+  if (rest.length - restPast > 0) lines.push(`- and ${rest.length - restPast} more not listed here`);
+  if (restPast > 0) lines.push(`- and ${restPast} more past their date, not listed here`);
   return lines;
 }

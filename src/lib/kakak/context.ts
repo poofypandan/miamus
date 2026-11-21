@@ -396,7 +396,7 @@ export function buildContext(
       ...(recipes.length ? { recipes } : {}),
       ...(menu.length ? { menu } : {}),
       // Only once the switches were read: a failed read never assumes Food at home is on (Codex, PR #166).
-      ...(rows.featuresRead && rows.foodOn !== false && rows.foods ? { foods: foodsFor(rows.foods) } : {}),
+      ...(rows.featuresRead && rows.foodOn !== false && rows.foods ? { foods: foodsFor(rows.foods, today) } : {}),
     },
     refs,
     names,
@@ -516,7 +516,12 @@ function kitchenFor(
 }
 
 /** E1: the food as the block lists it, soonest use-by first, then no date (newest first). */
-function foodsFor(rows: ContextFoodRow[]): NonNullable<KakakHousehold["foods"]> {
+function foodsFor(rows: ContextFoodRow[], today: string): NonNullable<KakakHousehold["foods"]> {
+  // What can still be eaten comes first (Codex, PR #166): soonest date
+  // first, then no date (newest first), then past its date (most recently
+  // past first). Food past its date stays listed until someone marks it
+  // finished, so it must never crowd out a dish that is due today.
+  const rank = (day: string | null) => (day === null ? 1 : day < today ? 2 : 0);
   return rows
     .map((row) => {
       const day = typeof row.expires_on === "string" ? row.expires_on.slice(0, 10) : "";
@@ -529,7 +534,13 @@ function foodsFor(rows: ContextFoodRow[]): NonNullable<KakakHousehold["foods"]> 
         createdAt: row.created_at,
       };
     })
-    .sort((a, b) => (a.expiresOn ?? "9999-12-31").localeCompare(b.expiresOn ?? "9999-12-31") || b.createdAt.localeCompare(a.createdAt))
+    .sort((a, b) => {
+      const ra = rank(a.expiresOn);
+      const rb = rank(b.expiresOn);
+      if (ra !== rb) return ra - rb;
+      const byDay = ra === 0 ? (a.expiresOn ?? "").localeCompare(b.expiresOn ?? "") : ra === 2 ? (b.expiresOn ?? "").localeCompare(a.expiresOn ?? "") : 0;
+      return byDay || b.createdAt.localeCompare(a.createdAt);
+    })
     .map((food) => ({ name: food.name, keptIn: food.keptIn, expiresOn: food.expiresOn, expiryUnknown: food.expiryUnknown }));
 }
 
