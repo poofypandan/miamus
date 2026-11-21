@@ -204,8 +204,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Adding a chore by hand", id: "Menambah tugas sendiri" },
     body: {
-      en: "Home → Chores → Add Chore: what to do, who does it or anyone, the day, and whether it repeats. A room, a time and a note are optional. With Kakak on, one sentence to her does the same.",
-      id: "Rumah → Tugas → Tambah Tugas: apa yang dikerjakan, siapa yang mengerjakan atau siapa saja, harinya, dan apakah berulang. Ruangan, jam, dan catatan boleh dikosongkan. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
+      en: "Home → Chores → Add Chore: What to do, Who does it (or anyone), and When: tap it for the day, a time and whether it repeats. A room, a reminder and a note are under More, all optional. With Kakak on, one sentence to her does the same.",
+      id: "Rumah → Tugas → Tambah Tugas: Apa yang dikerjakan, Siapa yang mengerjakan (atau siapa saja), dan Kapan: ketuk untuk hari, jam, dan apakah berulang. Ruangan, pengingat, dan catatan ada di Lainnya, semuanya opsional. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
     },
     where: "home_chores",
   },

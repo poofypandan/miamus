@@ -135,7 +135,11 @@ test("Bahasa Indonesia: Coming up on Today, the tutorial, and a yearly bill's fo
   await page.goto("/dashboard?module=chores&chores=today");
   await page.getByRole("button", { name: "Tambah Tugas" }).first().click();
   const form = page.getByRole("dialog");
-  await expect(form.getByRole("button", { name: "Setiap 3 bulan" })).toBeVisible({ timeout: 20_000 });
+  // Short by default (21 Nov): the repeat is under Kapan, the reminder under Lainnya.
+  await expect(form.getByRole("button", { name: /^Kapan Hari ini, sekali/ })).toBeVisible({ timeout: 20_000 });
+  await form.getByRole("button", { name: /^Kapan/ }).click();
+  await form.getByRole("button", { name: "Lainnya", exact: true }).click();
+  await expect(form.getByRole("button", { name: "Setiap 3 bulan" })).toBeVisible();
   await expect(form.getByRole("button", { name: "Setiap tahun" })).toBeVisible();
   await expect(form.getByRole("button", { name: "Mati" })).toHaveAttribute("aria-pressed", "true");
 
