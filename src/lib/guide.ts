@@ -146,8 +146,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "Adding a new staff member", id: "Menambah staf baru" },
     body: {
-      en: "Settings → Staff → Add staff: their name, and what they do (Kitchen, Chores, Pets, Repairs), which sets what they see. Kitchen ticks the usual kitchen chores. Then send the welcome on WhatsApp or show the QR code. Staff under 18 need a parent's or guardian's consent.",
-      id: "Pengaturan → Staf → Tambah staf: namanya, dan apa yang dikerjakan (Dapur, Tugas rumah, Hewan, Perbaikan), yang mengatur yang dia lihat. Dapur mencentang tugas dapur yang biasa. Lalu kirim sambutan atau tunjukkan kode QR. Staf di bawah 18 tahun perlu izin orang tua atau wali.",
+      en: "Settings → Staff → Add staff: their name, and what they do (Kitchen, Chores, Pets, Repairs), which sets what they see. Kitchen ticks the usual chores; a trial adds a reminder. Then send the welcome or the QR code. Staff under 18 need a parent's or guardian's consent.",
+      id: "Pengaturan → Staf → Tambah staf: namanya, dan apa yang dikerjakan (Dapur, Tugas rumah, Hewan, Perbaikan), yang mengatur yang dia lihat. Dapur mencentang tugas biasa; masa percobaan menambah pengingat. Lalu kirim sambutan. Staf di bawah 18 tahun perlu izin orang tua atau wali.",
     },
     where: "settings_staff",
     covers: ["add-staff-2026-11"],
@@ -570,11 +570,11 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Kakak", id: "Kakak" },
     body: {
-      en: "Kakak is Miamus's AI helper. Type, say or tap an example and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Close her with the cross or by dragging down. Settings → Kakak turns her on or off.",
-      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik, ucapkan, atau pilih: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Tutup lewat silang atau tarik ke bawah. Atur di Pengaturan → Kakak.",
+      en: "Kakak is Miamus's AI helper. Type, say or tap an example and she prepares a card: chores, shopping, pet routines, food, ingredients, staff and what they see. Nothing is saved until you confirm. Close her with the cross or by dragging down. Settings → Kakak turns her on or off.",
+      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik, ucapkan, atau pilih: tugas, belanja, rutinitas hewan, makanan, bahan masakan, staf, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Tutup lewat silang atau tarik ke bawah. Atur di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
-    covers: ["kakak-routines-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
+    covers: ["kakak-routines-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11", "kakak-staff-2026-11"],
   },
   {
     // Tap to talk, tap Done to send (20 Nov): the voice flow in Kakak's sheet.

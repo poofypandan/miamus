@@ -320,7 +320,8 @@ describe("the cards", () => {
 
   it("is sent only to a page that can draw it (version 4)", () => {
     const [dish] = toSuggestions(household, refs, names, "plan_dish", plan());
-    expect(KAKAK_CLIENT_VERSION).toBe(5);
+    // 5 since E2 (Bought), 6 since staff onboarding step 5; a menu dish still needs 4.
+    expect(KAKAK_CLIENT_VERSION).toBeGreaterThanOrEqual(4);
     expect(clientVersionFor(dish)).toBe(4);
     expect(needsNewerApp(dish, 3)).toBe(true);
     expect(needsNewerApp(dish, 4)).toBe(false);

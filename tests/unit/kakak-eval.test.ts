@@ -93,12 +93,12 @@ describe("household dates", () => {
 });
 
 describe("tool definitions", () => {
-  it("are closed and require every property; strict except the five validate.ts checks in full", () => {
-    expect(KAKAK_TOOLS).toHaveLength(8);
+  it("are closed and require every property; strict except the seven validate.ts checks in full", () => {
+    expect(KAKAK_TOOLS).toHaveLength(10);
     for (const tool of KAKAK_TOOLS) {
       if (!("input_schema" in tool)) throw new Error("custom tools only");
       // The API's limit of 16 union-typed parameters (tools.ts, kakak-tool-limits.test.ts).
-      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient", "set_staff_areas", "plan_dish"].includes(tool.name);
+      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient", "set_staff_areas", "plan_dish", "add_staff", "remove_staff"].includes(tool.name);
       expect(tool.strict).toBe(loose ? undefined : true);
       expect(tool.input_schema.additionalProperties).toBe(false);
       expect([...(tool.input_schema.required ?? [])].sort()).toEqual(
@@ -404,9 +404,10 @@ describe("the test set", () => {
     // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K161–K174
     // and K175–K176 (the film's sentence) and K177–K187 (Fable's A1–A10) on 2026-11-20, plus
     // the cases up to K206 (Can we cook it?), plus K301–K303 on 2026-11-20 (staff onboarding
-    // step 1: how to add, explain to, and remove a staff member, answered from the guide). All
-    // for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(204);
+    // step 1: how to add, explain to, and remove a staff member, answered from the guide), plus
+    // K304–K318 on 2026-11-20 (step 5: add_staff, remove_staff, the trial reminder, what Kakak
+    // can't do, a code in the request). All for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(219);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 

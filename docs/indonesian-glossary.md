@@ -454,6 +454,12 @@ people are **staf** and **admin**.
 | Sri used to work here. Bring them back with what they saw before? · Bring Sri back | **Sri pernah bekerja di sini. Kembalikan dengan yang dia lihat sebelumnya?** · **Kembalikan Sri** | Staff onboarding step 4: Add staff, a name that matches someone who left. |
 | Remove for good · Tap again to remove for good · Former staff | **Hapus permanen · Ketuk lagi untuk menghapus permanen · Mantan staf** | Staff onboarding step 4 (owner decision 5): on Sudah tidak bekerja. The name becomes **Mantan staf** 12 months after they leave, or sooner with Hapus permanen. |
 | Their name stays on past work for 12 months after they leave, then it reads “Former staff”. | **Namanya tetap tercatat pada pekerjaan sebelumnya selama 12 bulan setelah berhenti, lalu menjadi “Mantan staf”.** | Staff onboarding step 4: under Sudah tidak bekerja. |
+| cook (only in what the owner might say to Kakak) | **juru masak** | Staff onboarding (owner decision 8): no role word on screens; the area **Dapur** says it. Kakak understands juru masak, tukang masak, koki and "ART masak", and never writes a role word back. Used only to quote an owner's sentence, as in Kakak's What's new card. |
+| New staff: Sri · Does · The kitchen's usual chores, ticked · Sri sees only what they do. | **Staf baru: Sri** · **Mengerjakan** · **Tugas dapur yang biasa, dicentang** · **Sri hanya melihat yang dikerjakannya.** | Staff onboarding step 5: Kakak's add card. Its button **Tambah Sri** (or **Kembalikan Sri** for someone who left). |
+| Sri leaves today · Their work goes to · Remove Sri | **Sri berhenti hari ini** · **Tugasnya diberikan ke** · **Hapus Sri** | Staff onboarding step 5: Kakak's remove card. "Berhenti", never "dipecat". |
+| New: tell Kakak about your staff | **Baru: bilang ke Kakak soal staf** | Staff onboarding step 5: the Kakak What's new card. |
+| Checking your staff list… | **Memeriksa daftar staf…** | Staff onboarding step 5: Add staff waits for the roster before it can check the name (with **Coba lagi**). |
+| Checking your chores… | **Memeriksa tugas Anda…** | Staff onboarding step 5: under Trial, while the open chores are read (a reminder may already be there). |
 
 ## Formatting
 

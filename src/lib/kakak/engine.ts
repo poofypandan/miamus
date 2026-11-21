@@ -214,6 +214,13 @@ function problemsWith(
   for (const call of calls) {
     const check = validateToolCall(household, call.name, (call.input ?? {}) as Record<string, unknown>);
     const errors = check.ok ? [] : [...check.errors];
+    // A staff card opens a sheet of its own (staff onboarding step 5), so it
+    // comes alone: one person added or removed per turn, nothing beside it
+    // (Codex, PR #173: a second staff card or a companion chore would be
+    // skipped, or saved without its undo).
+    if ((call.name === "add_staff" || call.name === "remove_staff") && calls.length > 1) {
+      errors.push("add_staff and remove_staff come alone: one staff change per turn, with nothing else; say the rest in one line");
+    }
     if (call.name === "ask_question") {
       if (questions.length < calls.length) errors.push("a question can't come with suggestions in the same turn");
       if (questions.length > 1) errors.push("only one question per turn");

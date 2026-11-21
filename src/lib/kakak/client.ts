@@ -30,8 +30,10 @@ export type KakakFailure = "invalid" | "api" | "too_long" | "refusal" | "offline
  *   2 (2026-11-14): a new ingredient's card, and amounts on an ingredient.
  *   3 (Phase 178 follow-up): what a staff member sees.
  *   4 (Can we cook it?, 20 Nov): a dish on the menu.
+ *   5 (E2, 21 Nov): Bought on a shopping card.
+ *   6 (staff onboarding step 5): adding or removing a staff member.
  */
-export const KAKAK_CLIENT_VERSION = 5;
+export const KAKAK_CLIENT_VERSION = 6;
 
 /**
  * A long chat rolls over (2026-11-14). A conversation may hold only so many

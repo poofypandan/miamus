@@ -3,6 +3,7 @@
 // Pure, so the wording is unit-tested in both languages.
 
 import { cookLine, cookTone, uncheckedLine, type CookCheck, type CookTone } from "@/lib/can-cook";
+import { STAFF_JOBS, STAFF_JOB_LABELS } from "@/lib/staff-onboarding";
 import { remindLabel } from "@/lib/chore-reminders";
 import { defaultPlace } from "@/lib/ingredients";
 import { clean, formatAmount, unitLabel } from "@/lib/kitchen-units";
@@ -359,6 +360,35 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
     }
     case "staff_areas":
       return describeStaffAreas(item, t, nobody ?? staffAreasNobody([item], 0));
+    case "add_staff": {
+      // Staff onboarding step 5: the Add staff sheet, filled in. No job
+      // title (decision 8): what they do is the areas, in the chips' words.
+      const sees = STAFF_JOBS.filter((job) => item.areas.includes(job)).map((job) => t(...STAFF_JOB_LABELS[job]));
+      const rows: CardRow[] = [{ label: t("Does", "Mengerjakan"), value: sees.join(", ") }];
+      if (item.starterChores && item.areas.includes("kitchen")) {
+        rows.push({ label: t("Chores", "Tugas"), value: t("The kitchen's usual chores, ticked", "Tugas dapur yang biasa, dicentang") });
+      }
+      if (item.trialDays > 0) {
+        rows.push({
+          label: t("Trial", "Masa percobaan"),
+          value: item.trialDays === 14 ? t("2 weeks, then a reminder to decide", "2 minggu, lalu pengingat untuk memutuskan") : t("1 month, then a reminder to decide", "1 bulan, lalu pengingat untuk memutuskan"),
+        });
+      }
+      return {
+        heading: t(`New staff: ${item.name}`, `Staf baru: ${item.name}`),
+        rows,
+        note: t(`${item.name} sees only what they do.`, `${item.name} hanya melihat yang dikerjakannya.`),
+      };
+    }
+    case "remove_staff":
+      return {
+        heading: t(`${item.staffName} leaves today`, `${item.staffName} berhenti hari ini`),
+        rows: [{ label: t("Their work goes to", "Tugasnya diberikan ke"), value: item.giveTo?.name ?? t("Anyone", "Siapa saja") }],
+        note: t(
+          `${item.staffName}'s phone is signed out. Their past work keeps their name.`,
+          `HP ${item.staffName} langsung keluar. Pekerjaan sebelumnya tetap atas namanya.`,
+        ),
+      };
   }
 }
 
@@ -467,7 +497,9 @@ export function savedSummary(items: KakakSuggestion[], locale: Locale): string {
               ? t(`What ${first.staffName} sees`, `Yang dilihat ${first.staffName}`)
               : first.kind === "menu_dish"
                 ? dishSummary(first, locale)
-                : first.name;
+                : first.kind === "remove_staff"
+                  ? first.staffName
+                  : first.name;
   const more = items.length > 1 ? t(` and ${items.length - 1} more`, ` dan ${items.length - 1} lainnya`) : "";
   return t(`Saved — ${name}${more}`, `Tersimpan — ${name}${more}`);
 }

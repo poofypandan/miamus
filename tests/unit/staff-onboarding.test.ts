@@ -17,7 +17,9 @@ import {
   giveToChoices,
   hiddenAreasFor,
   isClaimable,
+  staffNameKey,
   suggestGiveTo,
+  trialNameFrom,
   kitchenStarters,
   staffWithName,
 } from "@/lib/staff-onboarding";
@@ -79,10 +81,15 @@ describe("the guide's staff entries", () => {
 });
 
 describe("Kakak on adding and removing staff", () => {
-  it("says how from the guide: adding or removing someone is done by hand for now", () => {
+  it("suggests them now (step 5): the tools are listed, and the step 1 can't-do line is gone", () => {
+    expect(KAKAK_SYSTEM_PROMPT).toContain("- add_staff:");
+    expect(KAKAK_SYSTEM_PROMPT).toContain("- remove_staff:");
+    expect(KAKAK_SYSTEM_PROMPT).toContain("# Adding and removing staff");
     const cantDo = KAKAK_SYSTEM_PROMPT.slice(KAKAK_SYSTEM_PROMPT.indexOf("# What you can't do yet"));
-    expect(cantDo).toContain("- adding a staff member, or taking one off the list when they leave");
-    expect(cantDo).toContain("Pengaturan / Settings → Staf / Staff");
+    expect(cantDo).not.toContain("adding a staff member");
+    // Decision 2: ask what they do, never default to everything; decision 7: ask who takes the work.
+    expect(KAKAK_SYSTEM_PROMPT).toContain("Never default to everything.");
+    expect(KAKAK_SYSTEM_PROMPT).toContain("ask once who takes their chores");
   });
 });
 
@@ -325,5 +332,20 @@ describe("a removed name, in the screen's language", () => {
     expect(name("a")).toBe("Ari");
     expect(name("nope")).toBe("Someone");
     expect(name(null)).toBe("Someone");
+  });
+});
+
+describe("names as people say them (Codex, PR #173)", () => {
+  it("ignore a leading honorific, so Kakak's Sri finds Mbak Sri, here or gone", () => {
+    expect(staffNameKey("Mbak Sri")).toBe("sri");
+    expect(staffNameKey("  Bu   Sri ")).toBe("sri");
+    expect(staffNameKey("Sri")).toBe("sri");
+    expect(staffNameKey("Mbakyu")).toBe("mbakyu");
+    const roster = [staff("s", "Mbak Sri", { archived_at: "2026-10-01T00:00:00Z" }), staff("a", "Pak Budi")];
+    expect(formerStaffWithName("Sri", roster)?.id).toBe("s");
+    expect(staffWithName("budi", roster)?.id).toBe("a");
+  });
+  it("match a trial reminder by the name in it, whatever the owner's language", () => {
+    expect(staffNameKey(trialNameFrom("Decide on Yanti's trial"))).toBe(staffNameKey(trialNameFrom("Putuskan masa percobaan Yanti")));
   });
 });

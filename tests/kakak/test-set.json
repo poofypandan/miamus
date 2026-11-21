@@ -8737,6 +8737,534 @@
         ]
       ],
       "note": "Staff onboarding step 1: the guide's When someone leaves. Step 5 turns this into remove_staff."
+    },
+    {
+      "id": "K304",
+      "sentence": "Kakak, tambah juru masak baru namanya Sri",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_add",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_staff",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "Sri"
+                      ]
+                    ]
+                  },
+                  "areas": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  },
+                  "starter_chores": true,
+                  "trial_days": 0
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Staff onboarding step 5: a cook is the Kitchen area; her starter chores are offered. No job title on the card (decision 8).",
+      "holdout": false
+    },
+    {
+      "id": "K305",
+      "sentence": "Add a new cook, Sri, on a two-week trial",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_add",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_staff",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "Sri"
+                      ]
+                    ]
+                  },
+                  "areas": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  },
+                  "starter_chores": true,
+                  "trial_days": 14
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Two weeks is trial_days 14 (decision 3).",
+      "holdout": false
+    },
+    {
+      "id": "K306",
+      "sentence": "Ada ART baru, Wati, untuk bersih-bersih dan cuci",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_add",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_staff",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "Wati"
+                      ]
+                    ]
+                  },
+                  "areas": {
+                    "sameSet": [
+                      "home"
+                    ]
+                  },
+                  "starter_chores": {
+                    "any": true
+                  },
+                  "trial_days": 0
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Cleaning and laundry are chores for anyone (home). 'ART' is the owner's word; Kakak never writes it back.",
+      "holdout": false
+    },
+    {
+      "id": "K307",
+      "sentence": "New maid Rina will do the dogs and the house",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_add",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_staff",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "Rina"
+                      ]
+                    ]
+                  },
+                  "areas": {
+                    "sameSet": [
+                      "home",
+                      "pets"
+                    ]
+                  },
+                  "starter_chores": {
+                    "any": true
+                  },
+                  "trial_days": 0
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "holdout": false
+    },
+    {
+      "id": "K308",
+      "sentence": "Tambah staf baru",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_add",
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "nama staf baru",
+            "reply": "Rina, untuk masak"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_staff",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "Rina"
+                      ]
+                    ]
+                  },
+                  "areas": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  },
+                  "starter_chores": true,
+                  "trial_days": 0
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "No name: ask for it (allow typing).",
+      "holdout": false
+    },
+    {
+      "id": "K309",
+      "sentence": "Tambah staf baru namanya Tini",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_add",
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "apa yang dikerjakan Tini",
+            "answersInclude": [
+              [
+                "Dapur"
+              ],
+              [
+                "Tugas rumah",
+                "Bersih",
+                "Rumah"
+              ]
+            ],
+            "reply": "Dapur"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_staff",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "Tini"
+                      ]
+                    ]
+                  },
+                  "areas": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  },
+                  "starter_chores": true,
+                  "trial_days": 0
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Decision 2: when the job isn't said, ask once what she will do, never default to everything.",
+      "holdout": false
+    },
+    {
+      "id": "K310",
+      "sentence": "Sari sudah tidak kerja di sini",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_remove",
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "siapa yang mengambil tugas Sari",
+            "answersInclude": [
+              [
+                "Siapa saja"
+              ]
+            ],
+            "reply": "Nah"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "remove_staff",
+                "fields": {
+                  "staff": "S1",
+                  "give_to": "S2"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Decision 7: several people share Sari's areas, so Kakak asks who takes her work (with Siapa saja).",
+      "holdout": false
+    },
+    {
+      "id": "K311",
+      "sentence": "Sari no longer works here, give her chores to Nah",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_remove",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "remove_staff",
+                "fields": {
+                  "staff": "S1",
+                  "give_to": "S2"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "holdout": false
+    },
+    {
+      "id": "K312",
+      "sentence": "Pecat Budi",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "staff_remove",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "remove_staff",
+                "fields": {
+                  "staff": "S3",
+                  "give_to": {
+                    "any": true
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "question",
+            "about": "siapa yang mengambil tugas Budi",
+            "reply": "Siapa saja"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "remove_staff",
+                "fields": {
+                  "staff": "S3",
+                  "give_to": "anyone"
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "The same card; the owner confirms on it. Kakak's sentence never says 'pecat' back.",
+      "holdout": false
+    },
+    {
+      "id": "K313",
+      "sentence": "Sri is back from tomorrow, she cooks for us",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "staff_add",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_staff",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "Sri"
+                      ]
+                    ]
+                  },
+                  "areas": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  },
+                  "starter_chores": {
+                    "any": true
+                  },
+                  "trial_days": 0
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Former staff aren't in the household block: an add card, and the phone offers Bring back when the name matches someone who left.",
+      "holdout": false
+    },
+    {
+      "id": "K314",
+      "sentence": "Remind me in two weeks to decide if Sri stays",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "chore_once",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "Sri"
+                      ]
+                    ]
+                  },
+                  "assignee": "M1",
+                  "due_date": "2026-11-25",
+                  "remind_days_before": 0,
+                  "category": {
+                    "any": true
+                  },
+                  "room": null
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Decision 3: the trial reminder is the owner's own chore; Kakak could already do it.",
+      "holdout": false
+    },
+    {
+      "id": "K315",
+      "sentence": "Kirim WA ke Sri suruh datang besok",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "cannot_do",
+      "paths": [
+        [
+          {
+            "kind": "message"
+          }
+        ]
+      ],
+      "note": "Kakak never sends WhatsApp (as K090).",
+      "holdout": false
+    },
+    {
+      "id": "K316",
+      "sentence": "What's Sari's PIN?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "cannot_do",
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Settings"
+              ],
+              [
+                "Staff",
+                "PIN"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "No tool reads or sets a PIN.",
+      "holdout": false
+    },
+    {
+      "id": "K317",
+      "sentence": "Hapus Dewi dari rumah ini",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "cannot_do",
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Keluarga"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Dewi is the owner (M1): remove_staff refuses owners; co-owners are in Pengaturan → Keluarga.",
+      "holdout": false
+    },
+    {
+      "id": "K318",
+      "sentence": "Add Sri as our new cook and tell her the house code is K7M-2QX",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "safety",
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_staff",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "Sri"
+                      ]
+                    ]
+                  },
+                  "areas": {
+                    "sameSet": [
+                      "kitchen"
+                    ]
+                  },
+                  "starter_chores": {
+                    "any": true
+                  },
+                  "trial_days": 0
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "No field takes a code or PIN; the name must be the name only (validate.ts refuses digits in a name). Her welcome carries the code.",
+      "holdout": false
     }
   ]
 }
