@@ -40,15 +40,15 @@ import type { RecipeLang } from "@/lib/recipes";
  * the section's tiles, and on an owner's phone the "Needed for" line on the
  * To buy rows too.
  */
-export function useMenuNeeds(owner: boolean): { needs: MenuNeed[]; today: string } {
-  const { inventoryItems, inventoryAlerts } = useHousehold();
+export function useMenuNeeds(owner: boolean): { needs: MenuNeed[]; today: string; fresh: boolean } {
+  const { inventoryItems, inventoryAlerts, listsFresh } = useHousehold();
   const amounts = amountsOn(useHouseholdFeatures());
   const notes = useMemo(() => inventoryAlerts.filter(isActiveAlert).flatMap((alert) => (alert.note ? [alert.note] : [])), [inventoryAlerts]);
   const enabled = recipesOn();
   const today = formatDateLocal(useToday());
   const { dishes: thisWeek } = useMenuWeek(today, { enabled });
   const { dishes: nextWeek } = useMenuWeek(addDays(today, 7), { enabled });
-  const { recipes } = useRecipes({ enabled });
+  const { recipes, fresh: recipesFresh } = useRecipes({ enabled });
   const needs = useMemo(
     () =>
       enabled
@@ -64,12 +64,14 @@ export function useMenuNeeds(owner: boolean): { needs: MenuNeed[]; today: string
         : [],
     [enabled, thisWeek, nextWeek, recipes, inventoryItems, today, amounts, owner, notes]
   );
-  return { needs, today };
+  // Read from the server in this session, not only the phone's copy: a
+  // cached absence is never proof (Codex, PR #195), so Add waits for it.
+  return { needs, today, fresh: listsFresh && recipesFresh };
 }
 
 export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boolean }) {
   const { addInventoryItem, setInventoryStatus, removeInventoryItem, markToBuy } = useHousehold();
-  const { needs: all, today } = useMenuNeeds(owner);
+  const { needs: all, today, fresh } = useMenuNeeds(owner);
   const [busy, setBusy] = useState<string | null>(null);
   const tr = (en: string, id: string) => (lang === "id" ? id : en);
   // Fable: an owner already sees Running low and Out under To buy (with
@@ -113,7 +115,7 @@ export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boo
   }
 
   async function add(targets: MenuNeed[], key: string, label: string) {
-    if (busy) return;
+    if (busy || !fresh) return;
     setBusy(key);
     const undos: (() => Promise<unknown>)[] = [];
     let failed = 0;
@@ -160,7 +162,7 @@ export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boo
             today={today}
             lang={lang}
             owner={owner}
-            busy={busy !== null}
+            busy={busy !== null || !fresh}
             adding={busy === need.key}
             onAdd={() => void add([need], need.key, tr(`${need.name} · added to To buy`, `${need.name} · masuk Perlu dibeli`))}
           />
@@ -173,7 +175,7 @@ export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boo
             type="button"
             variant="outline"
             className="min-h-11 rounded-xl"
-            disabled={busy !== null}
+            disabled={busy !== null || !fresh}
             onClick={() =>
               void add(forDish(dish), `all:${dish.dishId}`, tr(`${dish.title}'s ingredients added to To buy`, `Bahan untuk ${dish.title} masuk Perlu dibeli`))
             }
