@@ -407,3 +407,17 @@ test("a finished routine in Latest opens its photo (Codex, PR #181)", async ({ c
   await page.keyboard.press("Escape");
   await expect(latest).toBeVisible();
 });
+
+test("a routine tapped in Next opens the whole day with Chores no longer filtering it out (Codex, PR #181)", async ({ context, page }) => {
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  await installStub(context, { owner: { locale: "en" }, chores: [nextChore("Mop the kitchen", 0)] });
+  await page.clock.setFixedTime(new Date(`${day}T10:00:00+07:00`));
+  await page.goto("/dashboard?module=agenda&day=all&show=chores");
+  await expect(page.getByTestId("whole-day")).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("whole-day").click();
+  const routine = page.getByTestId("next-list").getByRole("button", { name: /Makan Siang/ });
+  await routine.click();
+  await expect(page).toHaveURL(/day=all/);
+  await expect(page).not.toHaveURL(/show=chores/);
+  await expect(page.getByText("Makan Siang").first()).toBeVisible();
+});

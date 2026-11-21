@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { finishedEntries } from "@/lib/unified-agenda";
+import { finishedEntries, routinePart } from "@/lib/unified-agenda";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 
@@ -48,5 +48,20 @@ describe("finishedEntries (what Latest shows)", () => {
     });
     // Order is latestRows's job (by finish time), not this one's.
     expect(entries.map((e) => e.key).sort()).toEqual(["chore|laundry", "chore|mine-bill"]);
+  });
+});
+
+describe("routinePart (Next names what is left)", () => {
+  it("names a medicine group for the medicines still to give", () => {
+    const noon = group([item("Mocha", "completed", "Antibiotic"), item("Mocha", "pending", "Eye drops"), item("Mocha", "overdue", "Ear wash")]);
+    const left = routinePart(noon, false);
+    expect(left?.titles).toEqual(["Eye drops", "Ear wash"]);
+    expect(left?.title).toBe("Eye drops");
+  });
+
+  it("returns the group itself when nothing was split off, and null when nothing is left", () => {
+    const open = group([item("Mocha", "pending"), item("Matcha", "pending")]);
+    expect(routinePart(open, false)).toBe(open);
+    expect(routinePart(open, true)).toBeNull();
   });
 });

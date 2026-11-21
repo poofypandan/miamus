@@ -50,13 +50,19 @@ export function NextList({
       {expanded ? null : shown.length > 0 ? (
         <ul className="inset-rows flex flex-col overflow-hidden rounded-2xl bg-card shadow-card [--row-inset:5rem]">
           {shown.map((entry) => {
-            const title = entry.kind === "chore" ? entry.occurrence.task.title : entry.group.title;
+            // A dog's noon medicines are one routine: every one still to give.
+            const title =
+              entry.kind === "chore"
+                ? entry.occurrence.task.title
+                : entry.group.titles.length > 1
+                  ? entry.group.titles.join(" · ")
+                  : entry.group.title;
             const who =
               entry.kind === "chore"
                 ? entry.occurrence.task.assigned_to
                   ? staffName(entry.occurrence.task.assigned_to)
                   : t("Anyone", "Siapa saja")
-                : entry.group.items.map((item) => item.entityName).join(", ");
+                : [...new Set(entry.group.items.map((item) => item.entityName))].join(", ");
             return (
               <li key={entry.key}>
                 <button

@@ -99,6 +99,20 @@ export function isEntryDone(entry: UnifiedAgendaEntry): boolean {
 }
 
 /**
+ * The finished (or the unfinished) part of a routine, its titles taken from
+ * the items kept: a dog's noon medicines are one group named for the first
+ * scheduled, which may be one already given, or one still to give (Codex,
+ * PR #181). Null when nothing is left on that side.
+ */
+export function routinePart(group: AgendaGroup, finished: boolean): AgendaGroup | null {
+  const items = group.items.filter((item) => (item.status === "completed") === finished);
+  if (items.length === 0) return null;
+  if (items.length === group.items.length) return group;
+  const titles = [...new Set(items.map((item) => item.title))];
+  return { ...group, items, titles, title: titles[0] ?? group.title };
+}
+
+/**
  * What has been finished on the day, for Latest (Today v3): every completed
  * chore, the admin's own among them (they count in the status ring too), and
  * every pet a routine has been through, even while others in the same group
@@ -111,12 +125,8 @@ export function finishedEntries(params: {
   chores: ChoreOccurrence[];
 }): UnifiedAgendaEntry[] {
   const groups = params.groups.flatMap((group) => {
-    const items = group.items.filter((item) => item.status === "completed");
-    if (items.length === 0) return [];
-    // Its titles from what was finished: a dog's noon medicines are one
-    // group named for the first, and that may be the one still to give.
-    const titles = [...new Set(items.map((item) => item.title))];
-    return [{ ...group, items, titles, title: titles[0] ?? group.title }];
+    const part = routinePart(group, true);
+    return part ? [part] : [];
   });
   const chores = params.chores.filter((occurrence) => occurrence.status === "completed");
   return buildUnifiedAgenda({ groups, chores });

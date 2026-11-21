@@ -82,6 +82,7 @@ import {
   buildUnifiedAgenda,
   finishedEntries,
   isEntryDone,
+  routinePart,
   splitOverdue,
   weekStartOf,
   type UnifiedAgendaEntry,
@@ -399,6 +400,15 @@ export function AgendaTab() {
     const query = params.toString();
     startTransition(() => pushInPlace(query ? `${pathname}?${query}` : pathname));
   }
+  // A routine tapped in Next opens the whole day, where routines are: with
+  // Chores chosen under See all it would be filtered out of what just opened,
+  // so the filter goes back to All in the same step (Codex, PR #181).
+  function openDayForRoutine() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("day", "all");
+    if (params.get("show") === "chores") params.delete("show");
+    startTransition(() => pushInPlace(`${pathname}?${params.toString()}`));
+  }
   const [latestOpen, setLatestOpen] = useState(false);
   const notDoneCount = useMemo(() => {
     if (!showsToday) return 0;
@@ -500,7 +510,13 @@ export function AgendaTab() {
   })();
   const nextEntries = useMemo(() => {
     const { overdue: carried, rest: dayRest } = splitOverdue(allEntries);
-    const open = dayRest.filter((entry) => !isEntryDone(entry));
+    // A routine still under way is named for what is left in it.
+    const open = dayRest.flatMap((entry): UnifiedAgendaEntry[] => {
+      if (isEntryDone(entry)) return [];
+      if (entry.kind === "chore") return [entry];
+      const left = routinePart(entry.group, false);
+      return left ? [{ ...entry, group: left }] : [];
+    });
     const ahead = showsToday ? open.filter((entry) => !entry.time || entry.time >= nowHm) : open;
     return [...carried.filter((entry) => !isEntryDone(entry)), ...(ahead.length > 0 ? ahead : open)];
   }, [allEntries, showsToday, nowHm]);
@@ -857,7 +873,7 @@ export function AgendaTab() {
             staffName={staffName}
             expanded={showDay}
             onToggleDay={() => setShowDay((on) => !on)}
-            onOpen={(entry) => (entry.kind === "chore" ? openChore(entry.occurrence) : setShowDay(true))}
+            onOpen={(entry) => (entry.kind === "chore" ? openChore(entry.occurrence) : openDayForRoutine())}
           />
         )}
 
