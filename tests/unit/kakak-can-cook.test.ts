@@ -320,7 +320,7 @@ describe("the cards", () => {
 
   it("is sent only to a page that can draw it (version 4)", () => {
     const [dish] = toSuggestions(household, refs, names, "plan_dish", plan());
-    expect(KAKAK_CLIENT_VERSION).toBe(4);
+    expect(KAKAK_CLIENT_VERSION).toBe(5);
     expect(clientVersionFor(dish)).toBe(4);
     expect(needsNewerApp(dish, 3)).toBe(true);
     expect(needsNewerApp(dish, 4)).toBe(false);
@@ -743,5 +743,41 @@ describe("Kakak sees ready-to-eat food (E1)", () => {
     const system = JSON.stringify(kakakSystem(built().household));
     expect(system).toContain("Ready to eat at home");
     expect(system).toContain("never suggest eating it");
+  });
+});
+
+describe("\"I bought it\" and what is running low (E2)", () => {
+  it("tells Kakak each listed item's status, and that nothing means Enough", () => {
+    const { household } = built();
+    const block = renderHouseholdBlock(household);
+    expect(household.statusesRead).toBe(true);
+    expect(block).toContain("nothing means Enough; never an amount");
+    expect(block).toContain("- I2: Santan · out");
+    expect(block).toContain("- I4: Bihun · running low");
+    expect(block).toMatch(/- I3: Beras\n/);
+  });
+
+  it("bought is status ok on a listed item that is low or out, with its own card and Undo path", () => {
+    const { household, refs, names } = built({}, "id");
+    expect(validateToolCall(household, "add_to_shopping_list", { items: [{ item: "I2", status: "ok", note: null, pet: null }] })).toEqual({ ok: true });
+    // Already Enough: she says so instead.
+    const enough = validateToolCall(household, "add_to_shopping_list", { items: [{ item: "I3", status: "ok", note: null, pet: null }] });
+    expect(enough.ok).toBe(false);
+    // A new note can't be bought.
+    expect(validateToolCall(household, "add_to_shopping_list", { items: [{ item: null, status: "ok", note: "Gula", pet: null }] }).ok).toBe(false);
+    // Counted by amount with Kitchen amounts on: Bought in the app asks how much (review, E2).
+    const counted = built({ kitchenOn: true, featuresRead: true, items: rows.items.map((i) => (i.name === "Santan" ? { ...i, track_amount: true, unit: "ml" } : i)) });
+    const ref = counted.household.items.find((i) => i.name === "Santan")!.ref;
+    const refused = validateToolCall(counted.household, "add_to_shopping_list", { items: [{ item: ref, status: "ok", note: null, pet: null }] });
+    expect(refused.ok).toBe(false);
+    expect(renderHouseholdBlock(counted.household)).not.toContain("tracked");
+    const [card] = toSuggestions(household, refs, names, "add_to_shopping_list", { items: [{ item: "I2", status: "ok", note: null, pet: null }] });
+    expect(card).toMatchObject({ kind: "shopping", entries: [{ type: "item", name: "Santan", status: "ok" }] });
+    expect(clientVersionFor(card)).toBe(5);
+    // The page's own check before saving lets it through (Codex, PR #168).
+    expect(isSaveableSuggestion(card)).toBe(true);
+    expect(needsNewerApp(card, 4)).toBe(true);
+    const shown = describeSuggestion(card, "id");
+    expect(shown.rows).toEqual([{ label: "Sudah dibeli", value: "Santan · Masih ada" }]);
   });
 });
