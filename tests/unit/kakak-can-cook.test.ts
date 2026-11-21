@@ -320,7 +320,7 @@ describe("the cards", () => {
 
   it("is sent only to a page that can draw it (version 4)", () => {
     const [dish] = toSuggestions(household, refs, names, "plan_dish", plan());
-    expect(KAKAK_CLIENT_VERSION).toBe(4);
+    expect(KAKAK_CLIENT_VERSION).toBe(5);
     expect(clientVersionFor(dish)).toBe(4);
     expect(needsNewerApp(dish, 3)).toBe(true);
     expect(needsNewerApp(dish, 4)).toBe(false);
@@ -681,5 +681,103 @@ describe("what can we cook tonight? (PR C1)", () => {
     const system = JSON.stringify(kakakSystem(built().household));
     expect(system).toContain("Masak apa malam ini?");
     expect(system).toContain("Never call a recipe ready unless the block says ready");
+  });
+});
+
+describe("Kakak sees ready-to-eat food (E1)", () => {
+  const foods = [
+    { name: "Lapis legit", kept_in: "counter", expires_on: "2026-11-12", expiry_unknown: false, created_at: "2026-11-10T01:00:00Z" },
+    { name: "Rendang", kept_in: "fridge", expires_on: "2026-11-11", expiry_unknown: false, created_at: "2026-11-09T01:00:00Z" },
+    { name: "Sop", kept_in: "fridge", expires_on: "2026-11-10", expiry_unknown: false, created_at: "2026-11-08T01:00:00Z" },
+    { name: null, kept_in: "fridge", expires_on: null, expiry_unknown: true, created_at: "2026-11-10T02:00:00Z" },
+    { name: "Kue", kept_in: "attic", expires_on: null, expiry_unknown: false, created_at: "2026-11-10T03:00:00Z" },
+  ];
+
+  it("lists name, place and date only, soonest first and past its date last, in the block", () => {
+    const { household } = built({ foods, foodOn: true, featuresRead: true } as Partial<ContextRows>);
+    // What can still be eaten first; past its date last (Codex, PR #166).
+    expect(household.foods?.map((f) => f.name)).toEqual(["Rendang", "Lapis legit", "Kue", null, "Sop"]);
+    // An unknown place is dropped, never guessed.
+    expect(household.foods?.find((f) => f.name === "Kue")?.keptIn).toBeNull();
+    const block = renderHouseholdBlock(household);
+    expect(block).toContain("Ready to eat at home (Dapur / Kitchen → Makanan / Food), soonest first, past its date last:");
+    expect(block).toContain("- Sop · fridge · past its date (2026-11-10)");
+    expect(block).toContain("- Rendang · fridge · expires today (2026-11-11)");
+    expect(block).toContain("- Lapis legit · counter · expires 2026-11-12");
+    expect(block).toContain("- a dish saved with a photo only, no name · fridge · date not known");
+    expect(block).toContain("- Kue · no date noted");
+  });
+
+  it("never lets food past its date crowd out a dish due today (Codex, PR #166)", () => {
+    const old = Array.from({ length: 25 }, (_, i) => ({
+      name: `Lama ${i + 1}`,
+      kept_in: "fridge",
+      expires_on: `2026-10-${String(i + 1).padStart(2, "0")}`,
+      expiry_unknown: false,
+      created_at: "2026-10-01T01:00:00Z",
+    }));
+    const due = { name: "Rendang", kept_in: "fridge", expires_on: "2026-11-11", expiry_unknown: false, created_at: "2026-11-09T01:00:00Z" };
+    const { household } = built({ foods: [...old, due], foodOn: true, featuresRead: true } as Partial<ContextRows>);
+    expect(household.foods?.[0]?.name).toBe("Rendang");
+    // The most recently past next.
+    expect(household.foods?.[1]?.name).toBe("Lama 25");
+    const block = renderHouseholdBlock(household);
+    expect(block).toContain("- Rendang · fridge · expires today (2026-11-11)");
+    expect(block).toContain("- and 6 more past their date, not listed here");
+    expect(block).not.toContain("more not listed here");
+  });
+
+  it("says when there is nothing, and sends nothing while Food at home is off or the read failed", () => {
+    expect(renderHouseholdBlock(built({ foods: [], foodOn: true, featuresRead: true } as Partial<ContextRows>).household)).toContain(
+      "Ready to eat at home (Dapur / Kitchen → Makanan / Food): nothing.",
+    );
+    const off = built({ foods, foodOn: false, featuresRead: true } as Partial<ContextRows>).household;
+    expect(off.foods).toBeUndefined();
+    expect(renderHouseholdBlock(off)).not.toContain("Rendang");
+    expect(built({ foodOn: true, featuresRead: true }).household.foods).toBeUndefined();
+    // The switches not read: nothing sent, never assumed on (Codex, PR #166).
+    expect(built({ foods, foodOn: null, featuresRead: false } as Partial<ContextRows>).household.foods).toBeUndefined();
+  });
+
+  it("her instructions answer \"what should we eat?\" from the list, and never suggest food past its date", () => {
+    const system = JSON.stringify(kakakSystem(built().household));
+    expect(system).toContain("Ready to eat at home");
+    expect(system).toContain("never suggest eating it");
+  });
+});
+
+describe("\"I bought it\" and what is running low (E2)", () => {
+  it("tells Kakak each listed item's status, and that nothing means Enough", () => {
+    const { household } = built();
+    const block = renderHouseholdBlock(household);
+    expect(household.statusesRead).toBe(true);
+    expect(block).toContain("nothing means Enough; never an amount");
+    expect(block).toContain("- I2: Santan · out");
+    expect(block).toContain("- I4: Bihun · running low");
+    expect(block).toMatch(/- I3: Beras\n/);
+  });
+
+  it("bought is status ok on a listed item that is low or out, with its own card and Undo path", () => {
+    const { household, refs, names } = built({}, "id");
+    expect(validateToolCall(household, "add_to_shopping_list", { items: [{ item: "I2", status: "ok", note: null, pet: null }] })).toEqual({ ok: true });
+    // Already Enough: she says so instead.
+    const enough = validateToolCall(household, "add_to_shopping_list", { items: [{ item: "I3", status: "ok", note: null, pet: null }] });
+    expect(enough.ok).toBe(false);
+    // A new note can't be bought.
+    expect(validateToolCall(household, "add_to_shopping_list", { items: [{ item: null, status: "ok", note: "Gula", pet: null }] }).ok).toBe(false);
+    // Counted by amount with Kitchen amounts on: Bought in the app asks how much (review, E2).
+    const counted = built({ kitchenOn: true, featuresRead: true, items: rows.items.map((i) => (i.name === "Santan" ? { ...i, track_amount: true, unit: "ml" } : i)) });
+    const ref = counted.household.items.find((i) => i.name === "Santan")!.ref;
+    const refused = validateToolCall(counted.household, "add_to_shopping_list", { items: [{ item: ref, status: "ok", note: null, pet: null }] });
+    expect(refused.ok).toBe(false);
+    expect(renderHouseholdBlock(counted.household)).not.toContain("tracked");
+    const [card] = toSuggestions(household, refs, names, "add_to_shopping_list", { items: [{ item: "I2", status: "ok", note: null, pet: null }] });
+    expect(card).toMatchObject({ kind: "shopping", entries: [{ type: "item", name: "Santan", status: "ok" }] });
+    expect(clientVersionFor(card)).toBe(5);
+    // The page's own check before saving lets it through (Codex, PR #168).
+    expect(isSaveableSuggestion(card)).toBe(true);
+    expect(needsNewerApp(card, 4)).toBe(true);
+    const shown = describeSuggestion(card, "id");
+    expect(shown.rows).toEqual([{ label: "Sudah dibeli", value: "Santan · Masih ada" }]);
   });
 });
