@@ -9,7 +9,8 @@
     { "ref": "S3", "name": "Budi", "hidden": ["kitchen"] },
     { "ref": "S4", "name": "Yanti" },
     { "ref": "S5", "name": "Yati" },
-    { "ref": "S6", "name": "Syam" }
+    { "ref": "S6", "name": "Syam" },
+    { "ref": "S7", "name": "Joko" }
   ],
   "pets": [
     { "ref": "P1", "name": "Mochi", "kind": "dog", "meals": ["07:00", "17:00"], "potty": [] },
@@ -44,7 +45,22 @@
     { "ref": "I8", "name": "Minyak goreng", "pet": false, "ingredient": true, "keptIn": null, "expiresOn": null },
     { "ref": "I9", "name": "Galon air", "pet": false },
     { "ref": "I10", "name": "Daging sapi", "pet": false, "ingredient": true, "keptIn": "freezer", "expiresOn": "2026-12-20" },
-    { "ref": "I11", "name": "Tomat", "pet": false, "ingredient": true, "keptIn": null, "expiresOn": null }
+    { "ref": "I11", "name": "Tomat", "pet": false, "ingredient": true, "keptIn": null, "expiresOn": null },
+    { "ref": "I12", "name": "Santan", "pet": false, "ingredient": true, "out": true, "keptIn": null, "expiresOn": null },
+    { "ref": "I13", "name": "Ayam", "pet": false, "ingredient": true, "keptIn": "fridge", "expiresOn": null },
+    { "ref": "I14", "name": "Bihun", "pet": false, "ingredient": true, "out": true, "keptIn": null, "expiresOn": null }
   ],
-  "ingredientsOn": true
+  "ingredientsOn": true,
+  "recipes": [
+    { "ref": "D1", "name": "Opor ayam", "state": "missing", "missing": ["Santan"], "onList": ["Santan"], "unchecked": ["Serai"] },
+    { "ref": "D2", "name": "Nasi goreng", "state": "ready", "missing": [], "unchecked": [] },
+    { "ref": "D3", "name": "Soto ayam", "state": "missing", "missing": ["Ayam", "Bihun"], "onList": ["Bihun"], "unchecked": [] },
+    { "ref": "D4", "name": "Sayur asem", "state": "unknown", "missing": [], "unchecked": ["Asam jawa", "Kacang panjang"] },
+    { "ref": "D5", "name": "Rendang daging", "state": "ready", "missing": [], "unchecked": [] },
+    { "ref": "D6", "name": "Rendang ayam", "state": "missing", "missing": ["Ayam"], "unchecked": [] }
+  ],
+  "menu": [
+    { "day": "2026-11-12", "meal": "lunch", "title": "Nasi goreng", "recipe": "D2" },
+    { "day": "2026-11-15", "meal": "dinner", "title": "Soto ayam", "recipe": "D3" }
+  ]
 }

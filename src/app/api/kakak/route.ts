@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildContext, jakartaNow, type ContextRows } from "@/lib/kakak/context";
+import { addDays } from "@/lib/kakak/household";
 import type { KakakModel } from "@/lib/kakak/cost";
 import { PRICES } from "@/lib/kakak/cost";
 import { classifyApiError } from "@/lib/kakak/api-errors";
@@ -85,7 +86,7 @@ async function readItems(supabase: Awaited<ReturnType<typeof createSupabaseServe
   // ItemStock) and are never sent to Anthropic.
   const items = await supabase
     .from("inventory_items")
-    .select("id, name, scope, created_at, category, stock_status, kept_in, expires_on, track_amount, unit, quantity")
+    .select("id, name, variant, scope, created_at, category, stock_status, kept_in, expires_on, track_amount, unit, quantity")
     .eq("household_id", householdId);
   if (items.error?.code !== "42703") return items;
   console.error("Kakak: ingredient places not read", items.error.message);
@@ -128,7 +129,10 @@ async function readRows(
   supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
   householdId: string,
 ): Promise<ContextRows> {
-  const [staff, pets, rooms, items, household, food] = await Promise.all([
+  // The menu around today (Can we cook it?): context.ts keeps the 7 days
+  // from the conversation's own today.
+  const { today } = jakartaNow();
+  const [staff, pets, rooms, items, household, food, recipes, menu] = await Promise.all([
     readStaff(supabase, householdId),
     supabase.from("task_entities").select("id, name, created_at, entity_type, metadata").eq("household_id", householdId).eq("entity_type", "pet"),
     supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
@@ -145,12 +149,28 @@ async function readRows(
       .select("feature, enabled")
       .eq("household_id", householdId)
       .in("feature", ["food", "kitchen", "repairs", "bills"]),
+    // Can we cook it? (20 Nov): saved recipes with their lines, and the
+    // menu, so the app can tell Kakak what each recipe is missing. Names
+    // only reach her (context.ts); amounts and steps never do.
+    supabase
+      .from("recipes")
+      .select("id, name, name_id, servings, written_in, created_at, ingredients:recipe_ingredients(id, item_id, name, name_id, amount, unit, position)")
+      .eq("household_id", householdId),
+    supabase
+      .from("menu_dishes")
+      .select("day, meal, title, recipe_id, position, cooked_at")
+      .eq("household_id", householdId)
+      .gte("day", addDays(today, -1))
+      .lte("day", addDays(today, 8)),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;
   // Optional: a failed read (or a database without migrations/133) leaves
   // pets on, as before this phase, rather than failing Kakak's turn.
   if (household.error) console.error("Kakak: who lives here not read", household.error.message);
   if (food.error) console.error("Kakak: features not read", food.error.message);
+  // Optional too: without them Kakak knows no recipes and says so.
+  if (recipes.error) console.error("Kakak: recipes not read", recipes.error.message);
+  if (menu.error) console.error("Kakak: menu not read", menu.error.message);
   const petIds = (pets.data ?? []).map((p) => p.id as string);
   const schedules = petIds.length
     ? await supabase
@@ -171,6 +191,8 @@ async function readRows(
     repairsOn: food.error ? null : featureRow(food.data, "repairs"),
     billsOn: food.error ? null : featureRow(food.data, "bills"),
     featuresRead: !food.error,
+    recipes: recipes.error ? [] : (recipes.data ?? []),
+    menu: menu.error ? [] : (menu.data ?? []),
   } as ContextRows;
 }
 
