@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LowStockFlagButton } from "@/components/dashboard/low-stock-flag";
 import { usePurchase } from "@/components/shopping/bought-sheet";
 import { ToBuyRow } from "@/components/shopping/to-buy-row";
+import { MenuNeedsSection } from "@/components/shopping/menu-needs-section";
 import { StockItemsPanel } from "@/components/shopping/stock-items-panel";
 import { useHousehold } from "@/context/household-context";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
@@ -79,6 +80,9 @@ export function StaffShopping() {
           </div>
         </section>
       )}
+
+      {/* Untuk menu (21 Nov): what the coming menu still needs, to read at the market. */}
+      <MenuNeedsSection lang="id" owner={false} />
 
       <p className="text-sm text-muted-foreground">
         Ketuk barang yang hampir habis atau sudah habis.

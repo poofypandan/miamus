@@ -380,6 +380,18 @@ export const GUIDE: readonly GuideEntry[] = [
     where: "kitchen_shopping",
   },
   {
+    // The owner's wish list, step 1 (21 Nov): derived from the menu, never stored.
+    id: "menu-needs",
+    group: "kitchen",
+    title: { en: "What the menu needs", id: "Yang perlu untuk menu" },
+    body: {
+      en: "Kitchen → Shopping → For the menu: what the dishes planned for the coming week still need. Something not on your list has a dashed outline and says which dish it's for. Add puts it on To buy, and Add all does a whole dish. Staff see it too.",
+      id: "Dapur → Belanja → Untuk menu: yang masih perlu untuk menu seminggu ke depan. Yang belum ada di daftar bergaris putus-putus dan menyebut masakannya. Tambah memasukkannya ke Perlu dibeli; Tambah semua memasukkan semua bahan untuk satu masakan. Staf juga melihatnya.",
+    },
+    where: "kitchen_shopping",
+    covers: ["menu-needs-2026-11"],
+  },
+  {
     id: "kitchen-up-to-date",
     group: "kitchen",
     title: { en: "Keeping the kitchen up to date", id: "Menjaga stok tetap benar" },

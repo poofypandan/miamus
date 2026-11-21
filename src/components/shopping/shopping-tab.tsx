@@ -10,6 +10,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { usePurchase } from "@/components/shopping/bought-sheet";
 import { StockItemsPanel } from "@/components/shopping/stock-items-panel";
 import { ToBuyRow } from "@/components/shopping/to-buy-row";
+import { MenuNeedsSection, useMenuNeeds } from "@/components/shopping/menu-needs-section";
+import { neededForLine } from "@/lib/menu-needs";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -36,6 +38,8 @@ import type { InventoryAlert } from "@/types/database";
  *
  *   To buy      a quick-add line, then everything someone marked running low
  *               or out and every note about anything else. Tick = bought.
+ *   For the menu  what the dishes planned for the coming week still need
+ *               (lib/menu-needs.ts), with Add (21 Nov).
  *   Everything  every item, Pets then Home. Tap to say how much is left, or
  *               to edit it.
  *
@@ -66,6 +70,13 @@ export function ShoppingTab() {
     [flags, inventoryItems]
   );
   const purchase = usePurchase(locale);
+  // The wish list, step 1 (Fable): what the coming menu needs, on the To buy row of each item it is for.
+  const { needs: menuNeeds, today: menuToday } = useMenuNeeds(true);
+  const neededFor = useMemo(() => {
+    const byItem = new Map<string, string>();
+    for (const need of menuNeeds) if (need.item) byItem.set(need.item.id, neededForLine(need, menuToday, locale));
+    return byItem;
+  }, [menuNeeds, menuToday, locale]);
   const [jot, setJot] = useState("");
   const [jotting, setJotting] = useState(false);
 
@@ -195,6 +206,7 @@ export function ShoppingTab() {
                     detail={[buy ? t(`Buy ${buy}`, `Beli ${buy}`) : null, STOCK_STATUS_LABELS[locale][status], amount, by, when]
                       .filter(Boolean)
                       .join(" · ")}
+                    note={neededFor.get(item.id)}
                     out={status === "out"}
                     tickLabel={t(`Bought ${stockItemName(item)}`, `${stockItemName(item)} sudah dibeli`)}
                     onTick={() => purchase.buy(item)}
@@ -233,6 +245,9 @@ export function ShoppingTab() {
           </>
         )}
       </section>
+
+      {/* The owner's wish list, step 1 (21 Nov): what the coming menu still needs. */}
+      <MenuNeedsSection lang={locale} owner />
 
       <StockItemsPanel
         id="everything-title"
