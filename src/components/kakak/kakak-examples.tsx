@@ -6,7 +6,7 @@ import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
-import { kakakExamples, type KakakExample, type KakakExampleKind } from "@/lib/kakak/examples";
+import { idleExamples, kakakExamples, type KakakExample, type KakakExampleKind } from "@/lib/kakak/examples";
 
 const ICONS: Record<KakakExampleKind, LucideIcon> = {
   chore: ListChecks,
@@ -19,8 +19,9 @@ const ICONS: Record<KakakExampleKind, LucideIcon> = {
 };
 
 /**
- * The Kakak sheet's first screen: five things to say and one to ask, in the
- * owner's language and with this household's own names (lib/kakak/examples.ts).
+ * The Kakak sheet's first screen: two things to say and one to ask (07,
+ * decision 7), in the owner's language and with this household's own names
+ * (lib/kakak/examples.ts).
  * Tapping one puts it in the typing box, so the owner can change it first.
  * The roster loads on demand; until it has, the examples use no names.
  */
@@ -53,17 +54,20 @@ function ExampleList({ onPick, staffNames }: { onPick: (text: string) => void; s
   const { petsOn } = useHouseholdProfile();
   const examples: KakakExample[] = useMemo(
     () =>
-      kakakExamples({
-        locale,
-        staffNames,
-        petNames: petsOn ? [...pets].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((p) => p.name) : [],
-      }),
+      idleExamples(
+        kakakExamples({
+          locale,
+          staffNames,
+          petNames: petsOn ? [...pets].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((p) => p.name) : [],
+        }),
+      ),
     [locale, staffNames, pets, petsOn],
   );
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-medium text-muted-foreground">{t("Try saying", "Coba bilang")}</p>
-      <ul className="flex flex-col gap-2">
+      <p className="px-1 text-sm font-medium text-muted-foreground">{t("Try saying", "Coba bilang")}</p>
+      {/* One paper inset with hairlines between the rows (04, PR 5): lists, not boxes. */}
+      <ul className="flex flex-col divide-y overflow-hidden rounded-[22px] bg-background">
         {examples.map((example) => {
           const Icon = ICONS[example.kind];
           return (
@@ -71,12 +75,10 @@ function ExampleList({ onPick, staffNames }: { onPick: (text: string) => void; s
               <button
                 type="button"
                 onClick={() => onPick(example.text)}
-                className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left text-sm text-gray-900 transition-colors active:bg-muted"
+                className="flex min-h-[52px] w-full items-center gap-3 px-4 py-3 text-left text-base text-foreground transition-colors active:bg-muted"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
-                <span className="min-w-0">{example.text}</span>
+                <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="min-w-0 text-pretty">{example.text}</span>
               </button>
             </li>
           );

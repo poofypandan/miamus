@@ -31,7 +31,7 @@ export function FilterPill({
       className={cn(
         // Lifted paper when chosen, the warm track colour when not (21 Nov,
         // the visual direction's PR 2): black is for the action only.
-        "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold",
+        "press flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold",
         active
           ? "bg-card text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)]"
           : "bg-muted text-muted-foreground active:bg-muted/70"
