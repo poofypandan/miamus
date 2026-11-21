@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Loader2, PauseCircle, UserRoundCheck, Users, X } from "lucide-react";
+import { ArrowLeft, Check, CircleAlert, Loader2, PauseCircle, UserRoundCheck, Users, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -222,7 +222,7 @@ function LeaveApproval() {
       <Card className="py-4">
         <CardContent className="flex flex-col gap-1 px-4">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-base font-semibold text-gray-900">
+            <p className="text-base font-semibold text-foreground">
               {t(`${name} is asking for leave`, `${name} mengajukan cuti`)}
             </p>
             <StatusBadge status={leave.status} />
@@ -279,7 +279,7 @@ function LeaveApproval() {
                 </Button>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {action
                 ? ACTIONS.find((a) => a.value === action)?.hint[locale]
                 : t(
@@ -308,8 +308,10 @@ function LeaveApproval() {
           )}
 
           {action === "pause" && (
-            <div className="flex flex-col gap-1 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-              <p className="font-semibold">
+            // Attention is never carried by its tint alone: an icon and dark text (04).
+            <div className="flex flex-col gap-1 rounded-xl bg-attention-tint p-3 text-xs text-attention">
+              <p className="flex items-start gap-1.5 font-semibold">
+                <CircleAlert className="mt-px size-3.5 shrink-0" aria-hidden="true" />
                 {pausedCount > 0
                   ? t(
                       `At least ${pausedCount} of ${name}'s chores will be skipped and not done by anyone.`,
@@ -373,7 +375,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       >
         <ArrowLeft className="size-3.5" /> {back.fromToday ? t("Today", "Hari ini") : t("People", "Orang")}
       </Link>
-      <h1 className="text-lg font-semibold text-gray-900">{t("Leave request", "Permintaan cuti")}</h1>
+      <h1 className="text-lg font-semibold text-foreground">{t("Leave request", "Permintaan cuti")}</h1>
       {children}
     </div>
   );
@@ -391,9 +393,9 @@ function StatusBadge({ status }: { status: LeaveRequest["status"] }) {
     <Badge
       variant="secondary"
       className={cn(
-        "shrink-0 text-[10px]",
-        status === "pending" && "bg-slate-100 text-slate-700",
-        status === "approved" && "bg-emerald-100 text-emerald-800"
+        "shrink-0",
+        status === "pending" && "bg-muted text-muted-foreground",
+        status === "approved" && "bg-done-tint text-done-foreground"
       )}
     >
       {copy}

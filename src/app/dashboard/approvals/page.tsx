@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useT } from "@/context/owner-locale-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { moduleHref } from "@/lib/dashboard-modules";
 import {
@@ -73,13 +73,13 @@ export default function HouseholdApprovalsPage() {
       if (error) throw error;
       toast.success(
         approve
-          ? `${requesterLabel(request)} can now set up a household`
-          : `Request from ${requesterLabel(request)} rejected`
+          ? t(`${requesterLabel(request)} can now set up a household`, `${requesterLabel(request)} sekarang bisa menyiapkan rumah`)
+          : t(`Request from ${requesterLabel(request)} rejected`, `Permintaan dari ${requesterLabel(request)} ditolak`)
       );
       await fetchRequests();
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't save the decision. Check your connection and try again.");
+      toast.error(t("Couldn't save the decision. Check your connection and try again.", "Keputusan gagal disimpan. Periksa koneksi Anda lalu coba lagi."));
     } finally {
       setDeciding(null);
     }
@@ -97,16 +97,16 @@ export default function HouseholdApprovalsPage() {
   if (load.state === "forbidden") {
     return (
       <Shell>
-        <p className="text-sm text-muted-foreground">Not available.</p>
+        <p className="text-sm text-muted-foreground">{t("Not available.", "Tidak tersedia.")}</p>
       </Shell>
     );
   }
   if (load.state === "failed") {
     return (
       <Shell>
-        <p className="text-sm text-destructive">Couldn&apos;t load requests.</p>
+        <p className="text-sm text-destructive">{t("Couldn't load requests.", "Permintaan gagal dimuat.")}</p>
         <Button variant="outline" onClick={() => void fetchRequests()} className="w-fit">
-          Try again
+          {t("Try again", "Coba lagi")}
         </Button>
       </Shell>
     );
@@ -118,15 +118,17 @@ export default function HouseholdApprovalsPage() {
   return (
     <Shell>
       <p className="-mt-2 text-xs leading-relaxed text-muted-foreground">
-        Approving lets that Google account set up one household. Rejected requests, and the
-        sign-in they came from, are deleted after 30 days.
+        {t(
+          "Approving lets that Google account set up one household. Rejected requests, and the sign-in they came from, are deleted after 30 days.",
+          "Jika disetujui, akun Google itu bisa menyiapkan satu rumah. Permintaan yang ditolak, beserta akun masuknya, dihapus setelah 30 hari."
+        )}
       </p>
 
       {/* The north star in numbers (Phase 172 PR 0): only platform admins
           get this far, and only they can read it. */}
       <Link
         href="/dashboard/north-star"
-        className="flex min-h-[44px] items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-medium text-gray-900"
+        className="flex min-h-[44px] items-center gap-3 rounded-xl border bg-card px-4 py-3 text-sm font-medium text-foreground"
       >
         <ChartColumn className="size-4 text-muted-foreground" aria-hidden />
         <span className="flex-1">{t("North star numbers", "Angka ukuran utama")}</span>
@@ -134,9 +136,9 @@ export default function HouseholdApprovalsPage() {
       </Link>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-900">Waiting</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t("Waiting", "Menunggu")}</h2>
         {pending.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No requests waiting.</p>
+          <p className="text-sm text-muted-foreground">{t("No requests waiting.", "Tidak ada permintaan yang menunggu.")}</p>
         ) : (
           pending.map((request) => (
             <Card key={request.user_id} className="py-4">
@@ -149,7 +151,7 @@ export default function HouseholdApprovalsPage() {
                     className="min-h-[44px] flex-1"
                   >
                     {deciding === request.user_id ? <Loader2 className="animate-spin" /> : <Check />}
-                    Approve
+                    {t("Approve", "Setujui")}
                   </Button>
                   <Button
                     variant="outline"
@@ -157,7 +159,7 @@ export default function HouseholdApprovalsPage() {
                     disabled={deciding !== null}
                     className="min-h-[44px] flex-1"
                   >
-                    <X /> Reject
+                    <X /> {t("Reject", "Tolak")}
                   </Button>
                 </div>
               </CardContent>
@@ -168,7 +170,7 @@ export default function HouseholdApprovalsPage() {
 
       {decided.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-gray-900">Decided in the last 30 days</h2>
+          <h2 className="text-sm font-semibold text-foreground">{t("Decided in the last 30 days", "Diputuskan dalam 30 hari terakhir")}</h2>
           <Card className="py-2">
             <CardContent className="flex flex-col divide-y px-0">
               {decided.map((request) => (
@@ -188,7 +190,7 @@ export default function HouseholdApprovalsPage() {
                         disabled={deciding !== null}
                         className="min-h-[36px] shrink-0"
                       >
-                        Approve
+                        {t("Approve", "Setujui")}
                       </Button>
                     )}
                   </div>
@@ -218,7 +220,7 @@ function TellThem({ request, onTold }: { request: AccessRequest; onTold: () => v
   const message = approvedMessage(request.full_name, request.locale);
   const mail = emailThemHref(request);
   const button =
-    "flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium text-gray-900 active:bg-muted";
+    "flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium text-foreground active:bg-muted";
 
   async function told() {
     if (!request.whatsapp || !supabase) return;
@@ -261,18 +263,19 @@ function TellThem({ request, onTold }: { request: AccessRequest; onTold: () => v
 
 function RequestIdentity({ request }: { request: AccessRequest }) {
   const t = useT();
-  const when = new Date(request.decided_at ?? request.requested_at).toLocaleDateString("en-US", {
+  const locale = useOwnerLocale();
+  const when = new Date(request.decided_at ?? request.requested_at).toLocaleDateString(locale === "id" ? "id-ID" : "en-US", {
     month: "short",
     day: "numeric",
   });
   return (
     <div className="flex min-w-0 flex-col">
-      <span className="truncate text-sm font-medium text-gray-900">{requesterLabel(request)}</span>
+      <span className="truncate text-sm font-medium text-foreground">{requesterLabel(request)}</span>
       {request.full_name && request.email && (
         <span className="truncate text-xs text-muted-foreground">{request.email}</span>
       )}
       <span className="text-xs text-muted-foreground">
-        {request.status === "pending" ? `Asked ${when}` : `Decided ${when}`}
+        {request.status === "pending" ? t(`Asked ${when}`, `Diminta ${when}`) : t(`Decided ${when}`, `Diputuskan ${when}`)}
         {/* Approved at sign-up, reviewed afterwards (Phase 172, D1). */}
         {request.auto && <> · {t("Automatic", "Otomatis")}</>}
       </span>
@@ -293,17 +296,17 @@ function RequestAnswers({ request }: { request: AccessRequest }) {
   const heard = request.heard_from?.trim();
   if (!help && !heard) return null;
   return (
-    <dl className="mt-2 flex flex-col gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs">
+    <dl className="mt-2 flex flex-col gap-1.5 rounded-lg bg-background px-3 py-2 text-xs">
       {help && (
         <div className="flex flex-col">
           <dt className="text-muted-foreground">{t("Wants help with", "Ingin dibantu")}</dt>
-          <dd className="break-words whitespace-pre-line text-gray-900">{help}</dd>
+          <dd className="break-words whitespace-pre-line text-foreground">{help}</dd>
         </div>
       )}
       {heard && (
         <div className="flex flex-col">
           <dt className="text-muted-foreground">{t("Heard about Miamus from", "Tahu Miamus dari")}</dt>
-          <dd className="break-words text-gray-900">{heard}</dd>
+          <dd className="break-words text-foreground">{heard}</dd>
         </div>
       )}
     </dl>
@@ -311,30 +314,32 @@ function RequestAnswers({ request }: { request: AccessRequest }) {
 }
 
 function StatusBadge({ status }: { status: AccessRequest["status"] }) {
+  const t = useT();
   return (
     <Badge
       variant="secondary"
       className={cn(
-        "shrink-0 text-[10px]",
-        status === "approved" && "bg-emerald-100 text-emerald-800",
-        status === "rejected" && "bg-slate-100 text-slate-700"
+        "shrink-0",
+        status === "approved" && "bg-done-tint text-done-foreground",
+        status === "rejected" && "bg-muted text-muted-foreground"
       )}
     >
-      {status === "approved" ? "Approved" : status === "rejected" ? "Rejected" : "Pending"}
+      {status === "approved" ? t("Approved", "Disetujui") : status === "rejected" ? t("Rejected", "Ditolak") : t("Pending", "Menunggu")}
     </Badge>
   );
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
+  const t = useT();
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
       <Link
         href={moduleHref("agenda")}
         className="flex w-fit items-center gap-1 text-xs font-medium text-muted-foreground"
       >
-        <ArrowLeft className="size-3.5" /> Dashboard
+        <ArrowLeft className="size-3.5" /> {t("Today", "Hari ini")}
       </Link>
-      <h1 className="text-lg font-semibold text-gray-900">Household requests</h1>
+      <h1 className="text-lg font-semibold text-foreground">{t("Household requests", "Permintaan rumah baru")}</h1>
       {children}
     </div>
   );
