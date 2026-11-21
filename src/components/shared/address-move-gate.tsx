@@ -321,7 +321,7 @@ function MoveView({ audience, t }: { audience: MoveAudience; t: Translate }) {
           <div className="mt-3 flex gap-2">
             <Button
               variant="outline"
-              className="h-10 flex-1 rounded-xl bg-background"
+              className="h-10 flex-1 rounded-xl bg-card"
               onClick={() => setConfirming(false)}
               disabled={leaving}
             >

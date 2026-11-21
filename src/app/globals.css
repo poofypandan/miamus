@@ -45,6 +45,97 @@
   --color-kakak: var(--kakak);
   --color-kakak-tint: var(--kakak-tint);
   --color-kakak-line: var(--kakak-line);
+  /* Warm paper (21 Nov, the app's visual direction, PR 1): status colours
+     with meaning, to replace emerald-, amber- and red- over time (PR 8).
+     Amber never carries a state by its tint alone: always an icon and its
+     dark text, or a night light washes it out. */
+  --color-subtle-foreground: var(--subtle-foreground);
+  --color-done: var(--done);
+  --color-done-foreground: var(--done-foreground);
+  --color-done-tint: var(--done-tint);
+  --color-attention: var(--attention);
+  --color-attention-tint: var(--attention-tint);
+  --color-urgent: var(--urgent);
+  --color-urgent-tint: var(--urgent-tint);
+  /* One warm grey ramp (21 Nov, Fable's look at PR 1): the gray, zinc,
+     slate, neutral and stone scales all become it, so the ~450 hard-coded
+     text-gray-900/700/600/500 and friends stop reading cool blue on paper,
+     without touching a screen. 500 (#6b625b) is 4.7:1 on a track, 5.3 on
+     paper and 5.9 on warm white (Tailwind's gray-500 was 4.3 on paper);
+     600 is --muted-foreground, 900 the ink. 400 is for placeholders and
+     disabled things only. PR 8 still moves them to tokens. */
+  --color-gray-50: #f8f6f1;
+  --color-gray-100: #f3efe8;
+  --color-gray-200: #e9e4da;
+  --color-gray-300: #d6cfc4;
+  --color-gray-400: #9a9087;
+  --color-gray-500: #6b625b;
+  --color-gray-600: #5c534c;
+  --color-gray-700: #473f39;
+  --color-gray-800: #2f2925;
+  --color-gray-900: #1f1a17;
+  --color-gray-950: #14100e;
+  --color-zinc-50: #f8f6f1;
+  --color-zinc-100: #f3efe8;
+  --color-zinc-200: #e9e4da;
+  --color-zinc-300: #d6cfc4;
+  --color-zinc-400: #9a9087;
+  --color-zinc-500: #6b625b;
+  --color-zinc-600: #5c534c;
+  --color-zinc-700: #473f39;
+  --color-zinc-800: #2f2925;
+  --color-zinc-900: #1f1a17;
+  --color-zinc-950: #14100e;
+  --color-slate-50: #f8f6f1;
+  --color-slate-100: #f3efe8;
+  --color-slate-200: #e9e4da;
+  --color-slate-300: #d6cfc4;
+  --color-slate-400: #9a9087;
+  --color-slate-500: #6b625b;
+  --color-slate-600: #5c534c;
+  --color-slate-700: #473f39;
+  --color-slate-800: #2f2925;
+  --color-slate-900: #1f1a17;
+  --color-slate-950: #14100e;
+  --color-neutral-50: #f8f6f1;
+  --color-neutral-100: #f3efe8;
+  --color-neutral-200: #e9e4da;
+  --color-neutral-300: #d6cfc4;
+  --color-neutral-400: #9a9087;
+  --color-neutral-500: #6b625b;
+  --color-neutral-600: #5c534c;
+  --color-neutral-700: #473f39;
+  --color-neutral-800: #2f2925;
+  --color-neutral-900: #1f1a17;
+  --color-neutral-950: #14100e;
+  --color-stone-50: #f8f6f1;
+  --color-stone-100: #f3efe8;
+  --color-stone-200: #e9e4da;
+  --color-stone-300: #d6cfc4;
+  --color-stone-400: #9a9087;
+  --color-stone-500: #6b625b;
+  --color-stone-600: #5c534c;
+  --color-stone-700: #473f39;
+  --color-stone-800: #2f2925;
+  --color-stone-900: #1f1a17;
+  --color-stone-950: #14100e;
+  /* One white and one black (05, question 3): bg-white and text-white are
+     the film's warm white, bg-black the ink. */
+  --color-white: #fffdf8;
+  --color-black: #1f1a17;
+  /* Two warm shadows in the whole app: under surfaces, and under what
+     floats (Kakak, Lapor, toasts, sheets). Added here, used from PR 3. */
+  --shadow-card: 0 1px 2px rgb(60 40 20 / 0.04), 0 10px 28px -14px rgb(60 40 20 / 0.16);
+  --shadow-float: 0 2px 6px rgb(60 40 20 / 0.08), 0 16px 36px -10px rgb(60 40 20 / 0.28);
+  /* The one large line a screen (30 px). Used from PR 4. */
+  --text-title: 1.875rem;
+  --text-title--line-height: 2.125rem;
+  --text-title--font-weight: 600;
+  --text-title--letter-spacing: -0.032em;
+  /* Three easings, the motion kit's (PR 7 puts them to use). */
+  --ease-arrive: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-travel: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-settle: cubic-bezier(0.2, 0.8, 0.2, 1);
   /* Headline (19 Nov, product change #4, first part): one size above the
      body, for the single most important line on a card, such as the task's
      name. `text-headline` sets 22 px, its line height and semi-bold. Keep
@@ -53,6 +144,7 @@
   --text-headline: 1.375rem;
   --text-headline--line-height: 1.75rem;
   --text-headline--font-weight: 600;
+  --text-headline--letter-spacing: -0.022em;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -63,30 +155,52 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* Warm paper (21 Nov, the app's visual direction, PR 1;
+     docs/private/landing/04 and 05). The page is paper, surfaces the film's
+     warm white, text and the action the film's ink, so the app, the film and
+     the landing page agree to the digit. No cool grey anywhere. The system
+     bars follow the page: viewport.themeColor (layout.tsx), the manifest's
+     theme_color and background_color, and the launch stage all use
+     LAUNCH_BACKGROUND (brand-mark.tsx), this same paper. */
+  --background: #f5f2ec;
+  --foreground: #1f1a17;
+  --card: #fffdf8;
+  --card-foreground: #1f1a17;
+  --popover: #fffdf8;
+  --popover-foreground: #1f1a17;
+  --primary: #1f1a17;
+  --primary-foreground: #fffdf8;
+  --secondary: #e9e4da;
+  --secondary-foreground: #1f1a17;
+  --muted: #e9e4da;
+  /* Secondary text, dark enough to hold under a phone's night light
+     (about 6.7:1 on paper by day, 5.5 at 3500 K). */
+  --muted-foreground: #5c534c;
+  --accent: #e9e4da;
+  --accent-foreground: #1f1a17;
+  --destructive: #b3382c;
+  /* A hairline that works on paper and on warm white alike. */
+  --border: rgb(31 26 23 / 0.1);
+  --input: rgb(31 26 23 / 0.14);
+  /* Crisp on warm white: #a39a91 at 50% read as a muddy double outline
+     (Fable's look at PR 1). */
+  --ring: #5c534c;
+  /* Chevrons, placeholders, disabled: marks and large text only (3.2:1). */
+  --subtle-foreground: #978d83;
+  --done: #1f8a55;
+  --done-foreground: #155c3a;
+  --done-tint: #d8ecde;
+  --attention: #7a4f08;
+  --attention-tint: #f5dfae;
+  --urgent: #b3382c;
+  --urgent-tint: #fbeae6;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  /* 12 px (was 10): every corner follows, lg 12, xl 16.8, 2xl 21.6. */
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -144,6 +258,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Lighter icons (21 Nov, PR 1): Lucide draws 2 px lines by default; 1.75
+     everywhere matches the type's weight. A style beats the attribute, so
+     this reaches every icon at once; the tab bar sets its own (2 chosen,
+     1.6 not) inline. */
+  .lucide {
+    stroke-width: 1.75;
+  }
   body {
     @apply bg-background text-foreground;
   }
@@ -179,17 +300,17 @@
           reliable once html itself is the scroll container. */
     color-scheme: light;
     /* This is the colour the system bars are told to match: --background is
-       pure white, and layout.tsx's viewport.themeColor and manifest.ts's
-       theme_color/background_color are all #ffffff to agree with it. Change one
-       and the other three have to change with it, or a grey band reappears
-       above the status bar. Verified by reading the painted html/body colour on
-       the landing, dashboard and staff screens. */
+       warm paper (#f5f2ec since 21 Nov; it was white), and layout.tsx's
+       viewport.themeColor and manifest.ts's theme_color/background_color are
+       the same paper (LAUNCH_BACKGROUND) to agree with it. Change one and the
+       others have to change with it, or a band reappears above the status
+       bar, and Android's splash no longer meets the launch stage. */
     background-color: var(--background);
   }
 
   /* The desktop backdrop behind the mobile frame (Phase 113, layout.tsx).
-     Phones keep the white above: there the frame is the whole screen, and the
-     system bars are matched to white (see the note above). */
+     Phones keep the paper above: there the frame is the whole screen, and the
+     system bars are matched to it (see the note above). */
   @media (min-width: 768px) {
     html,
     body {
@@ -403,38 +524,205 @@
 }
 
 /*
- * The Miamus mark's roof drawing itself (MiamusMark, 2026-11-09). Two
- * animations on one 2.4s clock: a strip of the tile's ink slides from just
- * left of the roof (14px) to just past it (74px), revealing it left to right;
- * the roof holds, then fades, and at the restart the strip is back over it
- * while the roof returns to full opacity unseen. Transform and opacity only.
+ * The Miamus mark drawing itself (MiamusMark, 20 Nov; the roof alone from
+ * 2026-11-09). Timings from the film's end card, where the roof draws over
+ * 14 frames and the M starts 10 frames after it and draws over 22: at 30
+ * frames a second, 467ms, +333ms and 733ms. Curves from Fable's look (20 Nov):
+ * the roof slides on the motion kit's draw curve (0.25, 0.1, 0.25, 1), which
+ * on a slide writes for about 270ms instead of popping; the M goes in pen
+ * order, one strip per part, handing on as each lands. Fades use the kit's
+ * EVEN curve.
+ *
+ * One 2.6s cycle, transform and opacity only:
+ *     0–300ms   the strokes fade out (EVEN)
+ *   300ms       ink strips cover each line, unseen (ink on ink)
+ *   340ms       the strokes return under the strips
+ *   400–867ms   the roof's strip slides off it, left to right
+ *   733–943ms   the M's left wall, upwards        (0.4, 0, 0.8, 0.8)
+ *   923–1273ms  the V, left to right              (linear: the hand-on)
+ *  1253–1467ms  the right wall, downwards         (0.2, 0.2, 0.2, 1)
+ *  1500ms       the strips go (unseen); the whole house rests to 2.6s
+ *
+ * First move 2.2s after launch (a 2200ms delay, `backwards`, so the delay
+ * shows the 0% frame: the whole house): the still mark, then the promise line
+ * at 1.5s, then the loop, never two at once. Shares of the 512 box: the roof
+ * runs 92–420; the roof strip's soft edge is 20 wide.
  */
 @theme inline {
-  /* Started halfway through (-1.2s): the first frame is the whole house, the
-     same picture as the icon just tapped, so a quick load never shows a
-     roofless M. The roof first fades and redraws about 0.7s in. */
-  --animate-roof-reveal: roof-reveal 2.4s -1.2s infinite;
-  --animate-roof-fade: roof-fade 2.4s -1.2s infinite;
+  --animate-mark-strokes: mark-strokes 2.6s 2200ms infinite backwards;
+  --animate-mark-roof: mark-roof 2.6s 2200ms infinite backwards;
+  --animate-mark-m-left: mark-m-left 2.6s 2200ms infinite backwards;
+  --animate-mark-m-v: mark-m-v 2.6s 2200ms infinite backwards;
+  --animate-mark-m-right: mark-m-right 2.6s 2200ms infinite backwards;
 
-  @keyframes roof-reveal {
-    0%,
-    10% {
-      transform: translateX(14px);
-      animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  @keyframes mark-strokes {
+    0% {
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
     }
-    48%,
+    11.54% {
+      opacity: 0;
+      animation-timing-function: step-end;
+    }
+    13.08%,
     100% {
-      transform: translateX(74px);
+      opacity: 1;
     }
   }
 
-  @keyframes roof-fade {
-    0%,
-    78% {
-      opacity: 1;
+  @keyframes mark-roof {
+    0% {
+      opacity: 0;
+      transform: translateX(82.8%);
+      animation-timing-function: step-end;
     }
-    92%,
+    11.54% {
+      opacity: 1;
+      transform: translateX(14.06%);
+    }
+    15.38% {
+      opacity: 1;
+      transform: translateX(14.06%);
+      animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    33.35% {
+      opacity: 1;
+      transform: translateX(82.8%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
     100% {
+      opacity: 0;
+      transform: translateX(82.8%);
+    }
+  }
+
+  @keyframes mark-m-left {
+    0% {
+      opacity: 0;
+      transform: translateY(-100%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    28.19% {
+      opacity: 1;
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.4, 0, 0.8, 0.8);
+    }
+    36.27% {
+      opacity: 1;
+      transform: translateY(-100%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+  }
+
+  @keyframes mark-m-v {
+    0% {
+      opacity: 0;
+      transform: translateX(100%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    35.5% {
+      opacity: 1;
+      transform: translateX(0);
+      animation-timing-function: linear;
+    }
+    48.96% {
+      opacity: 1;
+      transform: translateX(100%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes mark-m-right {
+    0% {
+      opacity: 0;
+      transform: translateY(100%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    48.19% {
+      opacity: 1;
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.2, 0.2, 0.2, 1);
+    }
+    56.42% {
+      opacity: 1;
+      transform: translateY(100%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+}
+
+/*
+ * The launch mark on an installed Android app (20 Nov, Fable's look): the
+ * phone's own splash, held. Android draws that splash from the maskable icon
+ * cut to a 160dp circle, the glyph at 192dp (the icon's 80% safe zone on a
+ * 240dp canvas); on a 160px mark that is this circle and the glyph at 1.2.
+ * Nothing animates: the home icon and the splash are circles there, so the
+ * mark stays one, the loop drawing inside it, until the cover lifts. The
+ * circular clip also keeps the loop's ink strips inside the circle.
+ *
+ * Only where that splash exists: an installed app (display-mode: standalone)
+ * that is not an iPhone (-webkit-touch-callout is iOS Safari's alone). iPhones
+ * and browser tabs keep the rounded square, which their launch screen and home
+ * icon show. In CSS rather than script so the very first server-rendered frame
+ * is already right. Static, so reduced motion needs nothing different.
+ */
+@media (display-mode: standalone) {
+  @supports not (-webkit-touch-callout: none) {
+    .mark-opening {
+      border-radius: 50% !important;
+    }
+    .mark-opening-glyph {
+      transform: scale(1.2);
+    }
+  }
+}
+
+/*
+ * The staff cover taking over from the launch mark (20 Nov, Fable's look):
+ * the mark fades out over 200ms and the RUMAH rules fade in from 120ms later,
+ * so nothing leaves in one frame. When, is brand-cover.tsx's call (it sets
+ * each animation's start on the launch clock); these only say how.
+ */
+@theme inline {
+  --animate-staff-mark-out: staff-mark-out 200ms cubic-bezier(0.37, 0, 0.63, 1) both;
+  --animate-staff-rules-in: staff-rules-in 240ms cubic-bezier(0.25, 0.1, 0.25, 1) 120ms both;
+
+  @keyframes staff-mark-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes staff-rules-in {
+    from {
       opacity: 0;
     }
   }

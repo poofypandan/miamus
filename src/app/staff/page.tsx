@@ -140,7 +140,7 @@ function StaffTasks() {
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-50",
+        "mx-auto flex min-h-screen w-full max-w-md flex-col bg-background",
         // Tugas also has the "+ Lapor" FAB floating bottom-right (h-14 at
         // bottom-6): clear it so the last card can scroll out from under it.
         view === "tugas"
@@ -378,11 +378,11 @@ function TasksView() {
   const kitchenAmountsOn = sees.kitchen && ingredientsUnderFood(featureFlags);
   // The recipes tip (Phase 170 PR B) once the household has a recipe to open.
   // Loading here also keeps the phone's copy fresh for a weak kitchen signal.
-  const { recipes: householdRecipes } = useRecipes({ enabled: recipesOn(featureFlags) });
-  const showRecipesTip = sees.kitchen && recipesOn(featureFlags) && householdRecipes.length > 0;
+  const { recipes: householdRecipes } = useRecipes({ enabled: recipesOn() });
+  const showRecipesTip = sees.kitchen && recipesOn() && householdRecipes.length > 0;
   // The menu tip (Phase 170 PR C) once there is a menu on Today.
-  const { dishes: menuWeek } = useMenuWeek(dateStr, { enabled: recipesOn(featureFlags) });
-  const showMenuTip = sees.kitchen && recipesOn(featureFlags) && dishesOn(menuWeek, dateStr).length > 0;
+  const { dishes: menuWeek } = useMenuWeek(dateStr, { enabled: recipesOn() });
+  const showMenuTip = sees.kitchen && recipesOn() && dishesOn(menuWeek, dateStr).length > 0;
 
   // The floors tip (Phase 158) only once this phone's list actually shows a
   // floor or a spot: before the owner sorts rooms there is nothing to explain.
@@ -488,10 +488,13 @@ function TasksView() {
         ) : pushCard.ready ? (
         <StaffTipCard
           tips={[
+            // 20 Nov: Can we cook it? (D18), once Today has a menu.
+            { id: "staff-ready-to-cook-2026-11", show: showMenuTip },
             // 19 Nov: the task card with its Sebelum and Sesudah places.
             { id: "staff-task-card-2026-11", show: true },
             // Phase 177: changing what a cooked dish used, once Today has a menu.
-            { id: "staff-cooking-changes-2026-11", show: showMenuTip },
+            // Amounts only: with Kitchen amounts off nothing comes off stock to change.
+            { id: "staff-cooking-changes-2026-11", show: showMenuTip && featureFlags.kitchen },
             // Phase 170 PR A: only while Kitchen amounts is on.
             // Phase 176: while Bahan masakan shows under Makanan.
             { id: "staff-kitchen-places-2026-11", show: kitchenAmountsOn },
@@ -513,9 +516,9 @@ function TasksView() {
         ) : null}
 
         {/* Menu hari ini (Phase 170 PR C): above the chores, only when the
-            day has a plan, the Kitchen switch is on, and (Phase 178) the
-            person has Kitchen on. */}
-        <MenuTodayCard day={dateStr} enabled={sees.kitchen && recipesOn(featureFlags)} />
+            day has a plan and (Phase 178) the person has Kitchen on. Every
+            home since 20 Nov (recipesOn). */}
+        <MenuTodayCard day={dateStr} enabled={sees.kitchen && recipesOn()} />
 
         {/* Whoever is holding this phone is the one who will fetch the dog, so
             the discharge lives here as well as on the owner's profile sheet.
@@ -629,7 +632,7 @@ function HeaderIdentity() {
 function OnDutyBadge() {
   const { staffName } = useStaffIdentity();
   return (
-    <span className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-medium text-gray-500">
+    <span className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-card px-3 text-xs font-medium text-gray-500">
       <UserRound className="size-3.5" />
       {staffName ?? "Admin"}
     </span>

@@ -59,7 +59,7 @@ export function SpotField({
               onClick={() => onChange(on ? null : spot)}
               className={cn(
                 "flex min-h-[40px] items-center gap-1 rounded-full border px-3 text-sm",
-                on ? "border-amber-700 bg-amber-50 font-medium text-amber-900" : "bg-background active:bg-muted"
+                on ? "border-amber-700 bg-amber-50 font-medium text-amber-900" : "bg-card active:bg-muted"
               )}
             >
               {on && <Check className="size-3.5" />}

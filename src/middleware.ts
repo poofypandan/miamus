@@ -121,7 +121,8 @@ function requestHost(request: NextRequest): string | null {
 export const config = {
   // Every page, for the old-address check above; only GUARDED pays for the
   // auth check. Not API routes, the auth callback, Next's own files, the
-  // generated icons and preview pictures (a pushed notification on the old
-  // address still shows its icon), or anything with a file extension.
-  matcher: ["/((?!api/|auth/|_next/|icon|apple-icon|maskable-icon|opengraph-image|.*\\..*).*)"],
+  // generated icons, iPhone launch screens and preview pictures (a pushed
+  // notification on the old address still shows its icon), or anything with
+  // a file extension.
+  matcher: ["/((?!api/|auth/|_next/|icon|apple-icon|apple-splash|maskable-icon|opengraph-image|.*\\..*).*)"],
 };
