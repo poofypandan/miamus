@@ -38,12 +38,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       en: [
         "Plan the week's dishes in Kitchen → Menu. Shopping then shows what they still need, under For the menu.",
         "Something not on your list has a dashed outline and says which dish it's for, such as Needed for Rendang (Sat). Add puts it on To buy; Add all does a whole dish.",
-        "Once bought, it is part of what's at home. It leaves this list once the dish is cooked or its day passes. Staff see the same list.",
+        "Once bought, it is part of what's at home. It leaves this list once the dish is cooked or its day passes. Staff see it too, to know what to buy.",
       ],
       id: [
         "Rencanakan masakan seminggu di Dapur → Menu. Belanja lalu menunjukkan yang masih perlu, di Untuk menu.",
         "Yang belum ada di daftar bergaris putus-putus dan menyebut masakannya, misalnya Perlu untuk Rendang (Sab). Tambah memasukkannya ke Perlu dibeli; Tambah semua memasukkan semua bahan untuk satu masakan.",
-        "Setelah dibeli, barangnya jadi bagian stok di rumah. Hilang dari daftar setelah masakannya dimasak atau harinya lewat. Staf melihat daftar yang sama.",
+        "Setelah dibeli, barangnya jadi bagian stok di rumah. Hilang dari daftar setelah masakannya dimasak atau harinya lewat. Staf juga melihatnya, supaya tahu yang perlu dibeli.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },
