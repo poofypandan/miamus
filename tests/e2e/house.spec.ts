@@ -132,6 +132,14 @@ test("Home opens on the house: top floor first, amber only for a repair or an ea
   await floor.getByRole("button", { name: /^Dapur/ }).click();
   await expect(page.getByRole("dialog", { name: "LT1 · Dapur" })).toBeVisible();
   await page.keyboard.press("Escape");
+  // An empty room says nothing (Fable's look, #186).
+  await expect(floor.getByText("Nothing set up")).toHaveCount(0);
+
+  // A repair is named in words on its room's row, with no count badge.
+  await house.getByRole("button", { name: "LT2: show its list" }).click();
+  const upstairs = page.getByRole("dialog", { name: "LT2" });
+  await expect(upstairs.getByRole("button", { name: /^Kamar mandi/ })).toContainText("Keran wastafel bocor");
+  await page.keyboard.press("Escape");
 
   // A room opens its sheet, with its repair.
   await house.getByRole("button", { name: "LT2 · Kamar mandi, needs attention" }).click();
