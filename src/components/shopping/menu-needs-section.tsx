@@ -88,7 +88,8 @@ export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boo
     if (need.kind === "not_there") {
       const added = await addInventoryItem({
         scope: "home",
-        name: (need.saveName ?? need.name).slice(0, 60),
+        // In full (a recipe line is 80 at most), so it is found again by name (Codex, PR #195).
+        name: need.saveName ?? need.name,
         category: "pantry",
         photo_url: null,
         quantity: 0,

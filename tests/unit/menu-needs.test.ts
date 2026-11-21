@@ -188,3 +188,20 @@ describe("a name already noted on the shopping list", () => {
     expect(needs.map((n) => n.name)).toEqual(["Bihun"]);
   });
 });
+
+describe("a counted item short only for the week together (Codex, PR #195)", () => {
+  it("is a need, with what to buy, for every dish that uses it", () => {
+    const counted = item({ id: "ayam", name: "Ayam", track_amount: true, quantity: 1, unit: "kg" });
+    const opor = recipe("opor", "Opor", [line({ item_id: "ayam", name: "Ayam", amount: 600, unit: "g" })]);
+    const needs = menuNeeds({
+      ...base,
+      items: [counted],
+      recipes: [opor],
+      amounts: true,
+      dishes: [dish("d1", TODAY, "opor", "Opor"), dish("d2", "2026-11-20", "opor", "Opor")],
+    });
+    expect(needs).toEqual([
+      expect.objectContaining({ name: "Ayam", kind: "short", buy: 0.2, dishes: [expect.objectContaining({ dishId: "d1" }), expect.objectContaining({ dishId: "d2" })] }),
+    ]);
+  });
+});

@@ -162,6 +162,26 @@ export function menuNeeds({
       add(`name:${norm(saveName)}`, { name, kind: "not_there", item: null, buy: null, saveName }, forDish);
     }
   }
+  // Enough for each dish on its own but not for the week together (Codex,
+  // PR #195): the shortfall adds the week up, so it says what to buy, for
+  // every dish that uses the item.
+  for (const [itemId, buy] of buyOf) {
+    if (needs.has(itemId)) continue;
+    const item = items.find((i) => i.id === itemId);
+    if (!item) continue;
+    const status = stockStatus(item);
+    if (status !== "out" && isStaple(item.name)) continue;
+    for (const dish of planned) {
+      const recipe = recipeOf(dish, recipes);
+      if (!recipe || !recipe.ingredients.some((line) => lineItem(line, items)?.id === itemId)) continue;
+      const kind: MenuNeedKind = status === "out" ? "out" : status === "low" ? "low" : "short";
+      add(
+        itemId,
+        { name: stockItemName(item), kind, item, buy: kind === "short" ? buy : null, saveName: null },
+        { dishId: dish.id, title: dishTitle(dish, recipe, forStaff), day: dish.day }
+      );
+    }
+  }
   return [...needs.values()].sort(
     (a, b) => ORDER[a.kind] - ORDER[b.kind] || a.dishes[0].day.localeCompare(b.dishes[0].day) || a.name.localeCompare(b.name)
   );
