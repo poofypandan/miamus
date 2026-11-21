@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Edit2, Plus } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Edit2, Plus, X } from "lucide-react";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Stethoscope } from "lucide-react";
 import { DateRibbon } from "@/components/date-ribbon";
 import { DischargeButton } from "@/components/dashboard/discharge-button";
-import { MiniPetAvatar } from "@/components/dashboard/mini-pet-avatar";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { SummaryCard } from "@/components/dashboard/summary-card";
 import { PhotoStream } from "@/components/dashboard/photo-stream";
@@ -26,7 +25,10 @@ import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useToday } from "@/hooks/use-today";
-import { isAdmitted, petMasterUrl } from "@/lib/pets";
+import { getPetMeta, isAdmitted, petFocus, petMasterUrl, petPictureKind } from "@/lib/pets";
+import { photoSrc } from "@/lib/photos";
+import { FocusImg } from "@/components/pets/focus-img";
+import type { TaskEntity } from "@/types/database";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 
@@ -114,41 +116,24 @@ export function PetProfileSheet() {
         // above y=0). An inline style always wins regardless of specificity.
         style={{ height: "92vh" }}
         className="gap-0 overflow-y-auto rounded-t-2xl px-4 pb-10"
+        showCloseButton={false}
       >
         {pet && (
           <>
-            <SheetHeader className="gap-0 px-0 pt-2">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  {/* MiniPetAvatar is a squircle natively since Phase 59, so no
-                      shape override here — only the larger corner that suits an
-                      80px header portrait. Tappable only when there is a real
-                      photo to open; the fallback Dog glyph has nothing to
-                      expand. */}
-                  {masterUrl ? (
-                    <button
-                      type="button"
-                      onClick={() => setViewingAvatar(true)}
-                      aria-label={t(`View ${pet.name}'s photo`, `Lihat foto ${pet.name}`)}
-                      className="shrink-0 rounded-2xl transition-transform active:scale-95"
-                    >
-                      <MiniPetAvatar pet={pet} className="size-20 rounded-2xl" />
-                    </button>
-                  ) : (
-                    <MiniPetAvatar pet={pet} className="size-20 rounded-2xl" />
-                  )}
-                  <SheetTitle className="text-2xl">{pet.name}</SheetTitle>
-                </div>
-                {canManagePets && (
-                  <button
-                    type="button"
-                    onClick={() => setEditOpen(true)}
-                    className="flex items-center text-sm font-medium text-gray-500 hover:text-black"
-                  >
-                    <Edit2 className="mr-1 size-4" /> {t("Edit Pet", "Ubah Hewan")}
-                  </button>
-                )}
-              </div>
+            {/* Close, in a dark translucent disc that holds on any photo
+                (Fable's look, #197). */}
+            <SheetClose
+              aria-label={t("Close", "Tutup")}
+              className="absolute top-3 right-3 z-10 flex size-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm active:bg-black/60"
+            >
+              <X className="size-5" />
+            </SheetClose>
+            {/* The pet's page leads with its full photo, edge to edge, the
+                name and breed on it (21 Nov; Fable's 08, section 5). An old
+                small square is a print on paper, never stretched; no photo is
+                warm paper with the initial. A tap on a photo opens it whole. */}
+            <SheetHeader className="-mx-4 -mt-px gap-0 p-0">
+              <PetHero pet={pet} onOpenPhoto={masterUrl ? () => setViewingAvatar(true) : undefined} />
               <SheetDescription className="sr-only">
                 {t(
                   `${pet.name}'s daily feed, schedule, and health passport.`,
@@ -156,6 +141,17 @@ export function PetProfileSheet() {
                 )}
               </SheetDescription>
             </SheetHeader>
+            {canManagePets && (
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(true)}
+                  className="flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-gray-600 active:bg-muted"
+                >
+                  <Edit2 className="mr-1 size-4" /> {t("Edit Pet", "Ubah Hewan")}
+                </button>
+              </div>
+            )}
 
             {/* Above everything else, because while it is true nothing below
                 it is actionable: the dog's routines are suspended until it is
@@ -273,5 +269,75 @@ export function PetProfileSheet() {
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+/** The top of a pet's page: its photo, the name and the breed on it. */
+function PetHero({ pet, onOpenPhoto }: { pet: TaskEntity; onOpenPhoto?: () => void }) {
+  const t = useT();
+  const meta = getPetMeta(pet);
+  const kind = petPictureKind(pet);
+  const focus = petFocus(pet);
+  const breed = meta.breed?.trim();
+  const words = (
+    <>
+      <SheetTitle className="truncate text-[30px] leading-9 font-semibold tracking-[-0.03em] text-inherit">{pet.name}</SheetTitle>
+      {breed && <p className="truncate text-base opacity-85">{breed}</p>}
+    </>
+  );
+  if (kind === "full") {
+    const photo = (
+      <>
+        <FocusImg
+          src={photoSrc(meta.full_image_url ?? null, 1280)}
+          focus={focus}
+          className="absolute inset-0 size-full bg-zinc-200 object-cover"
+        />
+      </>
+    );
+    return (
+      <div className="relative aspect-[4/5] max-h-[58vh] w-full overflow-hidden rounded-t-2xl text-[#fff6e8]">
+        {onOpenPhoto ? (
+          <button
+            type="button"
+            onClick={onOpenPhoto}
+            aria-label={t(`View ${pet.name}'s photo`, `Lihat foto ${pet.name}`)}
+            className="absolute inset-0"
+          >
+            {photo}
+          </button>
+        ) : (
+          photo
+        )}
+        {/* The shade only behind the words, no darker than 55 % (#197). */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col bg-gradient-to-t from-black/55 via-black/35 to-transparent px-5 pt-10 pb-4 [text-shadow:0_1px_3px_rgb(31_26_23/0.45)]">
+          {words}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-t-2xl bg-[#f3ece1] px-5 pt-8 pb-5 text-gray-900">
+      {kind === "print" ? (
+        <button
+          type="button"
+          onClick={onOpenPhoto}
+          aria-label={t(`View ${pet.name}'s photo`, `Lihat foto ${pet.name}`)}
+          className="rounded-md"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photoSrc(meta.avatar_url ?? null, 320)}
+            alt=""
+            className="size-40 rounded-md bg-zinc-100 object-cover shadow-[0_2px_8px_rgb(60_40_20/0.18)] ring-4 ring-white"
+          />
+        </button>
+      ) : (
+        <span aria-hidden className="text-[96px] leading-none font-semibold text-[#e2d6c3]">
+          {pet.name.trim().charAt(0).toUpperCase()}
+        </span>
+      )}
+      <div className="flex max-w-full flex-col items-center text-center">{words}</div>
+    </div>
   );
 }

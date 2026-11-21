@@ -76,7 +76,7 @@ export function DeleteHouseholdSheet({
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-3 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-          <p className="text-sm text-gray-700">
+          <p className="text-sm text-foreground">
             {t(
               "It happens 7 days from now. Until then the other admins are told and anyone can cancel. Your Google sign-in stays, so you can start a new home later.",
               "Penghapusan terjadi 7 hari lagi. Sampai saat itu admin lain diberi tahu dan siapa pun bisa membatalkan. Akun Google Anda tetap ada, jadi Anda bisa membuat rumah tangga baru nanti."
@@ -85,7 +85,7 @@ export function DeleteHouseholdSheet({
           <button
             type="button"
             onClick={onDownload}
-            className="self-start text-sm font-medium text-gray-900 underline underline-offset-4"
+            className="self-start text-sm font-medium text-foreground underline underline-offset-4"
           >
             {t("Download a copy first", "Unduh salinan dulu")}
           </button>

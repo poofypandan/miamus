@@ -25,8 +25,8 @@ async function addPet(page: Page, name: string, labels: { add: string; placehold
   await page.getByRole("button", { name: labels.save }).click();
 }
 
-const EN = { add: "Add Pet", placeholder: "e.g. Buddy", save: "Save pet" };
-const ID = { add: "Tambah Hewan", placeholder: "mis. Buddy", save: "Simpan hewan" };
+const EN = { add: "Add pet", placeholder: "e.g. Buddy", save: "Save pet" };
+const ID = { add: "Tambah hewan", placeholder: "mis. Buddy", save: "Simpan hewan" };
 
 test("a new dog: the usual routines are ticked, a household routine can be joined, one tap adds them", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, schedules: lights as unknown as Record<string, unknown>[] });

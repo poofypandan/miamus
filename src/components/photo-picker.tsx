@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Camera, CloudOff, Crop, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import dynamic from "next/dynamic";
+import type { PhotoFrame } from "@/lib/image-crop";
 import { useHousehold } from "@/context/household-context";
 import { compressPhoto } from "@/lib/image";
 import { cn } from "@/lib/utils";
@@ -112,6 +113,12 @@ interface PhotoPickerProps {
    * bytes that save still has to upload (Codex, PR #41).
    */
   disabled?: boolean;
+  /**
+   * Where the framed square sits in its photo (21 Nov; Fable's 08, decision
+   * 23), after a crop that saved; null when the photo is removed. Only the
+   * pet form keeps it.
+   */
+  onFrame?: (frame: PhotoFrame | null) => void;
 }
 
 export function PhotoPicker({
@@ -130,6 +137,7 @@ export function PhotoPicker({
   allowGallery = false,
   offline = false,
   disabled = false,
+  onFrame,
 }: PhotoPickerProps) {
   const { uploadPhoto } = useHousehold();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -189,7 +197,7 @@ export function PhotoPicker({
    * operation: it is the one every list needs. A master that does not make it
    * leaves the avatar working and the lightbox falling back to the square.
    */
-  async function uploadPair(original: File, cropped: File) {
+  async function uploadPair(original: File, cropped: File, frame: PhotoFrame | null) {
     setBusy(true);
     try {
       const [thumbUrl, masterUrl] = await Promise.all([
@@ -207,6 +215,7 @@ export function PhotoPicker({
       ]);
       onChange(thumbUrl);
       onMaster?.(masterUrl);
+      onFrame?.(frame);
     } catch (err) {
       console.error(err);
       toast.error(errorMessage);
@@ -238,11 +247,12 @@ export function PhotoPicker({
    * so re-uploading it would churn storage for an identical file and leave the
    * old one orphaned.
    */
-  async function uploadSquareOnly(cropped: File) {
+  async function uploadSquareOnly(cropped: File, frame: PhotoFrame | null) {
     setBusy(true);
     try {
       // As-is, for the same reason as uploadPair: the crop is already final.
       onChange(await uploadPhoto(cropped, pathPrefix));
+      onFrame?.(frame);
     } catch (err) {
       console.error(err);
       toast.error(errorMessage);
@@ -261,7 +271,7 @@ export function PhotoPicker({
         url={pendingUrl}
         onCancel={cancelCrop}
         locale={locale}
-        onCropped={(cropped) => {
+        onCropped={(cropped, frame) => {
           setPendingFile(null);
           setPendingUrl(null);
           // A freshly chosen file brings its original with it, so both halves
@@ -269,8 +279,8 @@ export function PhotoPicker({
           // already has its master, and a caller with no `onMaster` (an
           // inventory reference photo, Phase 110) never wanted one, so both of
           // those only need the square.
-          if (file && onMaster) void uploadPair(file, cropped);
-          else void uploadSquareOnly(cropped);
+          if (file && onMaster) void uploadPair(file, cropped, frame);
+          else void uploadSquareOnly(cropped, frame);
         }}
       />
     );
@@ -293,6 +303,7 @@ export function PhotoPicker({
               // A retake: the old photo is never uploaded, if it hadn't been.
               if (offline) void discardPhoto(value);
               onChange(null);
+              onFrame?.(null);
               // Clearing the picture clears both halves of it.
               onMaster?.(null);
             }}

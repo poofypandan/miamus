@@ -38,8 +38,8 @@ export function pushStatusLabel(status: PushStatus, t: Translate): string | unde
 }
 
 const BADGE_CLASS: Partial<Record<PushStatus, string>> = {
-  on: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  denied: "bg-amber-50 text-amber-800 border-amber-200",
+  on: "border-transparent bg-done-tint text-done-foreground",
+  denied: "border-transparent bg-attention-tint text-attention",
 };
 
 function PushStatusBadge({ status, t }: { status: PushStatus; t: Translate }) {
@@ -47,8 +47,8 @@ function PushStatusBadge({ status, t }: { status: PushStatus; t: Translate }) {
   if (!label) return null;
   return (
     <span
-      className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
-        BADGE_CLASS[status] ?? "border-zinc-200 bg-zinc-50 text-zinc-600"
+      className={`shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${
+        BADGE_CLASS[status] ?? "border-transparent bg-muted text-muted-foreground"
       }`}
     >
       {label}
@@ -137,7 +137,7 @@ export function PushNotificationSettings() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("Notifications", "Notifikasi")}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t("Notifications", "Notifikasi")}</h2>
       <Card className="py-4">
         <CardContent className="flex flex-col gap-3 px-4">
           <div className="flex min-w-0 flex-col gap-0.5">
@@ -162,9 +162,9 @@ export function PushNotificationSettings() {
           {status === "ios-install-first" && (
             <div
               role="alert"
-              className="flex items-start gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-800"
+              className="flex items-start gap-2 rounded-lg bg-background px-3 py-2.5 text-sm text-foreground"
             >
-              <Share className="mt-0.5 size-4 shrink-0 text-zinc-500" />
+              <Share className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <div className="flex flex-col gap-1">
                 <p className="font-medium">
                   {t(
@@ -250,7 +250,7 @@ export function PushNotificationSettings() {
             </>
           )}
 
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {t(
               "Each phone or computer is turned on separately. Signing out turns it off here.",
               "Setiap HP atau komputer diaktifkan sendiri-sendiri. Keluar akan mematikannya di sini."
@@ -379,7 +379,7 @@ function NotificationChoices() {
             onToggle={() => void change({ ...prefs, staff_request_pushes: !prefs.staff_request_pushes })}
           />
         </div>
-        <p className="pb-2 text-[11px] text-muted-foreground">
+        <p className="pb-2 text-xs text-muted-foreground">
           {t(
             "For your account, on every phone where notifications are on.",
             "Untuk akun Anda, di setiap HP yang notifikasinya aktif."
@@ -437,7 +437,7 @@ function RepairPushChoices() {
             onToggle={() => void change({ ...prefs, repair_done_pushes: !prefs.repair_done_pushes })}
           />
         </div>
-        <p className="pb-2 text-[11px] text-muted-foreground">
+        <p className="pb-2 text-xs text-muted-foreground">
           {t(
             "Never between 9:00 PM and 6:00 AM. For your account, on every phone where notifications are on.",
             "Tidak pernah pukul 21.00–06.00. Untuk akun Anda, di setiap HP yang notifikasinya aktif."

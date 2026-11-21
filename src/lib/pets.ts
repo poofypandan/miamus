@@ -1,4 +1,5 @@
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import type { PhotoFrame } from "@/lib/image-crop";
 import type { TaskEntity, TaskLog } from "@/types/database";
 
 export interface PetMeta {
@@ -17,7 +18,64 @@ export interface PetMeta {
    * succeeded, which is why nothing reads it without a fallback.
    */
   full_image_url?: string | null;
+  /**
+   * Where the framed square sits in the full photo, in percent (21 Nov;
+   * Fable's 08, decision 23). Saved when a photo is framed; absent on every
+   * pet framed before, which read from 50 % across and 40 % down.
+   */
+  frame?: PhotoFrame | null;
   archived?: boolean;
+}
+
+/**
+ * Where a tile cut from the full photo centres, as CSS percentages: the
+ * framed square's centre, or 50 % across and 40 % down (faces sit a little
+ * above the middle) for a pet framed before it was kept.
+ */
+export function petFocus(entity: TaskEntity): { x: number; y: number } {
+  const frame = getPetMeta(entity).frame;
+  if (!frame) return { x: 50, y: 40 };
+  return {
+    x: Math.round((frame.x + frame.width / 2) * 10) / 10,
+    y: Math.round((frame.y + frame.height / 2) * 10) / 10,
+  };
+}
+
+/**
+ * The CSS object-position that puts a focal point (percent of the photo) at
+ * the centre of a box the photo covers, clamped so the photo never leaves an
+ * edge (Codex, PR #197). object-position aligns the same percentage of photo
+ * and box, so the focus itself is only right when it is 50 %: the offset is
+ * worked out from both sizes. Without sizes yet, the focus as it is.
+ */
+export function coverPosition(
+  focus: { x: number; y: number },
+  image: { width: number; height: number } | null,
+  box: { width: number; height: number } | null
+): { x: number; y: number } {
+  if (!image || !box || !image.width || !image.height || !box.width || !box.height) return focus;
+  const scale = Math.max(box.width / image.width, box.height / image.height);
+  const axis = (f: number, imageSide: number, boxSide: number) => {
+    const scaled = imageSide * scale;
+    const spare = boxSide - scaled; // zero or negative
+    if (Math.abs(spare) < 0.5) return 50;
+    const offset = Math.min(0, Math.max(spare, boxSide / 2 - (f / 100) * scaled));
+    return Math.round((offset / spare) * 1000) / 10 || 0;
+  };
+  return { x: axis(focus.x, image.width, box.width), y: axis(focus.y, image.height, box.height) };
+}
+
+/**
+ * Which picture a pet's tile shows/**
+ * Which picture a pet's tile shows (Fable's 08, section 5): its full photo,
+ * edge to edge; only the old small square, shown as a print and never
+ * stretched; or none, a paper portrait with its initial.
+ */
+export function petPictureKind(entity: TaskEntity): "full" | "print" | "none" {
+  const meta = getPetMeta(entity);
+  if (meta.full_image_url) return "full";
+  if (meta.avatar_url) return "print";
+  return "none";
 }
 
 /** The framed square, for small avatars. */

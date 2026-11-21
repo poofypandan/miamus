@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { CloudUpload, HandHeart, Loader2, Pencil, Trash2, UtensilsCrossed } from "lucide-react";
+import { Check, CloudUpload, HandHeart, Loader2, Pencil, Soup, Trash2, TriangleAlert, Utensils } from "lucide-react";
 import { PlacePicker } from "@/components/kitchen/place-picker";
 import { keepOpenForToasts, sheetToast } from "@/components/kitchen/sheet-toast";
 import { Button } from "@/components/ui/button";
@@ -48,8 +48,10 @@ function inTurn<T>(foodId: string, run: () => Promise<T>): Promise<T> {
   return next;
 }
 
+// A tick on Eaten: the crossed fork and knife read as "do not eat" (Fable's
+// look, #189).
 const OUTCOME_ICONS: Record<FoodOutcome, typeof Trash2> = {
-  eaten: UtensilsCrossed,
+  eaten: Check,
   given_away: HandHeart,
   thrown_away: Trash2,
 };
@@ -146,6 +148,7 @@ function Detail({
       month: "short",
     });
   const addedBy = staffName(item.added_by);
+  const state = eatByLine(days, item.expiry_unknown, item.expires_on, locale);
 
   async function finish(outcome: FoodOutcome) {
     setBusy(outcome);
@@ -299,44 +302,49 @@ function Detail({
 
   return (
     <div className="flex flex-col">
-      <SheetHeader className="pb-2">
-        <SheetTitle className="px-8 text-center text-lg font-semibold">{name}</SheetTitle>
+      {/* The thing itself, as the shelf shows it (21 Nov; Fable's
+          mockup-opened): its photo or symbol, the name, when to eat it in
+          words, and where it is and where it came from. */}
+      <SheetHeader className="items-center gap-1 pt-6 pb-3 text-center">
+        <span
+          aria-hidden
+          className={cn(
+            "mb-2 flex size-24 items-center justify-center overflow-hidden rounded-3xl",
+            state.tone === "urgent" ? "bg-attention-tint text-attention" : "bg-muted text-gray-600"
+          )}
+        >
+          {item.photo_url ? (
+            <SyncedImg url={item.photo_url} size={320} className="size-full object-cover" />
+          ) : (
+            <Soup className="size-10" strokeWidth={1.5} />
+          )}
+        </span>
+        <SheetTitle className="max-w-full px-8 text-[22px] leading-7 font-semibold tracking-[-0.02em] break-words">{name}</SheetTitle>
+        {state.text && (
+          <p
+            className={cn(
+              "flex items-center gap-1 text-sm",
+              state.tone === "quiet" ? "text-muted-foreground" : "font-medium text-attention"
+            )}
+          >
+            {state.tone === "urgent" && <TriangleAlert className="size-3.5 shrink-0" aria-hidden />}
+            {state.text}
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          {[
+            FOOD_PLACE_LABELS[locale][shownPlace ?? item.kept_in],
+            item.from_whom ?? (item.source ? FOOD_SOURCE_LABELS[locale][item.source].toLowerCase() : null),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
         <SheetDescription className="sr-only">
           {tr("Details, and whether it is finished.", "Detail, dan apakah sudah habis.")}
         </SheetDescription>
       </SheetHeader>
 
       <div className="flex flex-col gap-4 px-4 pb-4">
-        {item.photo_url && (
-          <SyncedImg url={item.photo_url} size={640} alt={name} className="max-h-56 w-full rounded-xl bg-muted object-cover" />
-        )}
-
-        <dl className="flex flex-col divide-y text-sm">
-          <Fact label={tr("Expires", "Kedaluwarsa")}>
-            <span
-              className={cn(days !== null && days < 0 && "text-red-700", needsDate(item) && "text-amber-700")}
-            >
-              {expiryLabel(days, locale, item.expiry_unknown)}
-              {item.expires_on && days !== null && days >= 0 && ` · ${shortDate(item.expires_on)}`}
-            </span>
-          </Fact>
-          {portions !== null && portions > 0 && (
-            <Fact label={tr("Portions", "Porsi")}>{portionsLabel(portions, locale)}</Fact>
-          )}
-          {/* With the place buttons below, the place is said there instead. */}
-          {!(canMove && !waitingToSend) && (
-            <Fact label={tr("Kept in", "Disimpan di")}>{FOOD_PLACE_LABELS[locale][item.kept_in]}</Fact>
-          )}
-          {(item.from_whom || item.source) && (
-            <Fact label={tr("From", "Dari")}>
-              {item.from_whom ?? (item.source ? FOOD_SOURCE_LABELS[locale][item.source] : null)}
-            </Fact>
-          )}
-          <Fact label={tr("Added", "Ditambahkan")}>
-            {[addedBy, shortDate(item.created_at)].filter(Boolean).join(" · ")}
-          </Fact>
-          {item.notes && <Fact label={tr("Notes", "Catatan")}>{item.notes}</Fact>}
-        </dl>
 
         {waitingToSend ? (
           // Amber means waiting (Phase 153 colour rule).
@@ -358,29 +366,31 @@ function Detail({
             disabled={busy !== null || moving}
             onClick={() => void atePortion()}
           >
-            {busy === "portion" ? <Loader2 className="animate-spin" /> : <UtensilsCrossed />}
+            {busy === "portion" ? <Loader2 className="animate-spin" /> : <Utensils />}
             {tr("Ate 1 portion", "Dimakan 1 porsi")}
           </Button>
         )}
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-semibold">{tr("Is it finished?", "Sudah habis?")}</p>
-          <div className="grid grid-cols-3 gap-2">
-            {FOOD_OUTCOMES.map((outcome) => {
-              const Icon = OUTCOME_ICONS[outcome];
-              return (
-                <Button
-                  key={outcome}
-                  variant="outline"
-                  disabled={busy !== null || moving}
-                  onClick={() => finish(outcome)}
-                  className="h-auto min-h-16 flex-col gap-1 rounded-xl px-1 text-[13px] font-semibold whitespace-normal"
-                >
-                  {busy === outcome ? <Loader2 className="size-5 animate-spin" /> : <Icon className="size-5" />}
-                  {FOOD_OUTCOME_LABELS[locale][outcome]}
-                </Button>
-              );
-            })}
-          </div>
+        {/* Is it finished? Eaten is the one solid action; the other two
+            quiet under it; and every one can be undone straight after. */}
+        <div role="group" aria-label={tr("Is it finished?", "Sudah habis?")} className="flex flex-col gap-2">
+          {FOOD_OUTCOMES.map((outcome) => {
+            const Icon = OUTCOME_ICONS[outcome];
+            return (
+              <Button
+                key={outcome}
+                variant={outcome === "eaten" ? "default" : "outline"}
+                disabled={busy !== null || moving}
+                onClick={() => finish(outcome)}
+                className="min-h-12 rounded-2xl text-base font-semibold"
+              >
+                {busy === outcome ? <Loader2 className="size-5 animate-spin" /> : outcome === "eaten" ? <Icon className="size-5" /> : null}
+                {FOOD_OUTCOME_LABELS[locale][outcome]}
+              </Button>
+            );
+          })}
+          <p className="text-center text-xs text-muted-foreground">
+            {tr("You can undo it straight after.", "Bisa dibatalkan langsung setelahnya.")}
+          </p>
         </div>
 
         {canMove && (
@@ -413,6 +423,24 @@ function Detail({
           ))}
         </>
         )}
+        {/* The rest of what is known, quiet, under the actions (mockup-opened). */}
+        <dl className="flex flex-col divide-y text-sm">
+          <Fact label={tr("Expires", "Kedaluwarsa")}>
+            <span
+              className={cn(days !== null && days < 0 && "text-red-700", needsDate(item) && "text-amber-700")}
+            >
+              {expiryLabel(days, locale, item.expiry_unknown)}
+              {item.expires_on && days !== null && days >= 0 && ` · ${shortDate(item.expires_on)}`}
+            </span>
+          </Fact>
+          {portions !== null && portions > 0 && (
+            <Fact label={tr("Portions", "Porsi")}>{portionsLabel(portions, locale)}</Fact>
+          )}
+          <Fact label={tr("Added", "Ditambahkan")}>
+            {[addedBy, shortDate(item.created_at)].filter(Boolean).join(" · ")}
+          </Fact>
+          {item.notes && <Fact label={tr("Notes", "Catatan")}>{item.notes}</Fact>}
+        </dl>
       </div>
     </div>
   );
@@ -425,4 +453,28 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
       <dd className="min-w-0 text-right font-medium break-words">{children}</dd>
     </div>
   );
+}
+
+/**
+ * When to eat it, in words, under the name (Fable's mockup-opened): "Eat by
+ * tomorrow" in amber with its mark today, tomorrow or past its date; two or
+ * three days away in amber; further off, grey. The app's attention colour.
+ */
+function eatByLine(
+  days: number | null,
+  unknown: boolean,
+  expiresOn: string | null,
+  locale: FoodLocale
+): { text: string | null; tone: "urgent" | "soon" | "quiet" } {
+  const id = locale === "id";
+  if (days === null && unknown) return { text: id ? "Cek tanggalnya" : "Check the date", tone: "urgent" };
+  if (days === null) return { text: null, tone: "quiet" };
+  if (days < 0) return { text: expiryLabel(days, locale), tone: "urgent" };
+  if (days === 0) return { text: id ? "Habiskan hari ini" : "Eat today", tone: "urgent" };
+  if (days === 1) return { text: id ? "Habiskan besok" : "Eat by tomorrow", tone: "urgent" };
+  if (days <= 3) return { text: id ? `Habiskan dalam ${days} hari` : `Eat within ${days} days`, tone: "soon" };
+  const date = expiresOn
+    ? new Date(`${expiresOn}T00:00:00`).toLocaleDateString(DATE_LOCALE[locale], { day: "numeric", month: "short" })
+    : "";
+  return { text: id ? `Baik sampai ${date}` : `Good until ${date}`, tone: "quiet" };
 }
