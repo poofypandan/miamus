@@ -240,22 +240,43 @@ export const LEGAL = {
   // the missing items for the shopping list, saved only when the admin
   // confirms. No new kind of personal data stored, no new service or
   // region; Anthropic's retention is unchanged.
-  // Same version, no policy change (PR C1, "What can we cook tonight?"):
+  // 2026-11-21.1: two questions when asking for access (owner, 2026-11-20;
+  // migrations/175) — what Miamus can help with at home (required on the
+  // screen, but one tap on a suggestion answers it; up to 300 characters)
+  // and, optionally, who introduced them to Miamus (up to 100; may be
+  // another person's name). Used to understand what people want
+  // and how they hear about Miamus; only Poofy Labs sees them (the approvals
+  // page); never in a notification. Cleared 12 months after the request by
+  // the nightly prune, or deleted sooner with the request (a rejected one
+  // after 30 days, an account that is deleted). Short anonymous summaries
+  // of the answers (no names or contact details) may be kept to decide what
+  // to improve (owner, 2026-11-20). No new service.
+  // 2026-11-21.2: who at Poofy Labs can see household data (security audit,
+  // 20 Nov 2026, finding S7) — section 5 now says that the operator can
+  // technically open a household's data and photos through Supabase and
+  // Vercel, that today this is one person signed in with two-step
+  // verification, when we look, and that the full-access keys never leave
+  // the database provider. The Indonesian photo line now also says the
+  // photo's own location data is removed on the phone (the English already
+  // did; PR #161 makes that true when compression fails, too). Nothing
+  // stored, collected or shared changes. Set effectiveDate to the merge day.
+  // No version of its own, no policy change (PR C1, "What can we cook tonight?"):
   // the recipe lines are listed ready first, and say "uses soon" with an
   // ingredient's use-by date, which is already sent while Ingredients are
   // on. Nothing new is sent or stored.
-  // 2026-11-20.2 (E1, Kakak sees ready-to-eat food): while Food at home is
+  // 2026-11-21.3 (E1, Kakak sees ready-to-eat food): while Food at home is
   // on, each Kakak request also carries the ready-to-eat food at home: its
   // name, where it is kept and its use-by date. Never its photo, its notes,
   // who gave it or who added it. Nothing new is stored; no new service or
-  // region.
-  // 2026-11-20.3 (E2): each Kakak request also says whether each shopping
+  // region. Set effectiveDate to the merge day.
+  // 2026-11-21.4 (E2): each Kakak request also says whether each shopping
   // item is marked Running low or Out (never an amount), for "what's
   // running low?" and "what do we need to buy?". Kakak may suggest marking
   // a listed item bought (Enough), saved only when the admin confirms.
-  // Nothing new is stored; no new service or region.
-  policyVersion: "2026-11-20.3",
-  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
+  // Nothing new is stored; no new service or region. Set effectiveDate to
+  // the merge day.
+  policyVersion: "2026-11-21.4",
+  effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on
