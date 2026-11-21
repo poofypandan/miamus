@@ -123,6 +123,14 @@ describe("the kitchen's shelves", () => {
     ]);
   });
 
+  it("names an ingredient with its variant, so two kinds stay apart (Codex, PR #189)", () => {
+    const names = shelfThings([], [ingredient("Beras", { variant: "Merah" }), ingredient("Beras", { variant: "Putih" })]).map(
+      (t) => t.name
+    );
+    expect(names[0]).not.toBe(names[1]);
+    expect(names[0]).toContain("Merah");
+  });
+
   it("reads the pill from the URL", () => {
     expect(shelfFilterFrom(null)).toBe("all");
     expect(shelfFilterFrom("soon")).toBe("soon");

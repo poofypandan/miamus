@@ -1,6 +1,6 @@
 import { FOOD_PLACE_LABELS, compareFood, daysLeft, isListed, type FoodLocale } from "@/lib/food";
 import { USE_SOON_DAYS, ingredientDaysLeft, placeOf } from "@/lib/ingredients";
-import { compareForList, isLowStock, isOutOfStock } from "@/lib/inventory";
+import { compareForList, isLowStock, isOutOfStock, stockItemName } from "@/lib/inventory";
 import type { FoodItem, FoodPlace, InventoryItem } from "@/types/database";
 
 /**
@@ -115,7 +115,9 @@ export function tileState(thing: ShelfThing, today: string, locale: FoodLocale):
 export function shelfThings(food: readonly FoodItem[], ingredients: readonly InventoryItem[]): ShelfThing[] {
   return [
     ...food.filter(isListed).map((item): ShelfThing => ({ kind: "food", id: item.id, name: item.name ?? "", item })),
-    ...ingredients.map((item): ShelfThing => ({ kind: "ingredient", id: item.id, name: item.name ?? "", item })),
+    // With its variant, as the lists name it ("Beras (Merah)"), so two kinds
+    // of one thing stay two tiles anyone can tell apart (Codex, PR #189).
+    ...ingredients.map((item): ShelfThing => ({ kind: "ingredient", id: item.id, name: stockItemName(item), item })),
   ];
 }
 
