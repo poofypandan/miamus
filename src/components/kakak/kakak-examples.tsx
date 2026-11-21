@@ -6,7 +6,7 @@ import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useStaffProfiles } from "@/hooks/use-staff-profiles";
-import { kakakExamples, type KakakExample, type KakakExampleKind } from "@/lib/kakak/examples";
+import { idleExamples, kakakExamples, type KakakExample, type KakakExampleKind } from "@/lib/kakak/examples";
 
 const ICONS: Record<KakakExampleKind, LucideIcon> = {
   chore: ListChecks,
@@ -19,8 +19,9 @@ const ICONS: Record<KakakExampleKind, LucideIcon> = {
 };
 
 /**
- * The Kakak sheet's first screen: five things to say and one to ask, in the
- * owner's language and with this household's own names (lib/kakak/examples.ts).
+ * The Kakak sheet's first screen: two things to say and one to ask (07,
+ * decision 7), in the owner's language and with this household's own names
+ * (lib/kakak/examples.ts).
  * Tapping one puts it in the typing box, so the owner can change it first.
  * The roster loads on demand; until it has, the examples use no names.
  */
@@ -53,11 +54,13 @@ function ExampleList({ onPick, staffNames }: { onPick: (text: string) => void; s
   const { petsOn } = useHouseholdProfile();
   const examples: KakakExample[] = useMemo(
     () =>
-      kakakExamples({
-        locale,
-        staffNames,
-        petNames: petsOn ? [...pets].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((p) => p.name) : [],
-      }),
+      idleExamples(
+        kakakExamples({
+          locale,
+          staffNames,
+          petNames: petsOn ? [...pets].sort((a, b) => a.created_at.localeCompare(b.created_at)).map((p) => p.name) : [],
+        }),
+      ),
     [locale, staffNames, pets, petsOn],
   );
   return (
