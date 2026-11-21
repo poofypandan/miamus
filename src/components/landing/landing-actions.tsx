@@ -1,32 +1,16 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SegmentedControl } from "@/components/ui/segmented-control";
-import { PUBLIC_LOCALE_KEY, type OwnerLocale } from "@/lib/owner-locale";
+import type { OwnerLocale } from "@/lib/owner-locale";
 import { supabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
-import { LANDING_HREF } from "./landing-copy";
+import { rememberLocale } from "./landing-links";
 
-/**
- * The landing page's only client code: the Google buttons, the EN | ID
- * switch and the links into the app. Everything else on the page is
- * server-rendered, so link previews and search see the words.
- *
- * Each of them first remembers the page's language as this phone's public
- * language (the sign-in screen's, Phase 150), so the sign-in screen opens in
- * it and onboarding lists it first (LanguageChoice orders by it).
- */
-function rememberLocale(locale: OwnerLocale) {
-  try {
-    window.localStorage.setItem(PUBLIC_LOCALE_KEY, locale);
-  } catch {
-    // Private mode: the page still works, the next screen just guesses.
-  }
-}
+// The links and the EN | ID switch live in landing-links.tsx, so a page can
+// use them without loading the Supabase client this file needs for Google.
+export { LandingLanguageSwitch, LocaleLink } from "./landing-links";
 
 /**
  * "Request access" / "Continue with Google": the same Google sign-in as the
@@ -87,47 +71,6 @@ export function LandingGoogleButton({
         </p>
       )}
     </>
-  );
-}
-
-/** A link into the app that carries the page's language along. */
-export function LocaleLink({
-  locale,
-  href,
-  className,
-  children,
-}: {
-  locale: OwnerLocale;
-  href: string;
-  className?: string;
-  children: ReactNode;
-}) {
-  return (
-    <Link href={href} className={className} onClick={() => rememberLocale(locale)}>
-      {children}
-    </Link>
-  );
-}
-
-/** EN | ID: the shared pill switch, which moves to the other page. */
-export function LandingLanguageSwitch({ locale }: { locale: OwnerLocale }) {
-  const router = useRouter();
-  return (
-    <div className="w-28">
-      <SegmentedControl
-        ariaLabel="Language · Bahasa"
-        value={locale}
-        onChange={(next) => {
-          if (next === locale) return;
-          rememberLocale(next);
-          router.push(LANDING_HREF[next]);
-        }}
-        segments={[
-          { value: "en", label: "EN" },
-          { value: "id", label: "ID" },
-        ]}
-      />
-    </div>
   );
 }
 

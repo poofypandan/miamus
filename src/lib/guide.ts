@@ -481,7 +481,19 @@ export const GUIDE: readonly GuideEntry[] = [
       id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik atau ucapkan: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Bacakan jawaban Kakak memperdengarkan suaranya. Atur di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
-    covers: ["kakak-routines-2026-11", "kakak-voice-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
+    covers: ["kakak-routines-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
+  },
+  {
+    // Tap to talk, tap Done to send (20 Nov): the voice flow in Kakak's sheet.
+    id: "kakak-voice",
+    group: "settings",
+    title: { en: "Talk to Kakak", id: "Bicara dengan Kakak" },
+    body: {
+      en: "Tap the mic in Kakak and talk; pauses are fine, she keeps listening. Tap Done to send, then Edit words if one was misheard. Nothing is saved until you confirm her card; Read replies aloud lets you hear her.",
+      id: "Ketuk mikrofon di Kakak lalu bicara; boleh berhenti sejenak, Kakak tetap mendengarkan. Ketuk Selesai untuk mengirim, lalu Ubah kata-kata kalau ada yang salah dengar. Semua disimpan setelah kartunya Anda konfirmasi; Bacakan jawaban Kakak memperdengarkan suaranya.",
+    },
+    where: null,
+    covers: ["kakak-voice-2026-11", "kakak-tap-to-talk-2026-11"],
   },
   {
     id: "kakak-cook",
