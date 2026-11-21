@@ -110,7 +110,7 @@ export function WeekSummaryView({
         </div>
 
         {summary.beyond.length === 0 ? (
-          <p className="rounded-xl border border-dashed px-3 py-5 text-center text-sm text-muted-foreground">
+          <p className="rounded-2xl px-3 py-5 text-center text-sm text-muted-foreground">
             {/* No daily routine to be "beyond" in a home without pets'
                 routines (Phase 162). */}
             {summary.rhythm.length > 0

@@ -37,7 +37,7 @@ export function RoomRepairs({ locationId }: { locationId: string }) {
         {t("Repairs", "Perbaikan")}
       </h4>
       {open.length + past.length > 0 && (
-        <div className="overflow-hidden rounded-xl border bg-card">
+        <div className="overflow-hidden rounded-2xl bg-card shadow-card">
           {[...open, ...past].map((repair, index) => (
             <RepairRow key={repair.id} repair={repair} onOpen={setOpenId} first={index === 0} />
           ))}
