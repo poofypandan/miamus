@@ -98,8 +98,14 @@ export interface GuideEntry {
 }
 
 export const GUIDE_BODY_MAX = 280;
-/** The guide as Kakak reads it, per language: about 3,500 tokens at most. */
-export const GUIDE_FOR_KAKAK_MAX = 14_000;
+/**
+ * The guide as Kakak reads it, per language: about 4,500 tokens at most.
+ * Raised from 14,000 on 21 Nov 2026, when the day's new screens (Home on the
+ * house, the pet wall, staff onboarding) filled it. The guide sits in the
+ * cached part of her prompt, so the extra ~1,000 tokens cost little per
+ * request; past this, send her only the entries a question needs.
+ */
+export const GUIDE_FOR_KAKAK_MAX = 18_000;
 
 export const GUIDE: readonly GuideEntry[] = [
   // ---------------------------------------------------------------- start
