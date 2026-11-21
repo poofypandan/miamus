@@ -38,7 +38,7 @@ export function PetFactsCard({ pet }: { pet: TaskEntity }) {
     };
   }, [medicalRecords, schedules, pet.id, today, allProfiles]);
 
-  const rows: { label: string; value: ReactNode; under?: string }[] = [];
+  const rows: { label: string; value: ReactNode; under?: ReactNode }[] = [];
   if (facts.weight) {
     rows.push({
       label: t("Weight", "Berat"),
@@ -47,18 +47,25 @@ export function PetFactsCard({ pet }: { pet: TaskEntity }) {
     });
   }
   if (facts.vaccine) {
+    // Every row the same shape: the value (the date), and a quiet line under
+    // it. Once passed, that line says so, in amber with its mark, beside the
+    // vaccine's name (Fable's look, Pets PR 2).
+    const late = facts.vaccine.late;
     rows.push({
       label: t("Next vaccine", "Vaksin berikutnya"),
-      value: facts.vaccine.late ? (
-        // The mark inline, beside the words; the date never split.
-        <span className="text-attention">
-          <TriangleAlert className="mr-1 inline size-3.5 -translate-y-px align-middle" aria-hidden />
-          {t("Was due", "Lewat jatuh tempo")} <span className="whitespace-nowrap">{date(facts.vaccine.due)}</span>
-        </span>
+      value: date(facts.vaccine.due),
+      under: late ? (
+        <>
+          <span className="text-attention">
+            <TriangleAlert className="mr-0.5 inline size-3 -translate-y-px align-middle" aria-hidden />
+            {t("Was due", "Lewat jatuh tempo")}
+          </span>
+          {" · "}
+          {facts.vaccine.title}
+        </>
       ) : (
-        date(facts.vaccine.due)
+        facts.vaccine.title
       ),
-      under: facts.vaccine.title,
     });
   }
   if (facts.carer) rows.push({ label: t("Looked after by", "Dirawat oleh"), value: facts.carer });

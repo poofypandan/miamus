@@ -62,7 +62,8 @@ test("a vaccine past its date is amber, in Bahasa Indonesia; nothing known, no c
   await page.getByRole("list", { name: "Hewan Anda" }).getByRole("button", { name: /^Mochi/ }).click({ timeout: 20_000 });
   const card = page.getByRole("dialog", { name: "Mochi" }).getByRole("region", { name: "Tentang" });
   await expect(card).toContainText("Vaksin berikutnya");
-  await expect(card).toContainText("Lewat jatuh tempo");
+  await expect(card).toContainText("Lewat jatuh tempo · Rabies");
+  await expect(card).toContainText("1 Nov");
   await page.keyboard.press("Escape");
   await page.getByRole("list", { name: "Hewan Anda" }).getByRole("button", { name: /^Bento/ }).click();
   await expect(page.getByRole("dialog", { name: "Bento" }).getByRole("region", { name: "Tentang" })).toHaveCount(0);
