@@ -25,11 +25,9 @@ import { PetsQuestionCard } from "@/components/dashboard/pets-question-card";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { DatePill } from "@/components/agenda/date-pill";
 import { StaffProgressCard } from "@/components/dashboard/staff-progress-card";
-import { LatestList, latestRows } from "@/components/agenda/latest-list";
-import { useBackToClose } from "@/hooks/use-back-to-close";
+import { LatestSheet, latestRows } from "@/components/agenda/latest-list";
 import { NextList } from "@/components/agenda/next-list";
 import { PeopleCircles } from "@/components/agenda/people-circles";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { StaffWorkloadSheet } from "@/components/dashboard/staff-workload-sheet";
 import { useStaffProgress } from "@/hooks/use-staff-progress";
 import { ANYONE_PERSON, useWorkloadParam } from "@/hooks/use-staff-workload";
@@ -38,7 +36,7 @@ import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
-import { useAgendaRange } from "@/hooks/use-agenda-range";
+import { useAgendaRange, type AgendaRange } from "@/hooks/use-agenda-range";
 import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/use-agenda-filter";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
@@ -402,8 +400,6 @@ export function AgendaTab() {
     startTransition(() => pushInPlace(query ? `${pathname}?${query}` : pathname));
   }
   const [latestOpen, setLatestOpen] = useState(false);
-  // Back closes Latest, as it does the date pill's sheet (Codex, PR #181).
-  useBackToClose(latestOpen, () => setLatestOpen(false));
   const notDoneCount = useMemo(() => {
     if (!showsToday) return 0;
     const now = new Date(clock);
@@ -587,7 +583,7 @@ export function AgendaTab() {
   // Day | Week (Phase 112): which view. On top of the Week view, which is
   // the whole page; with the list on the Day view (Phase 175), where the
   // top of the page belongs to what needs the owner.
-  const rangePill = (size: "md" | "sm") => (
+  const rangePill = (size: "md" | "sm", choose: (next: AgendaRange) => void = setRange) => (
     <SegmentedControl
       ariaLabel={t("Agenda range", "Rentang agenda")}
       size={size}
@@ -596,7 +592,7 @@ export function AgendaTab() {
         { value: "week", label: t("Week", "Minggu") },
       ]}
       value={range}
-      onChange={setRange}
+      onChange={choose}
     />
   );
 
@@ -1162,28 +1158,19 @@ export function AgendaTab() {
       <StaffWorkloadSheet />
 
       {/* The date, at the bottom left beside Tell Kakak (Today v3). */}
-      <DatePill rangeSwitch={rangePill("md")} />
+      <DatePill rangeSwitch={(afterClose) => rangePill("md", (next) => afterClose(() => setRange(next)))} />
 
       {/* Latest (Today v3): behind the status card, what has been finished
           today, with its photos, the latest first. */}
-      <Sheet open={latestOpen} onOpenChange={setLatestOpen}>
-        <SheetContent side="bottom" className="mx-auto max-h-[92dvh] max-w-md overflow-y-auto rounded-t-3xl">
-          <SheetHeader>
-            <SheetTitle>{t("Latest", "Terbaru")}</SheetTitle>
-            <SheetDescription>{t("Finished today, the latest first.", "Selesai hari ini, yang terbaru di atas.")}</SheetDescription>
-          </SheetHeader>
-          <div className="px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-            <LatestList
-              rows={latestRows(finished, staffName)}
-              onOpen={(row) => {
-                if (row.entry.kind !== "chore") return;
-                setLatestOpen(false);
-                openChore(row.entry.occurrence);
-              }}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <LatestSheet
+        open={latestOpen}
+        onClose={() => setLatestOpen(false)}
+        rows={latestRows(finished, staffName)}
+        onOpenChore={(occurrence) => {
+          setLatestOpen(false);
+          openChore(occurrence);
+        }}
+      />
 
       <EveningSummarySheet
         date={summaryOpen}

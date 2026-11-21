@@ -3,7 +3,10 @@
 import { ImageOff } from "lucide-react";
 import { SyncedImg } from "@/components/shared/synced-img";
 import { useFormatTime } from "@/components/ui/ui-labels";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useT } from "@/context/owner-locale-context";
+import { useBackToClose } from "@/hooks/use-back-to-close";
+import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { UnifiedAgendaEntry } from "@/lib/unified-agenda";
 
 /** One finished thing: its photo, its name, who, and when. */
@@ -81,5 +84,43 @@ export function LatestList({ rows, onOpen }: { rows: LatestRow[]; onOpen: (row: 
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * Latest's sheet, behind Today's status card: what has been finished today,
+ * with its photos, the latest first. Back closes it, as it does every sheet
+ * (Codex, PR #181). A chore row opens that chore's sheet.
+ */
+export function LatestSheet({
+  open,
+  onClose,
+  rows,
+  onOpenChore,
+}: {
+  open: boolean;
+  onClose: () => void;
+  rows: LatestRow[];
+  onOpenChore: (occurrence: ChoreOccurrence) => void;
+}) {
+  const t = useT();
+  useBackToClose(open, onClose);
+  return (
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+      <SheetContent side="bottom" className="mx-auto max-h-[92dvh] max-w-md overflow-y-auto rounded-t-3xl">
+        <SheetHeader>
+          <SheetTitle>{t("Latest", "Terbaru")}</SheetTitle>
+          <SheetDescription>{t("Finished today, the latest first.", "Selesai hari ini, yang terbaru di atas.")}</SheetDescription>
+        </SheetHeader>
+        <div className="px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+          <LatestList
+            rows={rows}
+            onOpen={(row) => {
+              if (row.entry.kind === "chore") onOpenChore(row.entry.occurrence);
+            }}
+          />
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

@@ -263,3 +263,46 @@ test("the date pill sits above Kakak's band and takes its own taps (Codex, PR #1
   // One room under the page, the band's: the pill adds none of its own.
   await expect(page.locator("main [aria-hidden=true].h-24")).toHaveCount(1);
 });
+
+test("on a 360 px phone in Indonesian, Hari ini stands above the date pill, clear of Kakak (Codex, PR #181)", async ({ context, page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
+  await page.goto("/dashboard?module=agenda");
+  const kakak = page.getByRole("button", { name: "Bilang ke Kakak" });
+  await expect(kakak).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("date-pill").click();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  await page
+    .getByRole("dialog")
+    .getByRole("button")
+    .filter({ hasText: new RegExp(`^\\D*${tomorrow.getDate()}$`) })
+    .first()
+    .click();
+  const back = page.getByRole("button", { name: "Hari ini", exact: true });
+  await expect(back).toBeVisible();
+  await expect(page.locator("[data-stacked]")).toHaveCount(1);
+  const [a, b, pill] = await Promise.all([back.boundingBox(), kakak.boundingBox(), page.getByTestId("date-pill").boundingBox()]);
+  if (!a || !b || !pill) throw new Error("missing a box");
+  // Not over Kakak's button, and above the date pill rather than beside it.
+  expect(a.x + a.width <= b.x || a.y + a.height <= b.y).toBe(true);
+  expect(a.y + a.height).toBeLessThanOrEqual(pill.y);
+  await back.click();
+  await expect(back).toHaveCount(0);
+});
+
+test("Week from the date pill's sheet leaves no dead Back press (Codex, PR #181)", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" } });
+  await page.goto("/dashboard?module=chores");
+  await expect(page.getByRole("navigation").first()).toBeVisible({ timeout: 20_000 });
+  await page.goto("/dashboard?module=agenda");
+  await page.getByTestId("date-pill").click();
+  await page.getByRole("dialog").getByRole("tab", { name: "Week" }).click();
+  await expect(page).toHaveURL(/range=week/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.goBack();
+  await expect(page).not.toHaveURL(/range=week/);
+  await expect(page).toHaveURL(/module=agenda/);
+  await page.goBack();
+  await expect(page).toHaveURL(/module=chores/);
+});

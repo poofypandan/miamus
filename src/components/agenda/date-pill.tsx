@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal, flushSync } from "react-dom";
 import { CalendarDays } from "lucide-react";
 import { DAY_LABELS, DateRibbon } from "@/components/date-ribbon";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
-import { useBackToClose } from "@/hooks/use-back-to-close";
+import { afterBackSettles, useBackToClose } from "@/hooks/use-back-to-close";
 
 /**
  * The date on Today v3 (21 Nov; docs/private/landing/06, sections 2 and 4):
@@ -21,8 +21,22 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
  * hint steps aside (it marks <body> with data-date-pill). It stacks one
  * above the band (z-31 over z-30): the band is full width and takes taps,
  * and its portal can be added after this one (Codex, PR #181).
+ *
+ * Side by side with Tell Kakak while they fit. On a narrow phone (360 px, in
+ * Indonesian) the date, "Hari ini" and "Bilang ke Kakak" don't, and the
+ * Today pill would sit over Kakak's button and take its taps: it then stands
+ * above the date pill instead (Codex, PR #181).
  */
-export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
+export function DatePill({
+  rangeSwitch,
+}: {
+  /**
+   * Day | Week for the sheet. It is given `afterClose`: wrap the switch's own
+   * navigation in it, so the sheet closes and its history entry is gone
+   * before Day or Week pushes the address.
+   */
+  rangeSwitch: (afterClose: (navigate: () => void) => void) => ReactNode;
+}) {
   const t = useT();
   const locale = useOwnerLocale();
   const { selectedDate, setSelectedDate, jumpToToday } = useHousehold();
@@ -31,6 +45,10 @@ export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
   /** Kakak's band is up, and with it the room under the page's last row. */
   const [band, setBand] = useState(true);
   useBackToClose(open, () => setOpen(false));
+  function afterClose(navigate: () => void) {
+    flushSync(() => setOpen(false));
+    afterBackSettles(navigate);
+  }
 
   useEffect(() => {
     setMounted(true);
@@ -54,6 +72,30 @@ export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
     selectedDate.getDate() === now.getDate();
   const label = `${DAY_LABELS[locale][selectedDate.getDay()]} ${selectedDate.getDate()}`;
 
+  const pillRef = useRef<HTMLButtonElement>(null);
+  const todayRef = useRef<HTMLButtonElement>(null);
+  const [stack, setStack] = useState(false);
+  useLayoutEffect(() => {
+    if (!mounted || isToday || !band) {
+      setStack(false);
+      return;
+    }
+    // The date pill's place never moves, so measuring in either layout gives
+    // the same answer: where the Today pill would end beside it, against
+    // where Kakak's button starts (12 px apart, as the band's own gap).
+    function measure() {
+      const pill = pillRef.current;
+      const todayPill = todayRef.current;
+      const kakak = document.querySelector<HTMLElement>('[data-testid="kakak-band"] button');
+      if (!pill || !todayPill || !kakak) return setStack(false);
+      const end = pill.getBoundingClientRect().right + 8 + todayPill.offsetWidth;
+      setStack(end + 12 > kakak.getBoundingClientRect().left);
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [mounted, isToday, band, label, locale]);
+
   if (!mounted) return null;
   return (
     <>
@@ -63,8 +105,12 @@ export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
       {!band && <div aria-hidden="true" className="h-24 shrink-0" />}
       {createPortal(
         <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+0.75rem+env(safe-area-inset-bottom))] z-[31] mx-auto flex w-full max-w-md px-4">
-          <div className="pointer-events-auto flex items-center gap-2">
+          <div
+            data-stacked={stack ? "" : undefined}
+            className={`pointer-events-auto flex gap-2 ${stack ? "flex-col-reverse items-start" : "items-center"}`}
+          >
             <button
+              ref={pillRef}
               type="button"
               onClick={() => setOpen(true)}
               data-testid="date-pill"
@@ -76,6 +122,7 @@ export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
             </button>
             {!isToday && (
               <button
+                ref={todayRef}
                 type="button"
                 onClick={jumpToToday}
                 className="flex min-h-12 items-center rounded-full bg-card px-4 text-sm font-semibold text-gray-900 shadow-float active:scale-[0.98]"
@@ -104,7 +151,7 @@ export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
               }}
               locale={locale}
             />
-            <div onClickCapture={() => setTimeout(() => setOpen(false), 150)}>{rangeSwitch}</div>
+            {rangeSwitch(afterClose)}
           </div>
         </SheetContent>
       </Sheet>
