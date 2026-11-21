@@ -729,6 +729,28 @@
 }
 
 /*
+ * Grouped rows' hairlines, inset to where the text starts (21 Nov, Fable's
+ * look at PR 3): a line from edge to edge reads as a table. Each row after
+ * the first draws one from --row-inset (the avatar's or icon's width plus
+ * the gaps) to the right edge; the first row has none.
+ */
+@utility inset-rows {
+  & > * + * {
+    position: relative;
+  }
+  & > * + *::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: var(--row-inset, 1rem);
+    right: 0;
+    height: 1px;
+    background: var(--border);
+    pointer-events: none;
+  }
+}
+
+/*
  * The pending bar's travelling segment (Phase 125): a transform from off the
  * left edge to off the right, on repeat.
  */
