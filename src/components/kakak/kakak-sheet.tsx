@@ -425,8 +425,9 @@ function Conversation({
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-5">
+      {/* Information about a mode, not something that needs the owner: quiet, not amber (Fable, PR 5). */}
       {practice && (
-        <p role="note" className="rounded-xl bg-attention-tint px-3 py-2 text-sm text-attention">
+        <p role="note" className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
           {t(
             "Practice mode: Kakak's answers are scripted and nothing is sent to the AI. Saving still saves.",
             "Mode latihan: jawaban Kakak sudah disiapkan dan tidak ada yang dikirim ke AI. Menyimpan tetap tersimpan."
