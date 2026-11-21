@@ -28,7 +28,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           alignItems: "center",
           justifyContent: "center",
           fontFamily: "system-ui, -apple-system, sans-serif",
-          background: "#ffffff",
+          background: "#f5f2ec",
           color: "#111827",
           textAlign: "center",
           padding: 24,

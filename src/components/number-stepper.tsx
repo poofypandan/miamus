@@ -79,7 +79,7 @@ export function NumberStepper({
           onFocus={(e) => e.target.select()}
           onChange={(e) => typed(e.target.value)}
           aria-label={label}
-          className="h-11 w-full min-w-0 rounded-md border bg-background text-center text-base font-semibold tabular-nums"
+          className="h-11 w-full min-w-0 rounded-md border bg-card text-center text-base font-semibold tabular-nums"
         />
         <Button
           type="button"
