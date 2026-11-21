@@ -2,6 +2,7 @@
 
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FoodView } from "@/components/kitchen/food-view";
+import { KitchenShelves } from "@/components/kitchen/kitchen-shelves";
 import { IngredientsSection } from "@/components/kitchen/ingredients-section";
 import { IngredientOpenerProvider } from "@/components/kitchen/ingredient-opener";
 import { MenuView } from "@/components/kitchen/menu-view";
@@ -62,6 +63,11 @@ export function KitchenTab() {
         <KitchenSwitch locale={locale} />
       </div>
       {/* Phase 176: first, so on a fresh week it claims the one card. */}
+      {view === "food" && (
+        <div className="px-4 empty:hidden">
+          <WhatsNewCard id="kitchen-shelves-2026-11" />
+        </div>
+      )}
       {ingredients && view === "food" && (
         <div className="px-4 empty:hidden">
           <WhatsNewCard id="kitchen-places-2026-11" />
@@ -77,16 +83,10 @@ export function KitchenTab() {
           <MenuView />
         </div>
       ) : view === "food" ? (
-        <div className="flex flex-col gap-6 px-4">
-          {ingredients ? (
-            // "Open it" from the add-food sheet opens an ingredient here (Phase 176).
-            <IngredientOpenerProvider>
-              <FoodView locale={locale} canDelete readyHeading />
-              <IngredientsSection lang={locale} owner />
-            </IngredientOpenerProvider>
-          ) : (
-            <FoodView locale={locale} canDelete readyHeading={false} />
-          )}
+        <div className="px-4">
+          {/* The kitchen as shelves (21 Nov, Fable's 08 section 2): food and,
+              with Kitchen amounts and Food at home on, ingredients, by place. */}
+          <KitchenShelves locale={locale} ingredients={ingredients} />
         </div>
       ) : (
         <ShoppingTab />

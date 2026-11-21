@@ -45,10 +45,9 @@ test("an owner tracks rice under Food → Ingredients; the old count is only a h
   const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [rice(), soap] });
   await page.goto("/dashboard?module=inventory");
 
-  // D6: rice browses under Food → Ingredients; soap stays under Shopping.
-  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
-  await expect(page.getByRole("heading", { name: "Ready to eat" })).toBeVisible({ timeout: 20_000 });
-  await expect(ingredients.getByRole("button", { name: /Beras/ })).toBeVisible();
+  // D6: rice browses on Food's shelves (21 Nov); soap stays under Shopping.
+  const ingredients = page.getByRole("region", { name: "The kitchen", exact: true });
+  await expect(ingredients.getByRole("button", { name: /Beras/ })).toBeVisible({ timeout: 20_000 });
   await expect(ingredients.getByRole("button", { name: /Sabun cuci/ })).toHaveCount(0);
 
   await ingredients.getByRole("button", { name: /Beras/ }).click();
@@ -62,7 +61,8 @@ test("an owner tracks rice under Food → Ingredients; the old count is only a h
   await page.getByLabel(/Running low at/).fill("1");
   await page.getByRole("button", { name: "Save" }).click();
 
-  await expect(ingredients.getByRole("button", { name: /Beras/ })).toContainText("4.5 kg left");
+  // Tracked: the tile's word is what is left.
+  await expect(ingredients.getByRole("button", { name: "Beras, 4.5 kg left" })).toBeVisible();
   expect(stub.supplies[0]).toMatchObject({ track_amount: true, quantity: 4.5, min_threshold: 1, unit: "kg", stock_status: "ok" });
 
   // Shopping keeps the non-food supplies.
@@ -79,11 +79,9 @@ test("Food · Menu · Shopping, and Food's buttons say what they add", async ({ 
 
   const pills = page.getByRole("tablist", { name: "Kitchen" }).getByRole("tab");
   await expect(pills).toHaveText(["Food", "Menu", "Shopping"], { timeout: 20_000 });
-  await expect(page.getByRole("button", { name: "Add ready-to-eat food" })).toBeVisible();
-  // Ingredients as large as Ready to eat, with its own full-width button.
-  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
-  await expect(ingredients.getByRole("heading", { name: "Ingredients", exact: true })).toHaveClass(/text-base/);
-  await ingredients.getByRole("button", { name: "Add ingredient" }).click();
+  // Two buttons side by side on the shelves (21 Nov): food, and an ingredient.
+  await expect(page.getByRole("button", { name: "Add food" })).toBeVisible();
+  await page.getByRole("button", { name: "Add ingredient" }).click();
   await expect(page.getByRole("dialog", { name: "Add item" })).toBeVisible();
   await page.keyboard.press("Escape");
 
@@ -257,14 +255,14 @@ test("changing kg to g converts the amount and the Bought pre-fill (Codex, PR #9
     items: [rice({ track_amount: true, quantity: 1.5, min_threshold: 0, amount_set_at: new Date().toISOString(), last_bought_amount: 5 })],
   });
   await page.goto("/dashboard?module=inventory");
-  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
+  const ingredients = page.getByRole("region", { name: "The kitchen", exact: true });
   await ingredients.getByRole("button", { name: /Beras/ }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: /^Track amount/ }).click();
   await page.getByRole("button", { name: "g", exact: true }).click();
   await expect(page.getByLabel("How much is there now?")).toHaveValue("1500");
   await page.getByRole("button", { name: "Save" }).click();
 
-  await expect(ingredients.getByRole("button", { name: /Beras/ })).toContainText("1,500 g left");
+  await expect(ingredients.getByRole("button", { name: "Beras, 1,500 g left" })).toBeVisible();
   expect(stub.supplies[0]).toMatchObject({ unit: "g", quantity: 1500, last_bought_amount: 5000 });
 });
 
