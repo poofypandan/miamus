@@ -2,6 +2,7 @@ import { WRITE_TIMEOUT_MS } from "@/lib/supabase/write-timeout";
 import { ChoreAlreadySettledError, ChoreChangedError } from "@/lib/chore-settled";
 import { supabase } from "@/lib/supabase/client";
 import { getActiveHouseholdId } from "@/lib/tenant";
+import { cleanedForUpload } from "@/lib/strip-metadata";
 import type { OrganiseRoomsMoved,
   HouseholdTask,
   BillPayment,
@@ -298,7 +299,9 @@ export const supabaseProvider: DataProvider = {
     const { data } = client().storage.from(STORAGE_BUCKET).getPublicUrl(path);
     return { path, url: data.publicUrl };
   },
-  async uploadPhotoAt(path, file) {
+  async uploadPhotoAt(path, original) {
+    // Never with a camera's hidden data (lib/strip-metadata.ts).
+    const file = await cleanedForUpload(original);
     const { error } = await client()
       .storage.from(STORAGE_BUCKET)
       .upload(path, file, { contentType: file.type });
@@ -474,8 +477,9 @@ export const supabaseProvider: DataProvider = {
     }
     return latest;
   },
-  async uploadInventoryPhoto(file, itemId) {
+  async uploadInventoryPhoto(original, itemId) {
     const c = client();
+    const file = await cleanedForUpload(original);
     const ext = extensionFor(file);
     const path = `${getActiveHouseholdId()}/${itemId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await c.storage
@@ -1127,9 +1131,10 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
-  async uploadReceipt(file, folder) {
+  async uploadReceipt(original, folder) {
     // <household>/<folder>/…: the bucket's policies read the household from
     // the path and let only its owners in (migrations/131).
+    const file = await cleanedForUpload(original);
     const ext = extensionFor(file);
     const path = `${getActiveHouseholdId()}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const { error } = await client().storage.from(RECEIPTS_BUCKET).upload(path, file, { contentType: file.type });

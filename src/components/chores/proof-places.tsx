@@ -11,7 +11,7 @@ import { useFinishChore } from "@/hooks/use-finish-chore";
 import { useQueuedPhoto } from "@/hooks/use-queued-photo";
 import { choreDraftKey } from "@/lib/chore-draft";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
-import { compressPhoto } from "@/lib/image";
+import { photoForUpload } from "@/lib/image";
 import { discardPhoto, enqueuePhoto } from "@/lib/photo-queue";
 import { photoSrc, photoTakenAt } from "@/lib/photos";
 import { cn } from "@/lib/utils";
@@ -164,10 +164,9 @@ function ProofPlace({
     setSaving(true);
     onBusyChange(true);
     try {
-      const resized = await compressPhoto(file).catch((err) => {
-        console.error("Compression failed; keeping the original", err);
-        return file;
-      });
+      // Compressed, or the original without its location and other hidden
+      // data when compression fails (security audit, 20 Nov 2026).
+      const resized = await photoForUpload(file);
       onChange(await enqueuePhoto(resized, pathPrefix));
     } catch (err) {
       console.error(err);

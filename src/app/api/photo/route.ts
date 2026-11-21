@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPhotoBucket } from "@/lib/photos";
-import { resizeForWidth } from "@/lib/photo-resize";
+import { resizeForWidth, servableOriginal } from "@/lib/photo-resize";
 
 // sharp is a native module: Node, never the edge runtime.
 export const runtime = "nodejs";
@@ -64,11 +64,20 @@ export async function GET(request: NextRequest) {
 
   // A thumbnail: a feed asking for 320px gets ~24KB instead of the ~185KB
   // original. Scaled to fit the width, never upscaled; an original no wider
-  // than asked (or one that can't be read) is served as it is.
-  const resized = width ? await resizeForWidth(Buffer.from(await data.arrayBuffer()), width) : null;
-  const body = resized ? new Uint8Array(resized.body) : data;
-  const bodyType = resized ? resized.type : contentType;
-  const bodySize = resized ? resized.body.byteLength : data.size;
+  // than asked (or one that can't be resized) is served as servableOriginal
+  // allows: cleaned, re-encoded, or not at all.
+  const original = Buffer.from(await data.arrayBuffer());
+  // Never with hidden data such as where it was taken (security audit,
+  // 20 Nov 2026). A resized thumbnail carries none; otherwise the original
+  // is cleaned, and one that can't be cleaned or checked is not served
+  // (the same answer as a missing photo).
+  const out = (width ? await resizeForWidth(original, width) : null) ?? (await servableOriginal(original));
+  if (!out) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+  const body = new Uint8Array(out.body);
+  const bodyType = out.type;
+  const bodySize = out.body.byteLength;
 
   return new NextResponse(body, {
     headers: {
