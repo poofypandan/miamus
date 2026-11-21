@@ -693,18 +693,38 @@ describe("Kakak sees ready-to-eat food (E1)", () => {
     { name: "Kue", kept_in: "attic", expires_on: null, expiry_unknown: false, created_at: "2026-11-10T03:00:00Z" },
   ];
 
-  it("lists name, place and date only, soonest first, in the block", () => {
+  it("lists name, place and date only, soonest first and past its date last, in the block", () => {
     const { household } = built({ foods, foodOn: true, featuresRead: true } as Partial<ContextRows>);
-    expect(household.foods?.map((f) => f.name)).toEqual(["Sop", "Rendang", "Lapis legit", "Kue", null]);
+    // What can still be eaten first; past its date last (Codex, PR #166).
+    expect(household.foods?.map((f) => f.name)).toEqual(["Rendang", "Lapis legit", "Kue", null, "Sop"]);
     // An unknown place is dropped, never guessed.
     expect(household.foods?.find((f) => f.name === "Kue")?.keptIn).toBeNull();
     const block = renderHouseholdBlock(household);
-    expect(block).toContain("Ready to eat at home (Dapur / Kitchen → Makanan / Food), soonest first:");
+    expect(block).toContain("Ready to eat at home (Dapur / Kitchen → Makanan / Food), soonest first, past its date last:");
     expect(block).toContain("- Sop · fridge · past its date (2026-11-10)");
     expect(block).toContain("- Rendang · fridge · expires today (2026-11-11)");
     expect(block).toContain("- Lapis legit · counter · expires 2026-11-12");
     expect(block).toContain("- a dish saved with a photo only, no name · fridge · date not known");
     expect(block).toContain("- Kue · no date noted");
+  });
+
+  it("never lets food past its date crowd out a dish due today (Codex, PR #166)", () => {
+    const old = Array.from({ length: 25 }, (_, i) => ({
+      name: `Lama ${i + 1}`,
+      kept_in: "fridge",
+      expires_on: `2026-10-${String(i + 1).padStart(2, "0")}`,
+      expiry_unknown: false,
+      created_at: "2026-10-01T01:00:00Z",
+    }));
+    const due = { name: "Rendang", kept_in: "fridge", expires_on: "2026-11-11", expiry_unknown: false, created_at: "2026-11-09T01:00:00Z" };
+    const { household } = built({ foods: [...old, due], foodOn: true, featuresRead: true } as Partial<ContextRows>);
+    expect(household.foods?.[0]?.name).toBe("Rendang");
+    // The most recently past next.
+    expect(household.foods?.[1]?.name).toBe("Lama 25");
+    const block = renderHouseholdBlock(household);
+    expect(block).toContain("- Rendang · fridge · expires today (2026-11-11)");
+    expect(block).toContain("- and 6 more past their date, not listed here");
+    expect(block).not.toContain("more not listed here");
   });
 
   it("says when there is nothing, and sends nothing while Food at home is off or the read failed", () => {

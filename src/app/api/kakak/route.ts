@@ -132,7 +132,7 @@ async function readRows(
   // The menu around today (Can we cook it?): context.ts keeps the 7 days
   // from the conversation's own today.
   const { today } = jakartaNow();
-  const [staff, pets, rooms, items, household, food, recipes, menu, foods] = await Promise.all([
+  const [staff, pets, rooms, items, household, food, recipes, menu, foodsDue, foodsPast] = await Promise.all([
     readStaff(supabase, householdId),
     supabase.from("task_entities").select("id, name, created_at, entity_type, metadata").eq("household_id", householdId).eq("entity_type", "pet"),
     supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
@@ -170,10 +170,22 @@ async function readRows(
       .select("name, kept_in, expires_on, expiry_unknown, created_at")
       .eq("household_id", householdId)
       .is("outcome", null)
-      // Soonest use-by first, so the limit never drops one that is due today.
+      // What can still be eaten, soonest first, read apart from what is past
+      // its date (Codex, PR #166): food past its date stays until someone
+      // marks it finished, and must never push today's dish past the limit.
+      .or(`expires_on.gte.${today},expires_on.is.null`)
       .order("expires_on", { ascending: true, nullsFirst: false })
       .order("created_at", { ascending: false })
-      .limit(60),
+      .limit(45),
+    supabase
+      .from("food_items")
+      .select("name, kept_in, expires_on, expiry_unknown, created_at")
+      .eq("household_id", householdId)
+      .is("outcome", null)
+      .lt("expires_on", today)
+      .order("expires_on", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(15),
   ]);
   for (const result of [staff, pets, rooms, items]) if (result.error) throw result.error;
   // Optional: a failed read (or a database without migrations/133) leaves
@@ -183,7 +195,8 @@ async function readRows(
   // Optional too: without them Kakak knows no recipes and says so.
   if (recipes.error) console.error("Kakak: recipes not read", recipes.error.message);
   if (menu.error) console.error("Kakak: menu not read", menu.error.message);
-  if (foods.error) console.error("Kakak: food at home not read", foods.error.message);
+  const foodsError = foodsDue.error ?? foodsPast.error;
+  if (foodsError) console.error("Kakak: food at home not read", foodsError.message);
   const petIds = (pets.data ?? []).map((p) => p.id as string);
   const schedules = petIds.length
     ? await supabase
@@ -206,7 +219,8 @@ async function readRows(
     featuresRead: !food.error,
     recipes: recipes.error ? [] : (recipes.data ?? []),
     menu: menu.error ? [] : (menu.data ?? []),
-    foods: foods.error ? undefined : (foods.data ?? []),
+    // Both halves or nothing: a half-read list could hide a dish due today.
+    foods: foodsError ? undefined : [...(foodsDue.data ?? []), ...(foodsPast.data ?? [])],
   } as ContextRows;
 }
 
