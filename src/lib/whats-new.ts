@@ -38,12 +38,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       en: [
         "The Pets tab now shows every pet at once, the same size, each on its own photo.",
         "Under each name: its breed, or, in amber with a warning mark, a routine that is late.",
-        "Tap a pet for its page: its day, its photos and its health record. To frame the photo, open Edit Pet and tap the photo.",
+        "Tap a pet for its page: its day, its photos and its health record. To frame the photo, open Edit pet and tap the photo.",
       ],
       id: [
         "Tab Hewan sekarang menampilkan semua hewan sekaligus, sama besar, masing-masing dengan fotonya.",
         "Di bawah tiap nama: rasnya, atau, berwarna kuning dengan tanda peringatan, rutinitas yang terlambat.",
-        "Ketuk hewan untuk halamannya: hari ini, foto, dan catatan kesehatannya. Untuk mengatur foto, buka Ubah Hewan lalu ketuk fotonya.",
+        "Ketuk hewan untuk halamannya: hari ini, foto, dan catatan kesehatannya. Untuk mengatur foto, buka Ubah hewan lalu ketuk fotonya.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },

@@ -28,6 +28,7 @@ import { useToday } from "@/hooks/use-today";
 import { getPetMeta, isAdmitted, petFocus, petMasterUrl, petPictureKind } from "@/lib/pets";
 import { photoSrc } from "@/lib/photos";
 import { FocusImg } from "@/components/pets/focus-img";
+import { PetFactsCard } from "@/components/pets/pet-facts-card";
 import type { TaskEntity } from "@/types/database";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -148,7 +149,7 @@ export function PetProfileSheet() {
                   onClick={() => setEditOpen(true)}
                   className="flex min-h-11 items-center rounded-lg px-2 text-sm font-medium text-gray-600 active:bg-muted"
                 >
-                  <Edit2 className="mr-1 size-4" /> {t("Edit Pet", "Ubah Hewan")}
+                  <Edit2 className="mr-1 size-4" /> {t("Edit pet", "Ubah hewan")}
                 </button>
               </div>
             )}
@@ -156,6 +157,8 @@ export function PetProfileSheet() {
             {/* Above everything else, because while it is true nothing below
                 it is actionable: the dog's routines are suspended until it is
                 collected. In the owner's language. */}
+            <PetFactsCard pet={pet} />
+
             {isAdmitted(pet) && (
               <div className="mt-4 flex flex-col gap-2 rounded-xl border bg-card p-3">
                 <p className="flex items-center gap-1.5 text-sm font-medium text-gray-900">

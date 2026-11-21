@@ -291,8 +291,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "pets",
     title: { en: "All your pets at once", id: "Semua hewan sekaligus" },
     body: {
-      en: "The Pets tab shows every pet at once, the same size, each on its own photo with its breed. A line in amber with its mark means one of its routines is late. Tap a pet for its page: its day, photos and health record. Frame the photo in Edit Pet.",
-      id: "Tab Hewan menampilkan semua hewan sekaligus, sama besar, masing-masing dengan fotonya dan rasnya. Baris kuning bertanda peringatan berarti ada rutinitasnya yang terlambat. Ketuk hewan untuk halamannya: hari ini, foto, dan catatan kesehatan. Atur foto di Ubah Hewan.",
+      en: "The Pets tab shows every pet at once, the same size, each on its own photo with its breed. A line in amber with its mark means one of its routines is late. Tap a pet for its page: its day, photos and health record. Frame the photo in Edit pet.",
+      id: "Tab Hewan menampilkan semua hewan sekaligus, sama besar, masing-masing dengan fotonya dan rasnya. Baris kuning bertanda peringatan berarti ada rutinitasnya yang terlambat. Ketuk hewan untuk halamannya: hari ini, foto, dan catatan kesehatan. Atur foto di Ubah hewan.",
     },
     where: "pets",
     needs: "pets",
@@ -339,8 +339,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "pets",
     title: { en: "Medicine, grooming and the vet", id: "Obat, grooming, dan dokter hewan" },
     body: {
-      en: "Each pet's page in Pets keeps its health records, like vaccines and weight, its medicine schedule, grooming and vet visits. A job for a person, like taking a dog to the groomer tomorrow, is a chore.",
-      id: "Halaman tiap hewan di tab Hewan menyimpan catatan kesehatannya, seperti vaksin dan berat badan, jadwal obat, grooming, dan kunjungan dokter hewan. Pekerjaan untuk seseorang, seperti mengantar anjing ke groomer besok, adalah tugas.",
+      en: "Each pet's page in Pets shows its latest weight, next vaccine and who looks after it, and keeps its health records, medicine, grooming and vet visits. A job for a person, like taking a dog to the groomer tomorrow, is a chore.",
+      id: "Halaman tiap hewan di tab Hewan menampilkan berat terakhir, vaksin berikutnya, dan siapa yang merawatnya, serta menyimpan catatan kesehatan, obat, grooming, dan kunjungan dokter hewan. Pekerjaan untuk seseorang, seperti mengantar anjing ke groomer besok, adalah tugas.",
     },
     where: "pets",
     needs: "pets",
