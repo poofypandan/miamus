@@ -34,7 +34,7 @@ import { beginNavigation, type CoverVariant } from "@/lib/launch-state";
  */
 export function AppHeader({ action, children }: { action?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="sticky top-0 z-30 border-b bg-background">
+    <div className="sticky top-0 z-30 bg-background">
       <div className="flex h-17 items-center justify-between gap-2 px-4">
         <h1 className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight">
           <span className="shrink-0" aria-hidden>

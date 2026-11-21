@@ -80,9 +80,12 @@ export function BottomTabBar() {
     <nav
       aria-label={locale === "id" ? "Bagian" : "Sections"}
       // pb-safe keeps the tabs clear of the iOS home indicator and Android's
-      // gesture bar; the solid background fills that inset rather than
-      // leaving page content showing through beneath the tabs.
-      className="sticky bottom-0 z-40 w-full border-t bg-background pb-safe shadow-[0_-1px_8px_rgba(0,0,0,0.04)]"
+      // gesture bar. The page seen through it, softened, over one hairline
+      // (21 Nov, the visual direction's PR 2), so the bar is part of the
+      // page rather than a white slab on it. 93 % paper under the blur
+      // (Fable's look): what passes below is only a change of tone, never
+      // words that can be read through the labels.
+      className="sticky bottom-0 z-40 w-full border-t bg-background/93 pb-safe backdrop-blur-[18px]"
     >
       <div className="flex h-16">
         {enabledModules(flags).map((module) => {
@@ -112,7 +115,7 @@ export function BottomTabBar() {
                 // px-0.5 and a tighter label: five tabs on a 360px phone leaves
                 // about 70px each, which "Inventory" overruns at the old size.
                 "flex flex-1 flex-col items-center justify-center gap-1 px-0.5 text-[10px] font-medium active:bg-muted/60",
-                active ? "text-primary" : "text-muted-foreground"
+                active ? "font-semibold text-foreground" : "text-muted-foreground"
               )}
             >
               <Icon className="size-6 shrink-0" style={{ strokeWidth: active ? 2 : 1.6 }} />
