@@ -224,8 +224,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Rooms, floors and spots", id: "Ruangan, lantai, dan bagian" },
     body: {
-      en: "Home opens on Rooms: your house, floor by floor, top first. Amber: an open repair or a chore left from earlier. A floor's name lists its rooms, each repair named. Rooms can hold rooms inside; a spot is one thing in a room, like the sink. Edit in Home → Rooms → Edit rooms.",
-      id: "Rumah dibuka di Ruangan: rumah Anda per lantai, teratas di atas. Kuning: ada perbaikan atau tugas tertinggal. Nama lantai membuka ruangannya, perbaikan disebut namanya. Ruangan bisa berisi ruangan; bagian ialah satu benda, mis. wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
+      en: "Home opens on Rooms: your house, floor by floor, top first. Amber: a repair or a chore left from earlier; the room's sheet says which. A floor's name lists its rooms. Rooms can hold rooms inside; a spot is one thing in a room, like the sink. Edit in Home → Rooms → Edit rooms.",
+      id: "Rumah dibuka di Ruangan: rumah Anda per lantai, teratas di atas. Kuning: ada perbaikan atau tugas tertinggal, disebut di lembar ruangannya. Nama lantai membuka ruangannya. Ruangan bisa berisi ruangan; bagian ialah satu benda, mis. wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
     },
     where: "home_rooms",
     covers: ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "rooms-inside-2026-11"],
