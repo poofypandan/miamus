@@ -260,7 +260,24 @@ export const LEGAL = {
   // photo's own location data is removed on the phone (the English already
   // did; PR #161 makes that true when compression fails, too). Nothing
   // stored, collected or shared changes. Set effectiveDate to the merge day.
-  policyVersion: "2026-11-21.2",
+  // 2026-11-21.7: photo backups (security audit S5, migrations/179). Amazon
+  // Web Services (Singapore, ap-southeast-1) becomes a processor: every
+  // photo in the three photo buckets is copied each night to a private,
+  // versioned, encrypted (SSE-S3) bucket there, which only Poofy Labs can
+  // open, only to restore. The copy runs in a Supabase Edge Function in
+  // Singapore, so photos stay in the region; GitHub only starts it and sees
+  // counts. A photo deleted from Miamus is marked deleted in the backup the
+  // next night and expires 30 days later (lifecycle rule), so it usually
+  // leaves about a month after leaving Miamus; AWS sets no deadline on the
+  // lifecycle, and removals the safety check holds back wait for a person
+  // (the policy says both, without a fixed day count; Codex, PR #167). No
+  // new kind of personal data; a new copy, location
+  // and retention. Section 5's operator access (2026-11-21.2) now names the
+  // backup at AWS, and the one time a full-access key leaves the database
+  // provider: a restore, run from Poofy Labs' own computer. Go live the day
+  // the backup is switched on (docs/photo-backups.md). Set effectiveDate to
+  // the merge day.
+  policyVersion: "2026-11-21.7",
   effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
@@ -268,6 +285,18 @@ export const LEGAL = {
    * the date above). Update this if the project moves region again.
    */
   dataRegion: { en: "Singapore", id: "Singapura" },
+  /**
+   * The nightly photo backup (docs/photo-backups.md). keepDeletedDays is
+   * the backup bucket's lifecycle rule (noncurrent versions expire after
+   * this many days). Change it with the bucket. No total is promised: AWS
+   * sets no deadline on lifecycle deletion, and held-back removals wait for
+   * a person, so the policy says "usually about a month".
+   */
+  photoBackup: {
+    provider: "Amazon Web Services (AWS)",
+    region: { en: "Singapore", id: "Singapura" },
+    keepDeletedDays: 30,
+  },
 } as const;
 
 export const isLegalDraft = !LEGAL.operatorName || !LEGAL.contactEmail;

@@ -22,7 +22,10 @@ import { LEGAL, isLegalDraft } from "@/config/legal";
  * for access (cleared after 12 months, migrations/175). Talking to
  * Kakak uses the browser's own speech recognition: no audio reaches Miamus. Read replies aloud sends
  * Kakak's reply text to ElevenLabs for her voice (app-voice-server.ts); Miamus keeps only a daily
- * character count (migrations/172, 35 days). If any of this changes,
+ * character count (migrations/172, 35 days). Photos are copied nightly to a
+ * versioned backup bucket in AWS Singapore, and a photo deleted from Miamus
+ * stays there 30 more days (docs/photo-backups.md, migrations/179;
+ * LEGAL.photoBackup). If any of this changes,
  * this has to change with it. Not legal advice: have it reviewed before a
  * public launch.
  */
@@ -199,8 +202,9 @@ const COPY: Record<
               `Requests to set up a household — only ${operator}, who runs Miamus.`,
               `Feedback you send — ${operator}, who runs Miamus, and your household's admins. Staff can't read anyone's feedback, not even their own once sent.`,
               `Usage counts — only ${operator}, who runs Miamus, as totals across households, without names.`,
-              `Everything else in your household, photos included — ${operator} can technically open it through our providers' admin tools (Supabase and Vercel). Today that is one person, our founder, who signs in with two-step verification. We look only when you ask us for help, to fix a fault or keep Miamus secure, or when the law requires it. Miamus's own screens never show us a household's data, and the keys that can read everything stay with our database provider, never in the app.`,
+              `Everything else in your household, photos included — ${operator} can technically open it through our providers' admin tools (Supabase and Vercel, and for photos also the backup at AWS). Today that is one person, our founder, who signs in with two-step verification. We look only when you ask us for help, to fix a fault or keep Miamus secure, or when the law requires it. Miamus's own screens never show us a household's data, and the keys that can read everything stay with our database provider, never in the app. The one exception is a restore from the photo backup, when we use such a key from our own computer for as long as the restore takes.`,
               `Supabase — database, sign-in and photo storage, on servers in ${LEGAL.dataRegion.en}.`,
+              `${LEGAL.photoBackup.provider} — keeps an encrypted backup copy of your household's photos, on servers in ${LEGAL.photoBackup.region.en}, so they can be restored if they're lost. Only ${operator} can open it, and only to restore photos.`,
               "Vercel — hosts the app, on servers in Singapore. Photos pass through its servers when they're shown, but aren't stored there.",
               "Google — sign-in for admins.",
               "Anthropic — understands what admins type to Kakak, if an admin turns it on, on servers in the United States. It keeps this up to 30 days (longer only if its safety systems flag a request, or the law requires it), and doesn't use it to train its AI.",
@@ -251,12 +255,13 @@ const COPY: Record<
               "Counts of Kakak requests and their cost (without anything that was typed) are kept 13 months, then deleted. How many characters were read aloud in Kakak's voice each day is kept 35 days.",
               "Usage counts are kept while your household exists, and deleted with it; the daily task counts are deleted after 400 days.",
               "Everything else is kept while your household uses Miamus.",
+              `Photos are also copied every night to an encrypted backup (${LEGAL.photoBackup.provider}, ${LEGAL.photoBackup.region.en}). When a photo leaves Miamus, whether you delete it, the rules above do, or it goes with its household, the backup marks it deleted the next night and keeps it ${LEGAL.photoBackup.keepDeletedDays} more days, so a mistaken delete can be undone; then it is deleted from the backup for good. So a deleted photo usually leaves the backup about a month after it leaves Miamus. If our safety check holds removals back for a person to look at first (for example after a whole household is deleted), that month starts once we have checked, usually within a few days.`,
               "A request to set up a household that isn't approved is deleted 30 days after the decision, together with the Google sign-in it came from, unless that account has since joined a household. Approved requests are kept while the account belongs to a household.",
               "When an admin's account no longer belongs to any household (the household was deleted, or another admin removed them), the account, with its Google name and email and its request, is deleted automatically 30 days later, unless it joins or asks to set up a household before then. Their name stays on past work, as for staff who leave.",
               "A WhatsApp number left to be told about approval is deleted once we've messaged you, if the request isn't approved, when you set up your household, and 30 days after you asked at the latest.",
               "Your answers when you asked for access (what you'd like Miamus to help with, and who introduced you to Miamus) are deleted 12 months after you asked, or sooner if the request itself is deleted. We may keep short anonymous summaries of these answers, with no names or contact details, to decide what to improve.",
-              "The admin who created a household can delete it in the app (Settings → Your data). It is deleted 7 days later, unless an admin cancels before then. Its photos are then deleted automatically at night, usually the same night; a household with very many photos can take a few nights. Database backups keep a copy for up to 7 more days, then it is gone.",
-              "If anyone asks us by email to delete their data or their household, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule.",
+              `The admin who created a household can delete it in the app (Settings → Your data). It is deleted 7 days later, unless an admin cancels before then. Its photos are then deleted automatically at night, usually the same night; a household with very many photos can take a few nights. Database backups keep a copy for up to 7 more days, and the photo backup usually about a month (see above), then it is gone.`,
+              `If anyone asks us by email to delete their data or their household, we delete it within 30 days unless the law requires us to keep it. Copies in our providers' backups are cleared on their normal schedule, and photos leave our photo backup as described above, usually about a month later.`,
               "When staff are removed from a household, their profile is archived and their name stays on past work, so the household's records stay accurate. The admin or the staff member can ask us to remove it.",
             ],
           },
@@ -307,6 +312,7 @@ const COPY: Record<
             ul: [
               "Everything travels over encrypted connections (HTTPS).",
               "Each household's data is walled off in the database, and photos are kept in private storage.",
+              `Photos are backed up every night to a private, encrypted copy in ${LEGAL.photoBackup.region.en}. Deleting from it takes a separate step of our own, so one mistake or one leaked password can't wipe out both.`,
               "PINs are stored hashed and lock after 5 wrong tries, and admins can turn on a Face ID or fingerprint lock.",
             ],
           },
@@ -485,8 +491,9 @@ const COPY: Record<
               `Permintaan membuat rumah tangga — hanya ${operator}, pengelola Miamus.`,
               `Masukan yang Anda kirim — ${operator}, pengelola Miamus, dan admin rumah tangga Anda. Staf tidak dapat membaca masukan siapa pun, termasuk miliknya sendiri setelah terkirim.`,
               `Hitungan pemakaian — hanya ${operator}, pengelola Miamus, sebagai jumlah gabungan dari semua rumah tangga, tanpa nama.`,
-              `Data rumah tangga Anda lainnya, termasuk foto — secara teknis ${operator} dapat membukanya lewat alat admin penyedia kami (Supabase dan Vercel). Saat ini hanya satu orang, pendiri kami, yang masuk dengan verifikasi dua langkah. Kami hanya melihatnya jika Anda meminta bantuan, untuk memperbaiki gangguan atau menjaga keamanan Miamus, atau jika diwajibkan hukum. Layar Miamus sendiri tidak pernah menampilkan data rumah tangga kepada kami, dan kunci yang dapat membaca semua data tetap di penyedia database kami, tidak pernah ada di aplikasi.`,
+              `Data rumah tangga Anda lainnya, termasuk foto — secara teknis ${operator} dapat membukanya lewat alat admin penyedia kami (Supabase dan Vercel, dan untuk foto juga cadangannya di AWS). Saat ini hanya satu orang, pendiri kami, yang masuk dengan verifikasi dua langkah. Kami hanya melihatnya jika Anda meminta bantuan, untuk memperbaiki gangguan atau menjaga keamanan Miamus, atau jika diwajibkan hukum. Layar Miamus sendiri tidak pernah menampilkan data rumah tangga kepada kami, dan kunci yang dapat membaca semua data tetap di penyedia database kami, tidak pernah ada di aplikasi. Satu-satunya pengecualian adalah saat memulihkan foto dari cadangan: kami memakai kunci itu dari komputer kami sendiri, hanya selama pemulihan berlangsung.`,
               `Supabase — database, login, dan penyimpanan foto, di server yang berada di ${LEGAL.dataRegion.id}.`,
+              `${LEGAL.photoBackup.provider} — menyimpan salinan cadangan (backup) foto rumah tangga Anda yang terenkripsi, di server yang berada di ${LEGAL.photoBackup.region.id}, supaya foto bisa dipulihkan jika hilang. Hanya ${operator} yang dapat membukanya, dan hanya untuk memulihkan foto.`,
               "Vercel — hosting aplikasi, di server yang berada di Singapura. Foto melewati servernya saat ditampilkan, tetapi tidak disimpan di sana.",
               "Google — login untuk admin.",
               "Anthropic — memahami yang diketik admin ke Kakak, jika admin menyalakannya, di server yang berada di Amerika Serikat. Anthropic menyimpannya paling lama 30 hari (lebih lama hanya jika sistem keamanannya menandai sebuah permintaan, atau jika diwajibkan hukum), dan tidak memakainya untuk melatih AI-nya.",
@@ -537,12 +544,13 @@ const COPY: Record<
               "Jumlah permintaan ke Kakak dan biayanya (tanpa isi yang diketik) disimpan 13 bulan, lalu dihapus. Jumlah karakter yang dibacakan dengan suara Kakak setiap hari disimpan 35 hari.",
               "Hitungan pemakaian disimpan selama rumah tangga Anda ada, dan ikut dihapus bersamanya; hitungan tugas harian dihapus setelah 400 hari.",
               "Data lainnya disimpan selama rumah tangga Anda memakai Miamus.",
+              `Foto juga disalin setiap malam ke cadangan (backup) yang terenkripsi (${LEGAL.photoBackup.provider}, ${LEGAL.photoBackup.region.id}). Saat foto hilang dari Miamus, baik dihapus oleh Anda, oleh aturan di atas, maupun bersama rumah tangganya, cadangan menandainya terhapus pada malam berikutnya dan menyimpannya ${LEGAL.photoBackup.keepDeletedDays} hari lagi, supaya penghapusan yang keliru bisa dibatalkan; setelah itu foto dihapus permanen dari cadangan. Jadi foto yang dihapus biasanya hilang dari cadangan sekitar sebulan setelah hilang dari Miamus. Jika pemeriksaan keamanan kami menahan penghapusan agar dicek dulu oleh seseorang (misalnya setelah seluruh rumah tangga dihapus), hitungan sebulan itu dimulai setelah kami memeriksanya, biasanya dalam beberapa hari.`,
               "Permintaan membuat rumah tangga yang tidak disetujui dihapus 30 hari setelah keputusan, bersama akun login Google yang dipakai untuk memintanya, kecuali akun itu sudah bergabung ke sebuah rumah tangga. Permintaan yang disetujui disimpan selama akun tersebut masih tergabung di sebuah rumah tangga.",
               "Jika akun admin tidak lagi tergabung di rumah tangga mana pun (rumah tangganya dihapus, atau admin lain mengeluarkannya), akun itu, beserta nama dan email Google-nya dan permintaannya, dihapus otomatis 30 hari kemudian, kecuali sebelum itu akun tersebut bergabung atau meminta membuat rumah tangga. Namanya tetap tercatat pada pekerjaan sebelumnya, seperti staf yang keluar.",
               "Nomor WhatsApp untuk diberi tahu soal persetujuan dihapus setelah kami mengirim pesan kepada Anda, jika permintaan tidak disetujui, saat Anda menyiapkan rumah tangga, dan paling lambat 30 hari setelah Anda meminta.",
               "Jawaban Anda saat meminta akses (bantuan yang Anda inginkan dari Miamus, dan siapa yang mengenalkan Anda pada Miamus) dihapus 12 bulan setelah Anda meminta, atau lebih awal jika permintaannya sendiri dihapus. Kami dapat menyimpan ringkasan singkat dan anonim dari jawaban ini, tanpa nama atau kontak, untuk menentukan apa yang perlu diperbaiki.",
-              "Admin yang membuat rumah tangga dapat menghapusnya di aplikasi (Pengaturan → Data Anda). Rumah tangga dihapus 7 hari kemudian, kecuali ada admin yang membatalkannya sebelum itu. Fotonya lalu dihapus otomatis pada malam hari, biasanya malam itu juga; rumah tangga dengan sangat banyak foto bisa memakan beberapa malam. Cadangan (backup) database menyimpan salinannya paling lama 7 hari lagi, lalu terhapus.",
-              "Jika siapa pun meminta lewat email agar datanya atau rumah tangganya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka.",
+              `Admin yang membuat rumah tangga dapat menghapusnya di aplikasi (Pengaturan → Data Anda). Rumah tangga dihapus 7 hari kemudian, kecuali ada admin yang membatalkannya sebelum itu. Fotonya lalu dihapus otomatis pada malam hari, biasanya malam itu juga; rumah tangga dengan sangat banyak foto bisa memakan beberapa malam. Cadangan (backup) database menyimpan salinannya paling lama 7 hari lagi, dan cadangan foto biasanya sekitar sebulan (lihat di atas), lalu terhapus.`,
+              `Jika siapa pun meminta lewat email agar datanya atau rumah tangganya dihapus, kami menghapusnya dalam 30 hari, kecuali hukum mewajibkan kami menyimpannya. Salinan di cadangan (backup) penyedia kami terhapus sesuai jadwal normal mereka, dan foto hilang dari cadangan foto kami seperti dijelaskan di atas, biasanya sekitar sebulan kemudian.`,
               "Staf yang dikeluarkan dari rumah tangga diarsipkan, dan namanya tetap tercatat pada pekerjaan sebelumnya agar catatan rumah tetap akurat. Admin atau staf yang bersangkutan dapat meminta kami menghapusnya.",
             ],
           },
@@ -593,6 +601,7 @@ const COPY: Record<
             ul: [
               "Semua data dikirim melalui koneksi terenkripsi (HTTPS).",
               "Data setiap rumah tangga dipisahkan di database, dan foto disimpan di penyimpanan privat.",
+              `Foto dicadangkan setiap malam ke salinan privat yang terenkripsi di ${LEGAL.photoBackup.region.id}. Menghapus dari cadangan itu butuh langkah terpisah dari kami sendiri, jadi satu kesalahan atau satu kata sandi yang bocor tidak bisa menghapus keduanya.`,
               "PIN disimpan dalam bentuk hash dan terkunci setelah 5 kali salah, dan admin dapat menyalakan kunci Face ID atau sidik jari.",
             ],
           },
