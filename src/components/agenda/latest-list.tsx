@@ -8,6 +8,9 @@ import { logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
 import { PhotoLightbox, type LightboxItem } from "@/components/dashboard/photo-lightbox";
 import { useHousehold } from "@/context/household-context";
 import { distinct, groupByPhoto } from "@/lib/photos";
+import { formatDateLocal } from "@/lib/scheduleEngine";
+import { threePhotoState } from "@/lib/staff-agenda";
+import type { TaskLog } from "@/types/database";
 import { SyncedImg } from "@/components/shared/synced-img";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -116,18 +119,29 @@ export function LatestSheet({
 }) {
   const t = useT();
   const locale = useOwnerLocale();
-  const { schedules } = useHousehold();
+  const { schedules, logs, selectedDate } = useHousehold();
   const [reviewing, setReviewing] = useState<ChoreOccurrence | null>(null);
   const [gallery, setGallery] = useState<LightboxItem[] | null>(null);
   useBackToClose(open, onClose);
 
   function openRow(row: LatestRow) {
     if (row.entry.kind === "routine") {
-      const frames = groupByPhoto(row.entry.group.items, (item) => item.log?.photo_url).map(({ rows }) =>
+      const group = row.entry.group;
+      // A three-photo routine (a walk) keeps only its end photo on the item;
+      // the start and arrival come from the day's logs, as on its row.
+      const photoLogs =
+        group.proof === "three"
+          ? threePhotoState(group.items, logs, formatDateLocal(selectedDate)).logs
+          : group.items.flatMap((item) => (item.log ? [item.log] : []));
+      const itemOf = (log: TaskLog) =>
+        group.items.find((item) => item.scheduleId === log.schedule_id && item.entityId === log.entity_id);
+      const frames = groupByPhoto(photoLogs, (log) => log.photo_url).map(({ rows }) =>
         logLightboxItem({
-          log: rows[0].log!,
-          title: distinct(rows.map((item) => item.title)).join(" · "),
-          entityName: distinct(rows.map((item) => item.entityName)).join(", ") || undefined,
+          log: rows[0],
+          title: distinct(rows.map((log) => itemOf(log)?.title ?? group.title)).join(" · "),
+          entityName:
+            distinct(rows.map((log) => itemOf(log)?.entityName).filter((name): name is string => !!name)).join(", ") ||
+            undefined,
           schedules,
           lang: locale,
         })

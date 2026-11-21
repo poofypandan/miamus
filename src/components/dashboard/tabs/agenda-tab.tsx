@@ -240,7 +240,11 @@ export function AgendaTab() {
    * first). From the whole day, the admin's own chores and the finished pets
    * of a routine still under way included, as the status ring counts them.
    */
-  const finished = useMemo(() => finishedEntries({ groups, chores: allChores }), [groups, allChores]);
+  const admittedIds = useMemo(() => new Set(pets.filter(isAdmitted).map((p) => p.id)), [pets]);
+  const finished = useMemo(
+    () => finishedEntries({ groups, chores: allChores, admittedIds, logs }),
+    [groups, allChores, admittedIds, logs]
+  );
 
   // Things to buy (Phase 154): one quiet line here instead of a banner on
   // every tab. Items marked running low or out, plus the staff's notes.
@@ -512,14 +516,14 @@ export function AgendaTab() {
     const { overdue: carried, rest: dayRest } = splitOverdue(allEntries);
     // A routine still under way is named for what is left in it.
     const open = dayRest.flatMap((entry): UnifiedAgendaEntry[] => {
-      if (isEntryDone(entry)) return [];
-      if (entry.kind === "chore") return [entry];
-      const left = routinePart(entry.group, false);
+      if (entry.kind === "chore") return isEntryDone(entry) ? [] : [entry];
+      // Paused while a pet is at the clinic, and a vet visit open until closed.
+      const left = routinePart(entry.group, false, { admittedIds, logs });
       return left ? [{ ...entry, group: left }] : [];
     });
     const ahead = showsToday ? open.filter((entry) => !entry.time || entry.time >= nowHm) : open;
     return [...carried.filter((entry) => !isEntryDone(entry)), ...(ahead.length > 0 ? ahead : open)];
-  }, [allEntries, showsToday, nowHm]);
+  }, [allEntries, showsToday, nowHm, admittedIds, logs]);
   const waitingLines = slip !== null || repairLines.toReview > 0 || repairLines.toCheck > 0 || needsDate > 0;
   const comingLines = comingUp.length > 0 || !!menuLine || eatSoon > 0 || toBuy > 0;
 

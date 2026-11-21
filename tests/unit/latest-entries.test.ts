@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { finishedEntries, routinePart } from "@/lib/unified-agenda";
 import type { AgendaGroup, AgendaItem } from "@/lib/scheduleEngine";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
+import type { TaskLog } from "@/types/database";
 
 // Latest (Today v3) lists what the status ring counts as finished: every
 // completed chore, the admin's own too, and every pet a routine has been
@@ -63,5 +64,26 @@ describe("routinePart (Next names what is left)", () => {
     const open = group([item("Mocha", "pending"), item("Matcha", "pending")]);
     expect(routinePart(open, false)).toBe(open);
     expect(routinePart(open, true)).toBeNull();
+  });
+});
+
+describe("routinePart counts as the status ring does (classifyDay)", () => {
+  it("leaves a pet at the clinic out of Next and Latest, apart from its vet visit", () => {
+    const feeding = group([item("Mocha", "pending"), item("Matcha", "pending")]);
+    const admittedIds = new Set(["Mocha"]);
+    expect(routinePart(feeding, false, { admittedIds })?.items.map((i) => i.entityName)).toEqual(["Matcha"]);
+    const vet = { ...group([item("Mocha", "pending", "Vet")]), category: "vet" } as AgendaGroup;
+    expect(routinePart(vet, false, { admittedIds })?.items).toHaveLength(1);
+  });
+
+  it("keeps a vet visit checked in but not closed open", () => {
+    const at = new Date().toISOString();
+    const checkIn = { schedule_id: "vet-1", entity_id: "Mocha", sub_type: "check_in", completed_at: at } as TaskLog;
+    const visitItem = { ...item("Mocha", "completed", "Vet"), scheduleId: "vet-1", log: checkIn } as AgendaItem;
+    const vet = { ...group([visitItem]), category: "vet" } as AgendaGroup;
+    expect(routinePart(vet, true, { logs: [checkIn] })).toBeNull();
+    expect(routinePart(vet, false, { logs: [checkIn] })).not.toBeNull();
+    const out = { ...checkIn, sub_type: "check_out" } as TaskLog;
+    expect(routinePart(vet, true, { logs: [checkIn, out] })).not.toBeNull();
   });
 });

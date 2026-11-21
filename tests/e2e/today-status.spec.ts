@@ -376,35 +376,36 @@ test("a finished chore in Latest opens its photos, never the editor (Codex, PR #
   await expect(page.getByRole("dialog", { name: /Edit/ })).toHaveCount(0);
 });
 
-test("a finished routine in Latest opens its photo (Codex, PR #181)", async ({ context, page }) => {
+test("a finished three-photo walk in Latest opens all three photos (Codex, PR #181)", async ({ context, page }) => {
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
-  const walk = schedule(MOCHI, "Jalan-jalan", ["07:00"], { kind: "walk", proof: "photo" });
+  const walk = schedule(MOCHI, "Jalan-jalan", ["07:00"], { kind: "walk", proof: "three" });
+  const step = (n: number, sub: string, minute: string) => ({
+    id: `00000000-0000-4000-8000-000000181a0${n}`,
+    schedule_id: walk.id,
+    entity_id: MOCHI.id,
+    module: "pet",
+    photo_url: `x/walk-${sub}.jpg`,
+    notes: null,
+    completed_at: `${day}T07:${minute}:00+07:00`,
+    staff_id: STAFF_ID,
+    sub_type: sub,
+    received_at: `${day}T00:${minute}:01Z`,
+  });
   await installStub(context, {
     owner: { locale: "en" },
     schedules: [walk],
-    logs: [
-      {
-        id: "00000000-0000-4000-8000-000000181a01",
-        schedule_id: walk.id,
-        entity_id: MOCHI.id,
-        module: "pet",
-        photo_url: "x/walk.jpg",
-        notes: null,
-        completed_at: `${day}T07:20:00+07:00`,
-        staff_id: STAFF_ID,
-        sub_type: "complete",
-        received_at: `${day}T00:20:01Z`,
-      },
-    ],
+    logs: [step(1, "check_in", "05"), step(2, "arrived", "15"), step(3, "check_out", "40")],
   });
   await page.clock.setFixedTime(new Date(`${day}T10:00:00+07:00`));
   await page.goto("/dashboard?module=agenda");
   await status(page).click({ timeout: 20_000 });
   const latest = page.getByRole("dialog", { name: "Latest" });
   await latest.getByTestId("latest-list").getByRole("button", { name: /Jalan-jalan/ }).click();
-  // The photo opens over Latest (hidden underneath while it is up).
+  // The photos open over Latest (hidden underneath while they are up): the
+  // start, the arrival and the end.
   await expect(page.getByRole("dialog", { name: "Mochi" })).toBeVisible();
-  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Mochi" }).getByText("1 / 3")).toBeVisible();
+  await page.getByRole("dialog", { name: "Mochi" }).getByRole("button", { name: "Close" }).click();
   await expect(latest).toBeVisible();
 });
 
