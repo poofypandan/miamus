@@ -53,7 +53,7 @@ export const PROMISE = {
  */
 export function MiamusPromise({ text }: { text: string }) {
   return (
-    <p className="absolute top-full left-1/2 mt-6 w-72 -translate-x-1/2 animate-promise-in text-center text-sm text-gray-500 motion-reduce:animate-none">
+    <p className="launch-promise absolute top-full left-1/2 mt-6 w-72 -translate-x-1/2 animate-promise-in text-center text-sm text-gray-500 motion-reduce:animate-none">
       {text}
     </p>
   );
@@ -188,7 +188,7 @@ export function LaunchStage({
     <div
       aria-hidden
       className={cn(
-        "fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-background px-6",
+        "launch-stage fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-background px-6",
         className
       )}
     >

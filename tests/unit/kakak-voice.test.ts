@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   FINISH_GRACE_MS,
+  LIMIT_NOTICE_MS,
   MAX_LISTEN_MS,
   MAX_STUMBLES,
   NEW_VOICE_KEY,
@@ -237,7 +238,7 @@ describe("listenUntilDone", () => {
     expect(second.stopped).toBe(1);
     second.end();
     expect(h.onFinished).toHaveBeenCalledTimes(1);
-    expect(h.onFinished).toHaveBeenCalledWith("Ari pel teras setiap Senin jam 9");
+    expect(h.onFinished).toHaveBeenCalledWith("Ari pel teras setiap Senin jam 9", "owner");
   });
 
   it("keeps the last guess of a session that ended before it was final (Safari)", () => {
@@ -248,7 +249,7 @@ describe("listenUntilDone", () => {
     FakeRecognition.last!.hear(["at six", false]);
     listening.finish();
     FakeRecognition.last!.end();
-    expect(h.onFinished).toHaveBeenCalledWith("Syam walks Matcha at six");
+    expect(h.onFinished).toHaveBeenCalledWith("Syam walks Matcha at six", "owner");
   });
 
   it("doesn't repeat words when the browser resends a session's results, or a session ends twice", () => {
@@ -262,7 +263,7 @@ describe("listenUntilDone", () => {
     FakeRecognition.last!.hear(["and 6 PM", true]);
     listening.finish();
     FakeRecognition.last!.end();
-    expect(h.onFinished).toHaveBeenCalledWith("Feed Mocha at 7 and 6 PM");
+    expect(h.onFinished).toHaveBeenCalledWith("Feed Mocha at 7 and 6 PM", "owner");
   });
 
   it("on Android, joins each session's snapshots without repeating them", () => {
@@ -273,7 +274,7 @@ describe("listenUntilDone", () => {
     FakeRecognition.last!.hear(["jam 6", true], ["jam 6 sore", true]);
     listening.finish();
     FakeRecognition.last!.end();
-    expect(h.onFinished).toHaveBeenCalledWith("Syam jalan-jalan dengan Matcha jam 6 sore");
+    expect(h.onFinished).toHaveBeenCalledWith("Syam jalan-jalan dengan Matcha jam 6 sore", "owner");
   });
 
   it("ignores words from a session that already ended", () => {
@@ -286,7 +287,7 @@ describe("listenUntilDone", () => {
     expect(h.onHeard).toHaveBeenLastCalledWith("Buy eggs");
   });
 
-  it("ends by itself after the safety limit, as if Done was tapped", () => {
+  it("ends by itself after the two-minute safety limit, keeping the words (not sent: the limit, not the owner, ended it)", () => {
     vi.useFakeTimers();
     const h = handlers();
     listenUntilDone(FakeRecognition, "en-US", h);
@@ -296,7 +297,18 @@ describe("listenUntilDone", () => {
     vi.advanceTimersByTime(1);
     expect(FakeRecognition.last!.stopped).toBe(1);
     FakeRecognition.last!.end();
-    expect(h.onFinished).toHaveBeenCalledWith("Beli gula");
+    expect(MAX_LISTEN_MS).toBe(120_000);
+    expect(LIMIT_NOTICE_MS).toBe(105_000);
+    expect(h.onFinished).toHaveBeenCalledWith("Beli gula", "limit");
+  });
+
+  it("says the owner ended it when Done is tapped", () => {
+    const h = handlers();
+    const listening = listenUntilDone(FakeRecognition, "en-US", h);
+    FakeRecognition.last!.hear(["Buy eggs", true]);
+    listening.finish();
+    FakeRecognition.last!.end();
+    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs", "owner");
   });
 
   it("says 'didn't hear anything' when Done is tapped with no words", () => {
@@ -344,7 +356,7 @@ describe("listenUntilDone", () => {
       clock += 2000;
       FakeRecognition.last!.end();
     }
-    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs and sugar");
+    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs and sugar", "browser");
     expect(h.onProblem).not.toHaveBeenCalled();
   });
 
@@ -355,7 +367,7 @@ describe("listenUntilDone", () => {
     FakeRecognition.last!.end();
     const second = FakeRecognition.last!;
     second.fail("not-allowed");
-    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs");
+    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs", "browser");
     second.end();
     expect(FakeRecognition.last).toBe(second);
   });
@@ -390,7 +402,7 @@ describe("listenUntilDone", () => {
     r.hear(["Buy eggs", true]);
     r.fail("network");
     r.end();
-    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs");
+    expect(h.onFinished).toHaveBeenCalledWith("Buy eggs", "browser");
     expect(h.onProblem).not.toHaveBeenCalled();
   });
 
@@ -407,7 +419,7 @@ describe("listenUntilDone", () => {
     FakeRecognition.last!.hear(["Beli telur", true]);
     FakeRecognition.throwOnStart = true;
     FakeRecognition.last!.end();
-    expect(h.onFinished).toHaveBeenCalledWith("Beli telur");
+    expect(h.onFinished).toHaveBeenCalledWith("Beli telur", "browser");
     expect(h.onProblem).not.toHaveBeenCalled();
   });
 
@@ -435,7 +447,7 @@ describe("listenUntilDone", () => {
     r.hear(["Ari mops the terrace on Monday", true]);
     r.end();
     expect(h.onFinished).toHaveBeenCalledTimes(1);
-    expect(h.onFinished).toHaveBeenCalledWith("Ari mops the terrace on Monday");
+    expect(h.onFinished).toHaveBeenCalledWith("Ari mops the terrace on Monday", "owner");
     expect(FakeRecognition.last).toBe(r); // not started again after Done
   });
 
@@ -447,7 +459,7 @@ describe("listenUntilDone", () => {
     listening.finish();
     expect(h.onFinished).not.toHaveBeenCalled();
     vi.advanceTimersByTime(FINISH_GRACE_MS);
-    expect(h.onFinished).toHaveBeenCalledWith("Beli gula");
+    expect(h.onFinished).toHaveBeenCalledWith("Beli gula", "owner");
     FakeRecognition.last!.hear(["Beli gula pasir", true]); // late words aren't shown again
     FakeRecognition.last!.fail("network");
     FakeRecognition.last!.end(); // a late end changes nothing
@@ -581,10 +593,14 @@ describe("the new-voice switch", () => {
     expect(newVoiceFromUrl("")).toBeNull();
   });
 
-  it("is off by default", () => {
-    expect(syncNewVoice("", memory())).toBe(false);
-    expect(syncNewVoice("", undefined)).toBe(false);
-    expect(readNewVoice(memory())).toBe(false);
+  it("is on by default (since 20 Nov), with or without storage", () => {
+    expect(syncNewVoice("", memory())).toBe(true);
+    expect(syncNewVoice("", undefined)).toBe(true);
+    expect(readNewVoice(memory())).toBe(true);
+  });
+
+  it("keeps a phone that opted in earlier on", () => {
+    expect(syncNewVoice("", memory({ [NEW_VOICE_KEY]: "on" }))).toBe(true);
   });
 
   it("?newvoice=1 turns it on for this phone, and it stays on without the parameter", () => {
@@ -597,8 +613,10 @@ describe("the new-voice switch", () => {
   it("?newvoice=0 turns it off again", () => {
     const storage = memory({ [NEW_VOICE_KEY]: "on" });
     expect(syncNewVoice("?newvoice=0", storage)).toBe(false);
-    expect(storage.data[NEW_VOICE_KEY]).toBeUndefined();
+    expect(storage.data[NEW_VOICE_KEY]).toBe("off");
     expect(syncNewVoice("", storage)).toBe(false);
+    expect(syncNewVoice("?newvoice=1", storage)).toBe(true);
+    expect(storage.data[NEW_VOICE_KEY]).toBe("on");
   });
 
   it("with storage blocked, the address still decides for this visit", () => {
@@ -613,8 +631,8 @@ describe("the new-voice switch", () => {
         throw new Error("blocked");
       },
     };
-    expect(syncNewVoice("?newvoice=1", blocked)).toBe(true);
-    expect(syncNewVoice("", blocked)).toBe(false);
+    expect(syncNewVoice("?newvoice=0", blocked)).toBe(false);
+    expect(syncNewVoice("", blocked)).toBe(true);
   });
 });
 

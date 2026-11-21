@@ -134,6 +134,18 @@ export function statusDetail(totals: DayTotals, locale: OwnerLocale): string | n
 }
 
 /** A leave request's row: "Syam is asking for leave · Nov 15 – Nov 16", the decision page's own words. */
+/**
+ * Under Today v3's title (21 Nov), beside the ring that carries the count:
+ * only what the ring can't say. "Nothing late" / "1 late"; null on a day
+ * with no tasks and nothing late.
+ */
+export function statusLateLine(totals: DayTotals, locale: OwnerLocale): string | null {
+  const id = locale === "id";
+  if (totals.total === 0 && totals.late === 0) return null;
+  if (totals.late > 0) return id ? `${totals.late} terlambat` : `${totals.late} late`;
+  return id ? "Tidak ada yang terlambat" : "Nothing late";
+}
+
 export function leaveRowLabel(name: string, range: string, locale: OwnerLocale): string {
   return locale === "id" ? `${name} mengajukan cuti · ${range}` : `${name} is asking for leave · ${range}`;
 }

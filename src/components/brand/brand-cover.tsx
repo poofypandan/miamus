@@ -50,8 +50,8 @@ import { cn } from "@/lib/utils";
  *   z-50  sheets, dialogs, toasts         opened deliberately, always on top
  */
 
-/** Matches the cover's duration-200. */
-const COVER_FADE_MS = 200;
+/** Matches the cover's duration-[220ms]. */
+const COVER_FADE_MS = 220;
 
 /**
  * Generous on purpose: past this, the household data has not arrived and
@@ -181,8 +181,11 @@ function CoverFace({
   return (
     <LaunchStage
       className={cn(
+        // The exit (Fable, 21 Nov): the picture fades over 220ms, easing
+        // down to 0.96 as it goes, while the page shows through. It never
+        // travels anywhere. Reduced motion: the fade alone.
         revealing
-          ? "pointer-events-none opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none"
+          ? "pointer-events-none opacity-0 transition-opacity duration-[220ms] ease-travel *:scale-96 *:transition-transform *:duration-[220ms] *:ease-travel motion-reduce:*:scale-100"
           : "opacity-100",
         fadeIn && !revealing && "animate-view-fade motion-reduce:animate-none"
       )}
