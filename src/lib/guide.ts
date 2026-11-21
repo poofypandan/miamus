@@ -385,8 +385,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "What the menu needs", id: "Yang perlu untuk menu" },
     body: {
-      en: "Kitchen → Shopping → For the menu: what the dishes planned for the coming week still need. Something not on your list has a dashed outline and says which dish it's for. Add puts it on To buy, and Add all does a whole dish. Staff see the same list.",
-      id: "Dapur → Belanja → Untuk menu: yang masih perlu untuk menu seminggu ke depan. Yang belum ada di daftar bergaris putus-putus dan menyebut masakannya. Tambah memasukkannya ke Perlu dibeli; Tambah semua memasukkan semua bahan satu masakan. Staf melihat daftar yang sama.",
+      en: "Kitchen → Shopping → For the menu: what the dishes planned for the coming week still need. Something not on your list has a dashed outline and says which dish it's for. Add puts it on To buy, and Add all does a whole dish. Staff see it too.",
+      id: "Dapur → Belanja → Untuk menu: yang masih perlu untuk menu seminggu ke depan. Yang belum ada di daftar bergaris putus-putus dan menyebut masakannya. Tambah memasukkannya ke Perlu dibeli; Tambah semua memasukkan semua bahan untuk satu masakan. Staf juga melihatnya.",
     },
     where: "kitchen_shopping",
     covers: ["menu-needs-2026-11"],
