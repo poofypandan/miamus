@@ -3,6 +3,7 @@ import { waitForSession } from "@/lib/auth/device-session";
 import { getActiveHouseholdId } from "@/lib/tenant";
 import { addDays, compareDishes, weekStart, type MenuDishInput } from "@/lib/menu";
 import type { KitchenNotes } from "@/lib/data/types";
+import type { FoodRule } from "@/lib/food-preferences";
 import type { CookedUse, InventoryItem, MenuDish } from "@/types/database";
 
 /**
@@ -327,9 +328,27 @@ export async function changeDishUses(
 
 /** Owners: the kitchen note (blank clears it); `confirm` is the one-time health-data OK. */
 export async function saveKitchenNotes(text: string | null, confirm: boolean): Promise<KitchenNotes> {
-  const notes = await dataProvider.setKitchenNotes(text, confirm);
+  const saved = await dataProvider.setKitchenNotes(text, confirm);
   mutations += 1;
   const household = currentHousehold();
+  // The note's save says nothing about the food preferences: keep them.
+  const notes: KitchenNotes =
+    snapshot.notes && "foodRules" in snapshot.notes ? { ...saved, foodRules: snapshot.notes.foodRules } : saved;
   if (household && snapshot.household === household) emit({ ...snapshot, notes, notesLoaded: true, notesFailed: false });
   return notes;
+}
+
+/**
+ * Admins: the household's food preferences (PR C2, migrations/183), from
+ * the Kitchen notes chips or Kakak's question card. Every screen holding the
+ * menu shows the change at once. Returns what they were, for Undo.
+ */
+export async function saveFoodPreferences(rules: FoodRule[] | null): Promise<FoodRule[] | null> {
+  const { before, after } = await dataProvider.setFoodPreferences(rules);
+  mutations += 1;
+  const household = currentHousehold();
+  if (household && snapshot.household === household && snapshot.notes) {
+    emit({ ...snapshot, notes: { ...snapshot.notes, foodRules: after } });
+  }
+  return before;
 }

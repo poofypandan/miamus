@@ -110,6 +110,21 @@ async function readStaff(supabase: Awaited<ReturnType<typeof createSupabaseServe
 }
 
 /**
+ * The household row: whether it has pets (migrations/133), its food
+ * preferences (migrations/183) and whether it has a kitchen note (153).
+ * The note's text is read only to say yes or no: it never leaves this
+ * route. On a database without 183 the column doesn't exist (Postgres
+ * 42703): read the rest as before, so Kakak keeps working while it rolls
+ * out, with no food preferences.
+ */
+async function readHousehold(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, householdId: string) {
+  const row = await supabase.from("households").select("has_pets, food_preferences, kitchen_notes").eq("id", householdId).maybeSingle();
+  if (row.error?.code !== "42703") return row;
+  console.error("Kakak: food preferences not read", row.error.message);
+  return supabase.from("households").select("has_pets").eq("id", householdId).maybeSingle();
+}
+
+/**
  * What the page that called can show (lib/kakak/client.ts KAKAK_CLIENT_VERSION).
  * A page loaded before a deploy keeps calling with its old number, or none:
  * it is never sent a card it can't draw or would half-save.
@@ -138,7 +153,8 @@ async function readRows(
     supabase.from("household_locations").select("id, name, created_at, kind, parent_id").eq("household_id", householdId),
     readItems(supabase, householdId),
     // "Who lives here?" (Phase 162): pets switched off means no pet routines.
-    supabase.from("households").select("has_pets").eq("id", householdId).maybeSingle(),
+    // PR C2: the food preferences, and whether there is a kitchen note.
+    readHousehold(supabase, householdId),
     // Household → Features (Phase 171): Food at home switched off means no
     // add_food; Kitchen amounts on as well means ingredients (Phase 176).
     // Repairs and Bills too (Phase 180): Kakak says a switched-off feature
@@ -212,6 +228,7 @@ async function readRows(
     rooms: rooms.data ?? [],
     items: items.data ?? [],
     hasPets: household.error ? null : ((household.data as { has_pets: boolean | null } | null)?.has_pets ?? null),
+    ...householdExtras(household.error ? null : (household.data as Record<string, unknown> | null)),
     foodOn: food.error ? null : featureRow(food.data, "food"),
     kitchenOn: food.error ? null : featureRow(food.data, "kitchen"),
     repairsOn: food.error ? null : featureRow(food.data, "repairs"),
@@ -222,6 +239,15 @@ async function readRows(
     // Both halves or nothing: a half-read list could hide a dish due today.
     foods: foodsError ? undefined : [...(foodsDue.data ?? []), ...(foodsPast.data ?? [])],
   } as ContextRows;
+}
+
+/** PR C2: the food preferences and the kitchen-note flag, only when the row carried them. */
+function householdExtras(row: Record<string, unknown> | null): Pick<ContextRows, "foodPreferences" | "kitchenNotes"> {
+  if (!row) return {};
+  return {
+    ...("food_preferences" in row ? { foodPreferences: row.food_preferences ?? null } : {}),
+    ...("kitchen_notes" in row ? { kitchenNotes: typeof row.kitchen_notes === "string" && row.kitchen_notes.trim().length > 0 } : {}),
+  };
 }
 
 export async function POST(request: NextRequest) {

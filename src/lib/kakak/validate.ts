@@ -7,6 +7,7 @@
 // so for them this also checks the whole shape: every field there and no
 // others, types and enums.
 
+import { foodRulesForKakak } from "@/lib/food-preferences";
 import { sameName } from "@/lib/ingredients";
 import { MAX_AMOUNT } from "@/lib/kitchen-units";
 import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts";
@@ -24,6 +25,7 @@ import {
   INGREDIENT_SHELVES,
   INGREDIENT_UNITS,
   DISH_MEALS,
+  IDEA_LIMITS,
   NONE,
   PET_ROUTINE_TOOL_KINDS,
   TOOL_WEEKDAYS,
@@ -156,6 +158,8 @@ export function amountGiven(input: Record<string, unknown>): AmountGiven | null 
 
 const STAFF_AREA_FIELDS = ["staff", "show", "hide"] as const;
 const DISH_FIELDS = ["recipe", "dish_name", "day", "meal", "servings", "add_missing", "put_on_menu"] as const;
+const IDEA_FIELDS = ["name", "name_en", "ingredients", "servings"] as const;
+const IDEA_LINE_FIELDS = ["item", "name"] as const;
 
 /** set_staff_areas' show or hide: a list of areas, each once. Null when it isn't one. */
 function areaList(errors: string[], field: string, value: unknown): StaffArea[] | null {
@@ -435,6 +439,41 @@ export function validateToolCall(
           (byRecipe ? dish.recipe === input.recipe : typeof input.dish_name === "string" && sameName(dish.title, input.dish_name)),
       );
       if (planned) errors.push(`${planned.title} is already on the menu for ${planned.day} ${planned.meal}: say so in one line instead`);
+      break;
+    }
+    case "save_recipe_idea": {
+      // PR C2: not strict (tools.ts), so the shape is checked here. No field is null.
+      shape(errors, "input", input, IDEA_FIELDS);
+      text(errors, "name", input.name, { max: IDEA_LIMITS.name, required: true });
+      if (typeof input.name_en !== "string") errors.push('name_en must be text: the English name, or "none"');
+      else if (input.name_en !== NONE) text(errors, "name_en", input.name_en, { max: IDEA_LIMITS.name, required: true });
+      const lines = Array.isArray(input.ingredients) ? (input.ingredients as unknown[]) : null;
+      if (!lines) errors.push("ingredients must be a list");
+      else if (lines.length < 1 || lines.length > IDEA_LIMITS.lines) errors.push(`ingredients must have 1 to ${IDEA_LIMITS.lines} entries`);
+      (lines ?? []).slice(0, IDEA_LIMITS.lines + 1).forEach((line, index) => {
+        const entry = shape(errors, `ingredients[${index}]`, line, IDEA_LINE_FIELDS);
+        if (!entry) return;
+        if (entry.item !== NONE) ref(errors, `ingredients[${index}].item`, entry.item, refs.items, false);
+        text(errors, `ingredients[${index}].name`, entry.name, { max: IDEA_LIMITS.lineName, required: true });
+      });
+      if (!Number.isInteger(input.servings) || (input.servings as number) < 0 || (input.servings as number) > IDEA_LIMITS.maxServings) {
+        errors.push("servings must be a whole number from 1 to 50, or 0 for 4");
+      }
+      // A saved recipe with this name already: point to it instead (plan, section 2).
+      const names = [input.name, input.name_en !== NONE ? input.name_en : null].filter((n): n is string => typeof n === "string");
+      const saved = (household.recipes ?? []).find((r) => names.some((n) => sameName(r.name, n) || sameName(r.nameId ?? null, n)));
+      if (saved) errors.push(`${saved.ref} ${saved.name} is already a saved recipe: say so in one line and point to it, with no card`);
+      break;
+    }
+    case "ask_food_preferences": {
+      // PR C2, D2: the app's own question card, asked once.
+      shape(errors, "input", input, ["for"]);
+      if (input.for !== "ideas") errors.push('for must be "ideas"');
+      if (household.foodRules === undefined) {
+        errors.push("food preferences can't be asked here: give the ideas, and follow any food rule the owner has said");
+      } else if (household.foodRules !== null) {
+        errors.push(`the food preferences are already saved (${foodRulesForKakak(household.foodRules)}): follow them and never ask again`);
+      }
       break;
     }
     case "ask_question": {

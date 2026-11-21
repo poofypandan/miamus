@@ -12,7 +12,9 @@ import { correctionFor, guardReplyText, replyProblems } from "@/lib/kakak/reply-
 import { validateToolCall } from "@/lib/kakak/validate";
 import { dishAnswerFromBlock } from "@/lib/kakak/dish-answer";
 import { budgetFetch, type Budget } from "./budget";
-import { scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
+import { questionOf, scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
+import { FOOD_RULES_PRESETS, foodRulesReply } from "@/lib/food-preferences";
+import { QUESTION_TOOLS } from "@/lib/kakak/tools";
 import { householdForCase, type KakakCase } from "./types";
 
 export type Effort = "low" | "medium" | "high";
@@ -151,7 +153,8 @@ function toCalls(content: Anthropic.ContentBlock[]): { calls: (ToolCall & { id: 
 }
 
 function classify(calls: ToolCall[]): Pick<ActualTurn, "kind" | "invalidReason"> {
-  const questions = calls.filter((c) => c.name === "ask_question").length;
+  // PR C2: the food-rules card is a question too (engine.ts QUESTION_TOOLS).
+  const questions = calls.filter((c) => QUESTION_TOOLS.includes(c.name)).length;
   if (calls.length === 0) return { kind: "message" };
   if (questions === 1 && calls.length === 1) return { kind: "question" };
   if (questions > 0) return { kind: "invalid", invalidReason: "a question together with other tool calls" };
@@ -310,8 +313,13 @@ export async function playConversation(
     if (reply === undefined) return result; // a question no path expects: graded as a failure
     const questionsSoFar = result.turns.filter((t) => t.kind === "question").length;
     if (questionsSoFar > MAX_QUESTIONS) return result; // graded as a must-never
-    const offered = ((calls[0].input.answers as unknown[]) ?? []).map(String);
-    const answer = pickAnswer(offered, reply);
+    // The food-rules card's answers are the app's own (PR C2), and a tap on
+    // one reaches Kakak as the app words it, saved (Remember is on by default).
+    const offered = questionOf(calls[0], caseHousehold.ownerLocale).answers;
+    const tapped = pickAnswer(offered, reply);
+    const preset =
+      calls[0].name === "ask_food_preferences" ? FOOD_RULES_PRESETS.find((p) => p[caseHousehold.ownerLocale] === tapped) : undefined;
+    const answer = preset ? foodRulesReply(preset.rules, true, caseHousehold.ownerLocale) : tapped;
     messages.push({ role: "assistant", content: response.content });
     messages.push({
       role: "user",

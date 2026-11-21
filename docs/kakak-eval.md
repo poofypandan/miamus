@@ -187,7 +187,10 @@ As in `docs/phase-156-kakak-test-set.md`:
   time, no supervision, no new room). Unlisted food fields must be
   `expiry_unknown`, `return_container` and `expiry_is_guess` all false.
 - **Questions:** the runner taps the scripted answer, or the offered answer
-  that contains it, and checks the next turn. Several paths can be accepted
+  that contains it, and checks the next turn. The food-rules card
+  (`ask_food_preferences`, PR C2) is a question with the app's own answers;
+  a tap reaches Kakak as the app words it, saved, as Remember for next time
+  is on by default. Several paths can be accepted
   (for example a question *or* a direct suggestion when either is reasonable).
 - **Plain replies** (an answer about Miamus, thanks, something she can't do):
   the reply must mention one word from each `mentions` group and none of the
@@ -206,7 +209,17 @@ As in `docs/phase-156-kakak-test-set.md`:
   - replying in the wrong language for the owner. This one is a word-count
     heuristic: read any case it flags;
   - showing a note to self: a reference (M1, S1, P1, R1, I1), an ISO date, or
-    a tool or field name in what the owner sees.
+    a tool or field name in what the owner sees;
+  - asking the household's food rules again: the food-rules card (or a
+    question in words about them) once they are saved, or the card twice in
+    one conversation (PR C2).
+
+  Cases can add their own (`mustNever` in the case): `states_amount` (an
+  amount with a kitchen unit, which she is never given), `invents_ingredient`
+  (a word from the case's avoids lists), `breaks_food_preference` (a word the
+  saved or tapped food preferences rule out, in her words or a saved idea;
+  "tanpa arak" is fine) and `idea_as_recipe` (an "Ide:" line that calls the
+  idea ready or a saved recipe).
 
   The last two are judged on what the owner sees: a question and its answers,
   or the text beside a card or on its own after the route's guard
@@ -316,6 +329,25 @@ fallbacks (she now writes a sentence beside every card), retries (plain
 replies sent back), and the `about_miamus` and `food` groups, which hold the
 new sentences. The eval key is in the same workspace as production, so each
 run counts against its monthly limit.
+
+## Changing the model
+
+Recipe ideas (PR C2, K207 to K221) come from the model's own knowledge, so a
+weaker or cheaper model has to be caught before it reaches an owner. The model
+id is set in one place (`KAKAK_MODEL`, read by `src/app/api/kakak/route.ts`).
+A pull request that changes it, or its effort, carries:
+
+1. the whole dev split and the holdout on the candidate, at the same budget
+   rules (each paid run needs the owner's OK);
+2. zero must-never in the ideas cases, and a pass rate no lower than the
+   current model's, overall and per category;
+3. the idea cases K207, K209, K211, K217 and K220 played three times each,
+   because ideas vary: all three must pass.
+
+A weaker model usually fails in one of these ways, and each has a case: it
+ignores the preference (K209, K220), presents what isn't at home as at home
+or an idea as ready (K217, K219), drops the "Ide:" label (K207, K211), or
+asks the food rules again (K209).
 
 ## From GitHub, when nobody is at the laptop
 

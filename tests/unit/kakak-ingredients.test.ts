@@ -103,7 +103,17 @@ describe("the tool", () => {
     expect(tool.strict).toBeUndefined();
     expect(toolsFor(on().household).map((t) => t.name)).toContain("put_away_ingredient");
     const off = toolsFor(buildContext(rows, opts).household).map((t) => t.name);
-    expect(off).toEqual(["create_chore", "add_to_shopping_list", "add_pet_routine", "add_food", "set_staff_areas", "plan_dish", "ask_question"]);
+    expect(off).toEqual([
+      "create_chore",
+      "add_to_shopping_list",
+      "add_pet_routine",
+      "add_food",
+      "set_staff_areas",
+      "plan_dish",
+      "save_recipe_idea",
+      "ask_food_preferences",
+      "ask_question",
+    ]);
   });
 
   it("is in Kakak's instructions, with raw ingredients kept off add_food", () => {
@@ -635,6 +645,14 @@ describe("the database records every tool Kakak has", () => {
       m[1].split(",").map((name) => name.trim().replace(/^'|'$/g, "")),
     );
     expect(lists).toHaveLength(2); // the column's check and kakak_record's
-    for (const list of lists) expect([...list].sort()).toEqual([...KAKAK_TOOL_NAMES].sort());
+    // Names another stack's tools use, already on the databases but not
+    // merged here yet: staff onboarding's add_staff and remove_staff
+    // (migrations/181), which 183 keeps so neither drops the other's.
+    const otherStacks = ["add_staff", "remove_staff"];
+    for (const list of lists) {
+      expect(list).toEqual(expect.arrayContaining([...KAKAK_TOOL_NAMES]));
+      const extra = list.filter((name) => !(KAKAK_TOOL_NAMES as readonly string[]).includes(name));
+      expect(extra.every((name) => otherStacks.includes(name))).toBe(true);
+    }
   });
 });

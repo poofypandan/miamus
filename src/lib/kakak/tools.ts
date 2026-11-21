@@ -18,8 +18,9 @@ import { AREAS } from "@/lib/staff-areas";
 // union, so only three tools are strict: create_chore (9 unions),
 // add_pet_routine (6) and ask_question (0), 15 in all. They are the ones
 // whose shape matters most (dates, recurrence, routine switches) or that
-// every turn may use. add_to_shopping_list, add_food, put_away_ingredient and
-// set_staff_areas are not strict: validate.ts checks their whole shape
+// every turn may use. add_to_shopping_list, add_food, put_away_ingredient,
+// set_staff_areas, plan_dish, save_recipe_idea and ask_food_preferences are
+// not strict: validate.ts checks their whole shape
 // (fields, types, enums), and a call that fails goes back to Kakak once like
 // any other mistake.
 // tests/unit/kakak-tool-limits.test.ts keeps the strict set under the limits.
@@ -37,8 +38,13 @@ export const KAKAK_TOOL_NAMES = [
   "put_away_ingredient",
   "set_staff_areas",
   "plan_dish",
+  "save_recipe_idea",
+  "ask_food_preferences",
   "ask_question",
 ] as const;
+
+/** The tools that ask the owner something: alone in a turn, and counted as questions (engine.ts). */
+export const QUESTION_TOOLS: readonly string[] = ["ask_question", "ask_food_preferences"];
 
 export type KakakToolName = (typeof KAKAK_TOOL_NAMES)[number];
 
@@ -78,6 +84,9 @@ export const DISH_MEALS = ["breakfast", "lunch", "dinner"] as const;
 
 /** plan_dish's "no recipe" and "no typed name": a value, never null, so the tool uses no union (tools header). */
 export const NONE = "none";
+
+/** save_recipe_idea's limits: the recipe form's own (lib/recipes RECIPE_LIMITS) or tighter. */
+export const IDEA_LIMITS = { name: 80, lineName: 60, lines: 20, maxServings: 50 } as const;
 
 /** Weekdays as the tool writes them; ISO order (1 = Monday ... 7 = Sunday). */
 export const TOOL_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -407,6 +416,59 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
           description:
             "True when the owner said to cook or plan this dish, or to put it on the menu ('Kamis siang masak ayam bakar madu', 'put opor on Saturday'). False when they only asked whether the ingredients are there ('Gulai kambing malam ini, bahannya ada?'). A dish with no saved recipe needs true.",
         },
+      },
+    },
+  },
+  {
+    // PR C2 (owner, 20 Nov): saving one of her recipe ideas. Not strict, and
+    // no field is nullable ("none" and 0 stand for nothing), so the strict
+    // union count stays 15 (tools header). validate.ts checks the shape, the
+    // references and that no saved recipe has the name already. Never an
+    // amount or a step: the owner adds those.
+    name: "save_recipe_idea",
+    description:
+      "Suggest saving one of your recipe ideas as a recipe, only after the owner asked to save it. Names only: never amounts or steps. Never saves anything.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["name", "name_en", "ingredients", "servings"],
+      properties: {
+        name: { type: "string", description: "The dish in Bahasa Indonesia, as staff read it ('Sayur lodeh'). Max 80 characters." },
+        name_en: {
+          type: "string",
+          description: "The owner's English name for it when the owner's language is English ('Vegetable curry'); otherwise \"none\".",
+        },
+        ingredients: {
+          type: "array",
+          description: "1 to 20 ingredients, as in the idea you gave.",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["item", "name"],
+            properties: {
+              item: { type: "string", description: "A listed item reference (I1, …) when it is one, otherwise \"none\"." },
+              name: { type: "string", description: "Its name in Bahasa Indonesia ('Labu siam'). Max 60 characters." },
+            },
+          },
+        },
+        servings: { type: "integer", description: "How many it is for, only when the owner said (1 to 50); 0 for 4." },
+      },
+    },
+  },
+  {
+    // PR C2, D2 (owner, 20 Nov): the app's own question card for the
+    // household's food rules, asked once, when ideas come up and the block
+    // says "not asked yet". The app writes the question and the answers;
+    // the owner's tap saves it. Not strict; one field that is always "ideas".
+    name: "ask_food_preferences",
+    description:
+      "Ask the owner the household's food rules with the app's own card, before your first recipe ideas, only when the household block says food preferences are not asked yet. Alone in its turn; write nothing with it.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["for"],
+      properties: {
+        for: { type: "string", enum: ["ideas"], description: "Always \"ideas\"." },
       },
     },
   },

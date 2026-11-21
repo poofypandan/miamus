@@ -4,6 +4,7 @@ import { CheckCircle2, CookingPot, Loader2, NotebookPen, Pencil, RefreshCw, Rota
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { RecipeBody } from "@/components/kitchen/recipe-detail-sheet";
+import { FoodRulesLine } from "@/components/kitchen/food-rules-chips";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useRecipes } from "@/hooks/use-recipes";
 import { useStaffProfiles, useStaffNameLookup } from "@/hooks/use-staff-profiles";
@@ -12,6 +13,8 @@ import { servingsLabel, type RecipeLang } from "@/lib/recipes";
 import { useToday } from "@/hooks/use-today";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { MenuDish } from "@/types/database";
+import type { FoodRule } from "@/lib/food-preferences";
+import { cn } from "@/lib/utils";
 
 /**
  * One planned dish (Phase 170 PR C). Staff (Bahasa Indonesia): the recipe
@@ -26,6 +29,7 @@ export function DishSheet({
   lang,
   owner,
   kitchenNotes,
+  foodRules = null,
   canCook,
   busy,
   cookState,
@@ -41,6 +45,8 @@ export function DishSheet({
   lang: RecipeLang;
   owner: boolean;
   kitchenNotes: string | null;
+  /** The household's food preferences (PR C2, D4), shown with the kitchen notes. */
+  foodRules?: FoodRule[] | null;
   /** Today or earlier: a dish isn't cooked ahead of its day. */
   canCook: boolean;
   busy: boolean;
@@ -67,6 +73,7 @@ export function DishSheet({
             lang={lang}
             owner={owner}
             kitchenNotes={kitchenNotes}
+            foodRules={foodRules}
             canCook={canCook}
             busy={busy}
             cookState={cookState}
@@ -88,6 +95,7 @@ function DishBody({
   lang,
   owner,
   kitchenNotes,
+  foodRules,
   canCook,
   busy,
   cookState,
@@ -102,6 +110,7 @@ function DishBody({
   lang: RecipeLang;
   owner: boolean;
   kitchenNotes: string | null;
+  foodRules: FoodRule[] | null;
   canCook: boolean;
   busy: boolean;
   /** Whether the recipe and items have loaded from the server (Codex, PR #101). */
@@ -133,12 +142,22 @@ function DishBody({
   const before = (
     <>
       <p className="-mt-3 text-sm text-muted-foreground">{meta}</p>
-      {kitchenNotes && (
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
-          <NotebookPen className="mt-0.5 size-4 shrink-0 text-amber-700" strokeWidth={1.75} />
-          <p className={owner ? "text-sm text-amber-900" : "text-base text-amber-900"}>
-            <span className="font-medium">{tr("Kitchen notes", "Catatan dapur")}:</span> {kitchenNotes}
-          </p>
+      {(kitchenNotes || (foodRules && foodRules.length > 0)) && (
+        <div
+          className={cn(
+            "flex flex-col gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-900",
+            owner ? "text-sm" : "text-base"
+          )}
+        >
+          {kitchenNotes && (
+            <div className="flex items-start gap-2.5">
+              <NotebookPen className="mt-0.5 size-4 shrink-0 text-amber-700" strokeWidth={1.75} />
+              <p>
+                <span className="font-medium">{tr("Kitchen notes", "Catatan dapur")}:</span> {kitchenNotes}
+              </p>
+            </div>
+          )}
+          <FoodRulesLine rules={foodRules} locale={lang} className="gap-2.5" />
         </div>
       )}
       {dish.notes && (

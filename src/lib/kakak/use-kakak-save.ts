@@ -16,6 +16,7 @@ import { stockStatus } from "@/lib/inventory";
 import { undoStatusShortfall } from "@/lib/kitchen-units";
 import { MENU_LIMITS, nextPosition, weekStart } from "@/lib/menu";
 import { addDishes, deleteDishes, getMenuSnapshot, loadMenuWeek } from "@/lib/menu-store";
+import { deleteRecipe, saveRecipe } from "@/lib/recipes-store";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { hiddenAreasOf, withAreas, type StaffArea } from "@/lib/staff-areas";
 import { petRoutineRows } from "./pet-routine-rows";
@@ -225,6 +226,33 @@ export function useKakakSave() {
                   throw new Error("The ingredient's date was not kept (it is marked Out)");
                 }
               }
+              break;
+            }
+            case "recipe_idea": {
+              // PR C2: through the owner's own save_recipe, as the recipe form
+              // saves one with names only: every line "to taste", no steps.
+              // An English-speaking owner's is written in English, with the
+              // Indonesian name beside it for staff (lib/recipes payloadFrom).
+              const english = item.nameEn !== null;
+              const saved = await saveRecipe({
+                recipe: {
+                  id: null,
+                  name: english ? (item.nameEn as string) : item.name,
+                  servings: item.servings,
+                  steps: null,
+                  written_in: english ? "en" : "id",
+                  name_id: english ? item.name : null,
+                  steps_id: null,
+                },
+                ingredients: item.ingredients.map((line) => ({
+                  item_id: line.itemId,
+                  name: line.name,
+                  name_id: null,
+                  amount: null,
+                  unit: null,
+                })),
+              });
+              undos.push(() => deleteRecipe(saved.id));
               break;
             }
             case "menu_dish": {

@@ -1,3 +1,4 @@
+import { foodRulesFromRow } from "@/lib/food-preferences";
 import { WRITE_TIMEOUT_MS } from "@/lib/supabase/write-timeout";
 import { ChoreAlreadySettledError, ChoreChangedError } from "@/lib/chore-settled";
 import { supabase } from "@/lib/supabase/client";
@@ -688,19 +689,22 @@ export const supabaseProvider: DataProvider = {
     return data as Recipe;
   },
   async getKitchenNotes() {
-    const { data, error } = await client()
-      .from("households")
-      .select("kitchen_notes, kitchen_notes_confirmed_at")
-      .eq("id", getActiveHouseholdId())
-      .maybeSingle();
+    const read = (columns: string) => client().from("households").select(columns).eq("id", getActiveHouseholdId()).maybeSingle();
+    let { data, error } = await read("kitchen_notes, kitchen_notes_confirmed_at, food_preferences");
+    // A database before migrations/183: the note without the food preferences.
+    if (error?.code === "42703" || error?.code === "PGRST204") ({ data, error } = await read("kitchen_notes, kitchen_notes_confirmed_at"));
     if (error) {
       // A database before migrations/153: no column yet.
       if (error.code === "42703" || error.code === "PGRST204") return null;
       throw error;
     }
     if (!data) return null;
-    const row = data as { kitchen_notes: string | null; kitchen_notes_confirmed_at: string | null };
-    return { text: row.kitchen_notes, confirmedAt: row.kitchen_notes_confirmed_at };
+    const row = data as unknown as { kitchen_notes: string | null; kitchen_notes_confirmed_at: string | null; food_preferences?: unknown };
+    return {
+      text: row.kitchen_notes,
+      confirmedAt: row.kitchen_notes_confirmed_at,
+      ...("food_preferences" in row ? { foodRules: foodRulesFromRow(row.food_preferences) } : {}),
+    };
   },
   async setKitchenNotes(notes, confirm) {
     const { data, error, status } = await client().rpc("set_kitchen_notes", {
@@ -711,6 +715,15 @@ export const supabaseProvider: DataProvider = {
     if (error) throw withStatus(error, status);
     const row = data as { kitchen_notes: string | null; kitchen_notes_confirmed_at: string | null };
     return { text: row.kitchen_notes, confirmedAt: row.kitchen_notes_confirmed_at };
+  },
+  async setFoodPreferences(rules) {
+    const { data, error, status } = await client().rpc("set_food_preferences", {
+      p_household: getActiveHouseholdId(),
+      p_rules: rules,
+    });
+    if (error) throw withStatus(error, status);
+    const row = (data ?? {}) as { before?: unknown; after?: unknown };
+    return { before: foodRulesFromRow(row.before), after: foodRulesFromRow(row.after) };
   },
   async listRoutineProposals() {
     const { data, error } = await client()

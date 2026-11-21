@@ -43,6 +43,11 @@ export type Household = {
   kitchen_notes?: string | null;
   kitchen_notes_confirmed_at?: string | null;
   kitchen_notes_confirmed_by?: string | null;
+  // The household's food preferences (PR C2, migrations/183): null until
+  // answered, [] for no rules. Written through set_food_preferences.
+  food_preferences?: string[] | null;
+  food_preferences_set_at?: string | null;
+  food_preferences_set_by?: string | null;
 };
 
 export type HouseholdMember = {
@@ -1189,6 +1194,12 @@ export interface Database {
       set_kitchen_notes: {
         Args: { p_household_id: string; p_notes: string | null; p_confirm?: boolean };
         Returns: { kitchen_notes: string | null; kitchen_notes_confirmed_at: string | null };
+      };
+      // The household's food preferences (migrations/183): admins only;
+      // returns what they were, for Undo. null is "not asked yet".
+      set_food_preferences: {
+        Args: { p_household: string; p_rules: string[] | null };
+        Returns: { before: string[] | null; after: string[] | null };
       };
       // Bought (migrations/148): adds the amount on a tracked item, keeps it
       // as the next pre-fill, and puts the item back to enough.

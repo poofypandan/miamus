@@ -28,6 +28,28 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // PR C2 (owner, 20 Nov): recipe ideas and the food rules, in the Kakak
+    // sheet for households with Kakak only, under the calm-start rules.
+    id: "kakak-ideas-2026-11",
+    date: "2026-11-21",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: recipe ideas from Kakak", id: "Baru: ide masak dari Kakak" },
+    steps: {
+      en: [
+        "Ask \"Any recipe ideas?\" Kakak suggests two or three dishes from her own knowledge, using what is at home, each marked Idea.",
+        "The first time, she asks once about food rules, such as Halal or No alcohol. Change them any time under Food preferences in Kitchen → Menu → Kitchen notes.",
+        "Like one? Say \"Save the second one\". It's saved as a recipe once you confirm; add the amounts and steps yourself.",
+      ],
+      id: [
+        "Tanya \"Ada ide masak?\" Kakak menyarankan dua atau tiga masakan dari pengetahuannya sendiri, memakai yang ada di rumah, masing-masing ditandai Ide.",
+        "Pertama kali, Kakak bertanya sekali soal aturan makanan, misalnya Halal atau Tanpa alkohol. Ubah kapan saja di Preferensi makanan, Dapur → Menu → Catatan dapur.",
+        "Suka salah satunya? Bilang \"Simpan yang kedua\". Resepnya tersimpan setelah Anda konfirmasi; tambahkan sendiri jumlah dan cara membuatnya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 21 Nov (Fable's tab redesigns, PR 1): the tabs reordered and Home
     // opening on the house. Shown on Home, under the calm-start rules.
     id: "home-centre-2026-11",

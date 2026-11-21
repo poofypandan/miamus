@@ -422,6 +422,17 @@ export const GUIDE: readonly GuideEntry[] = [
     where: "kitchen_menu",
     covers: ["menu-2026-11", "cooking-changes-2026-11"],
   },
+  {
+    // PR C2 (migrations/183): the food preferences sit above the note.
+    id: "kitchen-notes",
+    group: "kitchen",
+    title: { en: "Kitchen notes and food preferences", id: "Catatan dapur dan preferensi makanan" },
+    body: {
+      en: "Kitchen → Menu → Kitchen notes: one note for whoever cooks, such as how spicy. Above it, Food preferences (Halal, No alcohol, No beef, Vegetarian or No rules), also used for Kakak's recipe ideas. Staff see both on Menu hari ini. Allergies go in the note.",
+      id: "Dapur → Menu → Catatan dapur: satu catatan untuk yang memasak. Di atasnya, Preferensi makanan (Halal, Tanpa alkohol, Tanpa daging sapi, Vegetarian, Tidak ada aturan), juga untuk ide masak dari Kakak. Staf melihat keduanya di Menu hari ini. Alergi ditulis di catatan.",
+    },
+    where: "kitchen_menu",
+  },
   // ------------------------------------------------------------- settings
   {
     id: "features",
@@ -518,6 +529,18 @@ export const GUIDE: readonly GuideEntry[] = [
     },
     where: "kitchen_menu",
     covers: ["kakak-cook-2026-11"],
+  },
+  {
+    // PR C2 (owner, 20 Nov): ideas from her own knowledge, and the food rules asked once.
+    id: "kakak-ideas",
+    group: "settings",
+    title: { en: "Ask Kakak for recipe ideas", id: "Minta ide masak ke Kakak" },
+    body: {
+      en: "Ask Kakak \"Any recipe ideas?\" She suggests two or three dishes using what is at home, each marked Idea. The first time, she asks once about food rules; change them under Food preferences in Kitchen → Menu → Kitchen notes. Say \"Save the second one\" to keep one.",
+      id: "Tanya Kakak \"Ada ide masak?\" Kakak menyarankan dua atau tiga masakan dari yang ada di rumah, masing-masing ditandai Ide. Pertama kali, Kakak bertanya sekali soal aturan makanan; ubah di Preferensi makanan, Dapur → Menu → Catatan dapur. Bilang \"Simpan yang kedua\" untuk menyimpan.",
+    },
+    where: "kitchen_menu",
+    covers: ["kakak-ideas-2026-11"],
   },
   {
     id: "kakak-card",

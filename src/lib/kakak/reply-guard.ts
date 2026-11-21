@@ -23,6 +23,21 @@ export const MAX_REPLY_CHARS = 200;
  * for being an answer, and the owner read "Sorry, I didn't catch that."
  */
 export const MAX_ANSWER_CHARS = 480;
+/**
+ * PR C2: two or three recipe ideas, each on its own "Ide:" line with what it
+ * uses and still needs, then the kitchen-notes line and the offer to save
+ * one: more room than an answer, still a few lines on a phone.
+ */
+export const MAX_IDEAS_CHARS = 720;
+
+/** A line that starts "Idea:" / "Ide:" (PR C2): Kakak's recipe ideas are always marked so. */
+export const IDEA_LINE = /^[ \t]*(?:idea|ide)[ \t]*:/im;
+
+/** The longest a plain reply may be: an answer, or one with at least two recipe ideas. */
+export function maxAnswerChars(text: string): number {
+  const ideas = text.match(new RegExp(IDEA_LINE.source, "gim"))?.length ?? 0;
+  return ideas >= 2 ? MAX_IDEAS_CHARS : MAX_ANSWER_CHARS;
+}
 
 function propertyNames(schema: unknown, into: Set<string>): Set<string> {
   if (!schema || typeof schema !== "object") return into;
@@ -82,11 +97,12 @@ export const KITCHEN_AMOUNT =
   /\b\d+(?:[.,]\d+)?\s?(?:ml|mL|l|liter|litre|liters|litres|g|gr|gram|grams|kg|sdm|sdt|tbsp|tsp|siung|batang|butir|lembar|ikat|cups?|kaleng|bungkus|sachet)\b/i;
 
 /**
- * Whether the guard watches for amounts in this turn: a plan_dish card, or
- * a plain reply that names one of the home's saved recipes.
+ * Whether the guard watches for amounts in this turn: a plan_dish card, a
+ * plain reply that names one of the home's saved recipes, or one with recipe
+ * ideas (PR C2: an idea never carries an amount).
  */
 export function watchesAmounts(text: string, recipeNames: readonly string[], plansDish: boolean): boolean {
-  if (plansDish) return true;
+  if (plansDish || IDEA_LINE.test(text)) return true;
   const body = text.toLowerCase();
   return recipeNames.some((name) => name.trim().length >= 3 && body.includes(name.trim().toLowerCase()));
 }
@@ -142,7 +158,7 @@ export function guardReplyText(
   const trimmed = text.trim();
   if (kind === "question") return { text: "", tells: [] };
   if (!trimmed) return { text: "", tells: [] };
-  const tells = replyTells(trimmed, locale, kind === "message" ? MAX_ANSWER_CHARS : MAX_REPLY_CHARS, options);
+  const tells = replyTells(trimmed, locale, kind === "message" ? maxAnswerChars(trimmed) : MAX_REPLY_CHARS, options);
   if (tells.length === 0) return { text: trimmed, tells };
   return { text: kind === "message" ? safeReplyLine(locale) : "", tells };
 }
@@ -153,7 +169,7 @@ export type ReplyProblem = ReplyTell | "empty";
 /** What is wrong with a plain reply (a turn with no tool), or nothing. */
 export function replyProblems(text: string, locale: KakakLocale, options: { noAmounts?: boolean } = {}): ReplyProblem[] {
   const trimmed = text.trim();
-  return trimmed ? replyTells(trimmed, locale, MAX_ANSWER_CHARS, options) : ["empty"];
+  return trimmed ? replyTells(trimmed, locale, maxAnswerChars(trimmed), options) : ["empty"];
 }
 
 /** How every correction starts, so practice mode never reads one as the owner's words. */
@@ -169,13 +185,13 @@ export function correctionFor(problems: readonly ReplyProblem[], locale: KakakLo
   const language = locale === "id" ? "Bahasa Indonesia" : "English";
   const why: string[] = [];
   if (problems.includes("empty")) why.push("It had no words for the owner.");
-  if (problems.includes("too_long")) why.push(`It was longer than ${MAX_ANSWER_CHARS} characters.`);
+  if (problems.includes("too_long")) why.push(`It was longer than ${MAX_ANSWER_CHARS} characters (${MAX_IDEAS_CHARS} with ideas).`);
   if (problems.includes("language")) why.push(`It was not in ${language}.`);
   if (problems.some((p) => p === "reference" || p === "date" || p === "internal_name")) {
     why.push("It showed a reference such as S1, a date written as 2026-11-25, or a tool or field name.");
   }
   if (problems.includes("amount")) {
-    why.push("It stated an amount for a recipe; you are never given amounts, so point to the recipe in Dapur / Kitchen → Menu.");
+    why.push("It stated an amount; you are never given amounts: point to the recipe in Dapur / Kitchen → Menu, or offer to save the idea.");
   }
-  return `${CORRECTION_PREFIX} your last reply was not shown. ${why.join(" ")} Reply to the owner again now, in ${language}: at most three short sentences, in plain words.)`;
+  return `${CORRECTION_PREFIX} your last reply was not shown. ${why.join(" ")} Reply to the owner again now, in ${language}: at most three short sentences (or your idea lines), in plain words.)`;
 }

@@ -6,10 +6,12 @@ import { Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useT } from "@/context/owner-locale-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { MENU_LIMITS } from "@/lib/menu";
-import { saveKitchenNotes } from "@/lib/menu-store";
+import { saveFoodPreferences, saveKitchenNotes } from "@/lib/menu-store";
+import { FoodRulesChips } from "@/components/kitchen/food-rules-chips";
+import type { FoodRule } from "@/lib/food-preferences";
 import type { KitchenNotes } from "@/lib/data/types";
 import type { CookReadiness } from "@/lib/menu";
 
@@ -21,6 +23,9 @@ import type { CookReadiness } from "@/lib/menu";
  * It may hold health information (an allergy), which UU PDP treats with
  * extra care, so the first save asks once and the server records the
  * owner's OK with who and when (set_kitchen_notes). Blank clears it.
+ *
+ * Above the note, the household's food preferences (PR C2, migrations/183):
+ * chips that save on a tap, for Kakak's recipe ideas and for the cook.
  */
 export function KitchenNotesSheet({
   open,
@@ -133,6 +138,7 @@ function NotesForm({ notes, onDone }: { notes: KitchenNotes | null; onDone: () =
         </SheetDescription>
       </SheetHeader>
       <div className="flex flex-col gap-3 px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+        {notes && notes.foodRules !== undefined && <FoodPreferences initial={notes.foodRules} />}
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -199,5 +205,48 @@ function NotesForm({ notes, onDone }: { notes: KitchenNotes | null; onDone: () =
         )}
       </div>
     </form>
+  );
+}
+
+/**
+ * The household's food preferences (PR C2, D2/D4): one tap saves, as a
+ * switch does, so it never waits on the note's Save. Optional, with no free
+ * text: an allergy belongs in the note below, which is never sent to Kakak.
+ */
+function FoodPreferences({ initial }: { initial: FoodRule[] | null }) {
+  const t = useT();
+  const locale = useOwnerLocale();
+  const [rules, setRules] = useState<FoodRule[] | null>(initial);
+  const [saving, setSaving] = useState(false);
+  const label = t("Food preferences", "Preferensi makanan");
+
+  async function change(next: FoodRule[]) {
+    if (saving) return;
+    const before = rules;
+    setRules(next);
+    setSaving(true);
+    try {
+      await saveFoodPreferences(next);
+      toast.success(t("Food preferences saved", "Preferensi makanan disimpan"));
+    } catch (err) {
+      console.error(err);
+      setRules(before);
+      toast.error(t("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2" data-testid="food-preferences">
+      <p className="text-sm font-medium text-gray-900">{label}</p>
+      <FoodRulesChips value={rules} locale={locale} disabled={saving} onChange={(next) => void change(next)} label={label} />
+      <p className="text-xs text-muted-foreground">
+        {t(
+          "Optional. Shown to whoever cooks, and used for Kakak's recipe ideas. Allergies go in the note below.",
+          "Opsional. Ditampilkan untuk yang memasak, dan dipakai untuk ide masak dari Kakak. Alergi ditulis di catatan di bawah."
+        )}
+      </p>
+    </div>
   );
 }

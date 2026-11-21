@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { BookOpen, CheckCircle2, ChevronRight, CookingPot, NotebookPen } from "lucide-react";
 import { useCookFlow } from "@/components/kitchen/cook-flow";
 import { DishSheet } from "@/components/kitchen/dish-sheet";
+import { FoodRulesLine } from "@/components/kitchen/food-rules-chips";
 import { RecipesView } from "@/components/kitchen/recipes-view";
 import { CookStatus, useCookCheck } from "@/components/kitchen/cook-status";
 import { useMenuWeek } from "@/hooks/use-menu";
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
  *
  * Each dish: the meal (Pagi · Siang · Malam), its name as the cook reads it,
  * the servings, a recipe mark, a tick once cooked. The kitchen notes sit on
- * top. A tap opens the dish: the recipe at its servings and Sudah dimasak.
+ * top, with the household's food preferences (PR C2, D4), read only. A tap opens the dish: the recipe at its servings and Sudah dimasak.
  * No prices, anywhere.
  */
 export function MenuTodayCard({ day, enabled = true }: { day: string; enabled?: boolean }) {
@@ -43,13 +44,18 @@ export function MenuTodayCard({ day, enabled = true }: { day: string; enabled?: 
         <CookingPot className="size-5 shrink-0 text-muted-foreground" strokeWidth={1.75} />
         <h2 className="text-base font-semibold text-gray-900">{title}</h2>
       </header>
-      {notes?.text && (
-        <p className="mx-3 mt-1 mb-1 flex items-start gap-2 rounded-xl bg-amber-50 px-2.5 py-2 text-sm text-amber-900">
-          <NotebookPen className="mt-0.5 size-4 shrink-0 text-amber-700" strokeWidth={1.75} />
-          <span>
-            <span className="font-medium">Catatan dapur:</span> {notes.text}
-          </span>
-        </p>
+      {(notes?.text || (notes?.foodRules && notes.foodRules.length > 0)) && (
+        <div className="mx-3 mt-1 mb-1 flex flex-col gap-1.5 rounded-xl bg-amber-50 px-2.5 py-2 text-sm text-amber-900">
+          {notes.text && (
+            <p className="flex items-start gap-2">
+              <NotebookPen className="mt-0.5 size-4 shrink-0 text-amber-700" strokeWidth={1.75} />
+              <span>
+                <span className="font-medium">Catatan dapur:</span> {notes.text}
+              </span>
+            </p>
+          )}
+          <FoodRulesLine rules={notes.foodRules} locale="id" />
+        </div>
       )}
       <ul className="flex flex-col divide-y">
         {dishes.map((dish) => {
@@ -91,6 +97,7 @@ export function MenuTodayCard({ day, enabled = true }: { day: string; enabled?: 
         lang="id"
         owner={false}
         kitchenNotes={notes?.text ?? null}
+        foodRules={notes?.foodRules ?? null}
         canCook={!!open && open.day <= today}
         busy={!!open && cook.busyId === open.id}
         cookState={open ? cook.readiness(open) : "loading"}

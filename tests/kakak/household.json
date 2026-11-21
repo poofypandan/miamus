@@ -313,5 +313,7 @@
       "recipe": "D3"
     }
   ],
-  "statusesRead": true
+  "statusesRead": true,
+  "foodRules": null,
+  "kitchenNotes": false
 }

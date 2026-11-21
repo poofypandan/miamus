@@ -18,7 +18,8 @@ import { KAKAK_SYSTEM_PROMPT } from "./prompt";
 import { correctionFor, guardReplyText, replyProblems, watchesAmounts } from "./reply-guard";
 import { dishAnswerLine } from "./dish-answer";
 import { toSuggestions, type KakakSuggestion } from "./suggestions";
-import { KAKAK_TOOLS, KAKAK_TOOL_NAMES } from "./tools";
+import { KAKAK_TOOLS, KAKAK_TOOL_NAMES, QUESTION_TOOLS } from "./tools";
+import { FOOD_RULES_PRESETS, foodRulesQuestion } from "@/lib/food-preferences";
 import { validateToolCall } from "./validate";
 
 export const MAX_TYPED = 500;
@@ -68,7 +69,12 @@ export interface CallRecord {
 }
 
 export type TurnResult =
-  | { kind: "question"; question: string; answers: string[]; allowTyping: boolean; requestId: string; history: KakakHistory }
+  /**
+   * `foodRules` (PR C2, D2): the app's own food-rules card, with Remember
+   * for next time; a page that doesn't know it shows the answers as any
+   * question's, and the answer reaches Kakak the same way.
+   */
+  | { kind: "question"; question: string; answers: string[]; allowTyping: boolean; requestId: string; history: KakakHistory; foodRules?: true }
   | { kind: "suggestions"; text: string; items: KakakSuggestion[]; requestId: string; history: KakakHistory }
   | { kind: "message"; text: string; requestId: string; history: KakakHistory }
   | { kind: "refused"; reason: RefusalReason }
@@ -169,7 +175,39 @@ function toolUses(message: Anthropic.MessageParam | undefined): Anthropic.ToolUs
 }
 
 function questionsAsked(messages: Anthropic.MessageParam[]): number {
-  return messages.filter((m) => m.role === "assistant" && toolUses(m).some((t) => t.name === "ask_question")).length;
+  return messages.filter((m) => m.role === "assistant" && toolUses(m).some((t) => QUESTION_TOOLS.includes(t.name))).length;
+}
+
+/**
+ * The food-rules card was shown already in this conversation (PR C2): its
+ * answer holds until the end of it. A call the checks sent back (an error
+ * result) was never shown, so it doesn't count (Codex, PR #190).
+ */
+export function foodRulesAsked(messages: Anthropic.MessageParam[]): boolean {
+  return messages.some((message, index) => {
+    if (message.role !== "assistant") return false;
+    const next = messages[index + 1];
+    const results = next && Array.isArray(next.content) ? (next.content as Anthropic.ContentBlockParam[]) : [];
+    return toolUses(message).some(
+      (use) =>
+        use.name === "ask_food_preferences" &&
+        !results.some((block) => block.type === "tool_result" && block.tool_use_id === use.id && block.is_error),
+    );
+  });
+}
+
+/**
+ * The household as this conversation's block shows it. The block must stay
+ * byte-identical on every turn (KakakHistory.startedAt), but the food-rules
+ * card saves the answer before the owner's reply is sent. The card is only
+ * shown while the block says "not asked yet", so once it was shown the
+ * block keeps saying so for the rest of the conversation; the answer
+ * reaches Kakak in the reply (Codex, PR #190).
+ */
+export function householdForBlock(household: KakakHousehold, history: KakakHistory): KakakHousehold {
+  return household.foodRules !== undefined && household.foodRules !== null && foodRulesAsked(history.messages)
+    ? { ...household, foodRules: null }
+    : household;
 }
 
 /** The owner's words, as the next user turn after the history. */
@@ -180,7 +218,7 @@ export function nextUserTurn(history: KakakHistory, reply: string): Anthropic.Me
   const last = history.messages[history.messages.length - 1];
   const uses = toolUses(last);
   if (uses.length === 0) return { role: "user", content: text };
-  if (uses.length === 1 && uses[0].name === "ask_question") {
+  if (uses.length === 1 && QUESTION_TOOLS.includes(uses[0].name)) {
     const third = questionsAsked(history.messages) >= MAX_QUESTIONS;
     return {
       role: "user",
@@ -207,17 +245,21 @@ export function nextUserTurn(history: KakakHistory, reply: string): Anthropic.Me
 function problemsWith(
   household: KakakHousehold,
   calls: Anthropic.ToolUseBlock[],
-  priorQuestions: number,
+  messages: Anthropic.MessageParam[],
 ): Map<string, string[]> {
   const problems = new Map<string, string[]>();
-  const questions = calls.filter((c) => c.name === "ask_question");
+  const priorQuestions = questionsAsked(messages);
+  const questions = calls.filter((c) => QUESTION_TOOLS.includes(c.name));
   for (const call of calls) {
     const check = validateToolCall(household, call.name, (call.input ?? {}) as Record<string, unknown>);
     const errors = check.ok ? [] : [...check.errors];
-    if (call.name === "ask_question") {
+    if (QUESTION_TOOLS.includes(call.name)) {
       if (questions.length < calls.length) errors.push("a question can't come with suggestions in the same turn");
       if (questions.length > 1) errors.push("only one question per turn");
       if (priorQuestions >= MAX_QUESTIONS) errors.push("no more questions: suggest with what you have");
+    }
+    if (call.name === "ask_food_preferences" && foodRulesAsked(messages)) {
+      errors.push("the owner already answered the food rules in this conversation: follow that answer, never ask again");
     }
     if (errors.length) problems.set(call.id, errors);
   }
@@ -256,7 +298,7 @@ export function kakakSystem(household: KakakHousehold): Anthropic.TextBlockParam
 export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: string): Promise<TurnResult> {
   const history = checkHistory(historyIn);
   const messages: Anthropic.MessageParam[] = [...history.messages, nextUserTurn(history, reply)];
-  const system = kakakSystem(deps.household);
+  const system = kakakSystem(householdForBlock(deps.household, history));
   // One second try per turn, whichever needs it first: a tool call that fails
   // the checks, or a plain reply that can't be shown.
   let retried = false;
@@ -309,7 +351,7 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
       return { kind: "failed", reason: response.stop_reason === "refusal" ? "refusal" : "invalid" };
     }
 
-    const problems = problemsWith(deps.household, calls, questionsAsked(messages));
+    const problems = problemsWith(deps.household, calls, messages);
     if (problems.size > 0) {
       await deps.record(begun.requestId, record);
       if (retried) return { kind: "failed", reason: "invalid" };
@@ -353,6 +395,22 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
 
     messages.push({ role: "assistant", content: response.content });
     const out: KakakHistory = deps.startedAt ? { messages, startedAt: deps.startedAt } : { messages };
+
+    // PR C2, D2: the app's own question and answers, whatever Kakak would have written.
+    if (calls.length === 1 && calls[0].name === "ask_food_preferences") {
+      record.outcome = "question";
+      await deps.record(begun.requestId, record);
+      const locale = deps.household.ownerLocale;
+      return {
+        kind: "question",
+        question: foodRulesQuestion(locale),
+        answers: FOOD_RULES_PRESETS.map((preset) => preset[locale]),
+        allowTyping: true,
+        foodRules: true,
+        requestId: begun.requestId,
+        history: out,
+      };
+    }
 
     if (calls.length === 1 && calls[0].name === "ask_question") {
       record.outcome = "question";

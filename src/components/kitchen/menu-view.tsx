@@ -23,6 +23,7 @@ import { useCookFlow } from "@/components/kitchen/cook-flow";
 import { DishFormSheet, type DishFormTarget } from "@/components/kitchen/dish-form-sheet";
 import { DishSheet } from "@/components/kitchen/dish-sheet";
 import { KitchenNotesSheet } from "@/components/kitchen/kitchen-notes-sheet";
+import { FoodRulesLine } from "@/components/kitchen/food-rules-chips";
 import { RecipeHintCard } from "@/components/kitchen/recipe-hint-card";
 import { RecipesView } from "@/components/kitchen/recipes-view";
 import { CookStatus, useCookCheck } from "@/components/kitchen/cook-status";
@@ -274,6 +275,7 @@ export function MenuView() {
               {t("Add a note for whoever cooks", "Tambah catatan untuk yang memasak")}
             </span>
           )}
+          <FoodRulesLine rules={notes?.foodRules} locale={lang} className="text-sm text-gray-700" />
         </span>
         <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
       </button>
@@ -345,6 +347,7 @@ export function MenuView() {
         lang={lang}
         owner
         kitchenNotes={notes?.text ?? null}
+        foodRules={notes?.foodRules ?? null}
         canCook={!!open && open.day <= today}
         busy={!!open && cook.busyId === open.id}
         cookState={open ? cook.readiness(open) : "loading"}

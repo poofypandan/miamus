@@ -17,6 +17,7 @@ import { addDays, type KakakHousehold } from "./household";
 import {
   DISH_MEALS,
   FOOD_PLACES,
+  IDEA_LIMITS,
   INGREDIENT_EXPIRY,
   NONE,
   INGREDIENT_SHELVES,
@@ -256,8 +257,26 @@ export interface MenuDishSuggestion {
   toBuy?: { itemId: string; name: string; status: "low" | "out" }[];
 }
 
+/**
+ * One of Kakak's recipe ideas, saved as a recipe (PR C2, owner 20 Nov):
+ * through the owner's own save_recipe (recipes-store saveRecipe), with every
+ * line "to taste" and no steps, because Kakak never gives amounts or steps;
+ * the owner adds them. Undo deletes it.
+ */
+export interface RecipeIdeaSuggestion {
+  kind: "recipe_idea";
+  /** In Bahasa Indonesia, as staff read it. */
+  name: string;
+  /** The owner's English name for it (an English-speaking owner): the recipe is then written in English, with `name` as its Indonesian name. */
+  nameEn: string | null;
+  /** Each line by name; a listed item's id when it is one, so the recipe can be checked against what is at home. */
+  ingredients: { itemId: string | null; name: string }[];
+  servings: number;
+}
+
 export type KakakSuggestion =
   | MenuDishSuggestion
+  | RecipeIdeaSuggestion
   | ChoreSuggestion
   | ShoppingSuggestion
   | PetRoutineSuggestion
@@ -270,9 +289,12 @@ export type KakakSuggestion =
  * The oldest page (lib/kakak/client.ts KAKAK_CLIENT_VERSION) that can show
  * and save this suggestion: 2 (2026-11-14) for a new ingredient or an
  * amount, 3 for what a staff member sees (Phase 178 follow-up), 4 for a
- * dish on the menu (Can we cook it?), else 1.
+ * dish on the menu (Can we cook it?), 5 for Bought on a shopping card (E2),
+ * 6 for a recipe idea (PR C2), else 1.
  */
 export function clientVersionFor(item: KakakSuggestion): number {
+  // PR C2: a recipe idea; an older page has no card for it.
+  if (item.kind === "recipe_idea") return 6;
   // E2: "Bought" on a shopping card; an older page would save it as Out.
   if (item.kind === "shopping" && item.entries.some((e) => e.type === "item" && e.status === "ok")) return 5;
   if (item.kind === "menu_dish") return 4;
@@ -567,6 +589,32 @@ export function toSuggestion(
         ...(dateSkipped ? { dateSkipped: true } : {}),
       };
     }
+    case "save_recipe_idea": {
+      // PR C2: the idea's names only; amounts and steps are the owner's to add.
+      const name = str(input.name)?.slice(0, IDEA_LIMITS.name);
+      if (!name) return null;
+      const en = str(input.name_en);
+      const lines = Array.isArray(input.ingredients) ? (input.ingredients as Record<string, unknown>[]) : [];
+      const ingredients = lines
+        .map((line) => {
+          const item = str(line?.item);
+          const itemId = item && item !== NONE ? (refs.items[item] ?? null) : null;
+          const lineName = str(line?.name)?.slice(0, IDEA_LIMITS.lineName) ?? (item && item !== NONE ? (names.items[item] ?? null) : null);
+          return lineName ? { itemId, name: lineName } : null;
+        })
+        .filter((line): line is { itemId: string | null; name: string } => line !== null)
+        .slice(0, IDEA_LIMITS.lines);
+      if (ingredients.length === 0) return null;
+      const servings = Number.isInteger(input.servings) && (input.servings as number) >= 1 && (input.servings as number) <= IDEA_LIMITS.maxServings ? (input.servings as number) : 4;
+      return {
+        kind: "recipe_idea",
+        name,
+        // Only for an English-speaking owner: an Indonesian owner's recipe is written in Indonesian.
+        nameEn: household.ownerLocale === "en" && en && en !== NONE ? en.slice(0, IDEA_LIMITS.name) : null,
+        ingredients,
+        servings,
+      };
+    }
     case "set_staff_areas": {
       const ref = str(input.staff);
       const person = ref ? household.people.find((p) => p.ref === ref && !p.owner) : undefined;
@@ -657,6 +705,18 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
   if (!value || typeof value !== "object") return false;
   const s = value as Record<string, unknown>;
   switch (s.kind) {
+    case "recipe_idea":
+      return (
+        okText(s.name, IDEA_LIMITS.name, false) &&
+        okText(s.nameEn, IDEA_LIMITS.name, true) &&
+        Array.isArray(s.ingredients) &&
+        s.ingredients.length >= 1 &&
+        s.ingredients.length <= IDEA_LIMITS.lines &&
+        s.ingredients.every((line: Record<string, unknown>) => okId(line?.itemId, true) && okText(line.name, IDEA_LIMITS.lineName, false)) &&
+        Number.isInteger(s.servings) &&
+        (s.servings as number) >= 1 &&
+        (s.servings as number) <= IDEA_LIMITS.maxServings
+      );
     case "menu_dish":
       return (
         okId(s.recipeId, true) &&

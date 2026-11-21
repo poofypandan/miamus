@@ -358,7 +358,38 @@ function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "staff_areas" | "chore" | "thanks" | "question" | "cook" | "tonight" | "eat";
+type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "staff_areas" | "chore" | "thanks" | "question" | "cook" | "tonight" | "eat" | "ideas";
+
+/** "Ada ide masak apa?" / "Any recipe ideas?" (PR C2). */
+const IDEAS = /\b(ide|idea|ideas|resep baru|new recipes?)\b/;
+
+/** "Simpan yang pertama" / "Save the second one" (PR C2): which idea, 1-based, or null. */
+function savedIdea(text: string): number | null {
+  if (!has(text, /\b(simpan|save)\b/)) return null;
+  return has(text, /\b(kedua|second|2)\b/) ? 2 : 1;
+}
+
+/**
+ * Practice's two ideas (PR C2): fixed dishes with nothing from pigs, beef or
+ * alcohol, so they follow any saved preference except vegetarian, which gets
+ * the meatless pair. Each ingredient listed and Enough is "at home".
+ */
+const PRACTICE_IDEAS = [
+  { name: "Sayur lodeh", en: "Vegetable curry", needs: ["Labu siam", "Santan", "Tempe"] },
+  { name: "Ayam goreng kunyit", en: "Turmeric fried chicken", needs: ["Ayam", "Kunyit", "Bawang putih"], meat: true },
+  { name: "Tumis kangkung", en: "Stir-fried water spinach", needs: ["Kangkung", "Bawang putih"] },
+] as const;
+
+function practiceIdeas(household: KakakHousehold) {
+  const vegetarian = household.foodRules?.includes("vegetarian") ?? false;
+  return PRACTICE_IDEAS.filter((idea) => !(vegetarian && "meat" in idea)).slice(0, 2);
+}
+
+/** A listed item with nothing beside it (Enough) by this name, or null. */
+function atHome(household: KakakHousehold, name: string): KakakHousehold["items"][number] | null {
+  const key = name.toLowerCase();
+  return household.items.find((i) => i.name.toLowerCase() === key && !i.status && !i.out) ?? null;
+}
 
 /** "Makan apa?" / "What should we eat?" (E1). */
 const WHAT_TO_EAT = /\b(makan apa|what (should|can) we eat|any leftovers)\b/;
@@ -532,6 +563,7 @@ function guideEntryFor(question: string, locale: Locale): GuideEntry | null {
 
 function intentOf(household: KakakHousehold, text: string): Intent {
   if (THANKS.test(text.trim())) return "thanks";
+  if (has(text, IDEAS)) return "ideas";
   if (has(text, WHAT_TO_EAT) && household.foods) return "eat";
   // "…Put the first one on the menu" is the follow-up, not the question: the cook intent below.
   if (has(text, WHAT_TO_COOK) && !has(text, /\b(menu|put|taruh|masukkan)\b/)) return "tonight";
@@ -717,6 +749,43 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
     if (after && after.ref !== before?.ref) return message(model, [text(copy.noChange)]);
   }
   const canAsk = asked < 1;
+
+  if (intent === "ideas") {
+    // PR C2: the app's own food-rules card first, once, while nobody has answered.
+    const id = household.ownerLocale === "id";
+    const askedRules = messages.some(
+      (m) => m.role === "assistant" && Array.isArray(m.content) && m.content.some((b) => b.type === "tool_use" && b.name === "ask_food_preferences"),
+    );
+    if (household.foodRules === null && !askedRules) return message(model, [toolUse("ask_food_preferences", { for: "ideas" })]);
+    const ideas = practiceIdeas(household);
+    const pick = said.length > 1 ? savedIdea(said[said.length - 1]) : null;
+    if (pick !== null && ideas[pick - 1]) {
+      const idea = ideas[pick - 1];
+      return message(model, [
+        text(copy.here),
+        toolUse("save_recipe_idea", {
+          name: idea.name,
+          name_en: id ? "none" : idea.en,
+          ingredients: idea.needs.map((name) => ({ item: household.items.find((i) => i.name.toLowerCase() === name.toLowerCase())?.ref ?? "none", name })),
+          servings: 0,
+        }),
+      ]);
+    }
+    const line = (idea: (typeof ideas)[number]) => {
+      const home = idea.needs.filter((name) => atHome(household, name));
+      const still = idea.needs.filter((name) => !atHome(household, name));
+      const uses = home.length ? (id ? `pakai ${home.join(", ")}` : `uses ${home.join(", ")}`) : "";
+      const needs = still.length ? (id ? `masih perlu ${still.join(", ")}` : `still needs ${still.join(", ")}`) : "";
+      return `${id ? "Ide" : "Idea"}: ${id ? idea.name : `${idea.en} (${idea.name})`}${[uses, needs].filter(Boolean).length ? `, ${[uses, needs].filter(Boolean).join("; ")}` : ""}.`;
+    };
+    const lines = [
+      `${practice} ${line(ideas[0])}`,
+      ...ideas.slice(1).map(line),
+      ...(household.kitchenNotes ? [id ? "Cek catatan dapur sebelum masak." : "Check the kitchen notes before cooking."] : []),
+      id ? "Mau Kakak simpan salah satunya jadi resep?" : "Want me to save one as a recipe?",
+    ];
+    return message(model, [text(lines.join("\n"))]);
+  }
 
   if (intent === "eat") {
     // The block's order: soonest use-by first (E1).

@@ -40,7 +40,7 @@ export interface ExpectedShoppingItem {
 }
 
 export interface ExpectedCall {
-  tool: Exclude<KakakToolName, "ask_question">;
+  tool: Exclude<KakakToolName, "ask_question" | "ask_food_preferences">;
   /** Fields to check. Unlisted fields must equal the tool's defaults (grade.ts). */
   fields: Record<string, FieldMatcher>;
 }
@@ -50,6 +50,8 @@ export type ExpectedTurn =
       kind: "question";
       /** What the question is about, for people reading results. */
       about: string;
+      /** PR C2: the app's own food-rules card (ask_food_preferences), not ask_question. */
+      card?: "food_rules";
       /** Each group: one of these must be among the offered answers (case-insensitive substring). */
       answersInclude?: string[][];
       /** The answer the runner taps (or types, if no offered answer contains it). */
@@ -80,7 +82,11 @@ export type MustNeverFlag =
   /** Can we cook it?: anything she says states an amount with a kitchen unit ("400 ml"). She is never given one. */
   | "states_amount"
   /** Can we cook it?: anything she says names a word from the case's avoids lists (an ingredient no recipe lists). */
-  | "invents_ingredient";
+  | "invents_ingredient"
+  /** PR C2: a word the household's food preferences (saved, or tapped on the card) rule out, in her words or a saved idea. */
+  | "breaks_food_preference"
+  /** PR C2: an "Idea:" line that calls the idea ready or a saved recipe. */
+  | "idea_as_recipe";
 
 export interface KakakCase {
   /** K001…K100. */
@@ -117,7 +123,7 @@ export interface KakakCase {
    * household's (nothing ready, a use-soon ingredient, no recipes). Applied
    * by householdForCase everywhere a case is run, checked or graded.
    */
-  household?: Partial<Pick<KakakHousehold, "recipes" | "menu" | "foods">>;
+  household?: Partial<Pick<KakakHousehold, "recipes" | "menu" | "foods" | "foodRules" | "kitchenNotes" | "items">>;
 }
 
 /** The household a case runs against: the shared one, with the case's own recipes and menu. */
