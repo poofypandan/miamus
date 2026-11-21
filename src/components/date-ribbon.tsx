@@ -97,17 +97,27 @@ export function DateRibbon({ value, onChange, locale = "id" }: DateRibbonProps) 
               ref={isSelected ? selectedRef : undefined}
               type="button"
               onClick={() => onChange(d)}
+              // No tiles (21 Nov, the visual direction's PR 2): the weekday
+              // quiet above, the number in a circle, and the chosen day one
+              // small ink circle. Today, when not chosen, keeps a thin ring.
               className={cn(
-                "flex min-h-[48px] min-w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-3 py-2 text-xs",
-                isSelected
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : isToday
-                    ? "border-primary text-primary"
-                    : "border-border bg-card text-foreground hover:bg-muted"
+                "flex min-h-[48px] min-w-12 shrink-0 flex-col items-center justify-center gap-1 text-xs",
+                isSelected ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
               )}
             >
-              <span className="font-medium">{DAY_LABELS[locale][d.getDay()]}</span>
-              <span className="text-lg font-semibold">{format(d, "d")}</span>
+              <span>{DAY_LABELS[locale][d.getDay()]}</span>
+              <span
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-full text-base font-semibold tabular-nums",
+                  isSelected
+                    ? "bg-primary text-primary-foreground"
+                    : isToday
+                      ? "text-foreground ring-1 ring-foreground/40 ring-inset"
+                      : "text-foreground"
+                )}
+              >
+                {format(d, "d")}
+              </span>
               {/* Fixed-height row whether or not a dot is shown, so badged and
                   unbadged days keep identical heights and the ribbon doesn't
                   jog as the selection moves. */}
@@ -117,7 +127,7 @@ export function DateRibbon({ value, onChange, locale = "id" }: DateRibbonProps) 
                     aria-hidden
                     className={cn(
                       "size-1 rounded-full",
-                      isSelected ? "bg-white" : "bg-zinc-900"
+                      isSelected ? "bg-foreground" : "bg-subtle-foreground"
                     )}
                   />
                 )}
@@ -128,7 +138,7 @@ export function DateRibbon({ value, onChange, locale = "id" }: DateRibbonProps) 
       </div>
 
       <label
-        className="relative flex min-h-[48px] w-12 shrink-0 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground"
+        className="relative flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
         aria-label={JUMP_LABEL[locale]}
       >
         <CalendarDays className="size-5" />

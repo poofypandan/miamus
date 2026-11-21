@@ -86,9 +86,10 @@ export const AGENDA_TONES: Record<AgendaTone, ToneStyle> = {
  * that nobody needs to look at it.
  */
 export const DONE_TONE = {
-  tint: "border-emerald-500/30 bg-emerald-500/5",
-  icon: "text-emerald-700",
-  check: "text-emerald-600",
+  // The done tokens, no outline (21 Nov, the visual direction's PR 3).
+  tint: "border-transparent bg-done-tint/50",
+  icon: "text-done",
+  check: "text-done",
 } as const;
 
 /** Which colour a pet routine wears. Sick reports file as medication, so they are red too. */

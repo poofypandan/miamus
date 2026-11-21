@@ -19,16 +19,18 @@ export function TodayButton({ locale }: { locale: "en" | "id" }) {
   const { jumpToToday } = useHousehold();
   return (
     <Button
-      variant="outline"
+      variant="ghost"
       size="sm"
       onClick={jumpToToday}
       // Icon only since Phase 153, to leave the header room for the
       // Overview | Staff switch; the label is still there for screen readers.
+      // A plain round icon (21 Nov, PR 2), like the date ribbon's calendar,
+      // so the header has one kind of shape beside the lifted pill.
       aria-label={locale === "en" ? "Today" : "Hari ini"}
       title={locale === "en" ? "Today" : "Hari ini"}
-      className="size-10 shrink-0 rounded-lg p-0"
+      className="size-11 shrink-0 rounded-full p-0 text-muted-foreground active:bg-muted"
     >
-      <CalendarCheck className="size-4" />
+      <CalendarCheck className="size-5" />
     </Button>
   );
 }
