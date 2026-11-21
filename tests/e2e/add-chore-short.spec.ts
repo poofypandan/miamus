@@ -54,3 +54,16 @@ test("in Bahasa Indonesia, and a typed title alone is enough", async ({ context,
   await expect.poll(() => stub.tasks.length).toBe(1);
   expect(stub.tasks[0]).toMatchObject({ title: "Siram tanaman", recurrence: "none", category: "cleaning" });
 });
+
+test("with the keyboard up, Add Chore stays in reach (Fable's look, #194)", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, chores: [] });
+  await page.goto("/dashboard?module=chores&chores=today");
+  await page.getByRole("button", { name: "Add Chore" }).first().click({ timeout: 20_000 });
+  const form = page.getByRole("dialog", { name: "Add Chore" });
+  await form.getByRole("textbox").first().focus();
+  // A phone with its keyboard up leaves about 420 px of the screen.
+  await page.setViewportSize({ width: 390, height: 420 });
+  await expect(form.getByRole("button", { name: "Add Chore" })).toBeInViewport();
+  // Who reads "Anyone", as everywhere an unowned chore is named.
+  await expect(form.getByRole("combobox")).toHaveText(/Anyone/);
+});

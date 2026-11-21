@@ -340,7 +340,7 @@ export function BillsUpkeepSheet({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {item.group === "upkeep" && <SelectItem value={ANYONE}>{t("Unassigned", "Belum ditugaskan")}</SelectItem>}
+                  {item.group === "upkeep" && <SelectItem value={ANYONE}>{t("Anyone", "Siapa saja")}</SelectItem>}
                   {whoOptions.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {nameOf(p.id)}
