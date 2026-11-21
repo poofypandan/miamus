@@ -255,8 +255,15 @@ for (const locale of ["en", "id"] as const) {
       await page.waitForTimeout(400);
       // Her question, read aloud: the speaking line above the row, the disc as Stop.
       await page.getByRole("button", { name: c.aloud }).click();
+      // She takes a moment: the row stays, the disc quiet, her dots the one sign.
+      await page.route("**/api/kakak", async (route) => {
+        await new Promise((r) => setTimeout(r, 2500));
+        return route.fallback();
+      }, { times: 1 });
       await page.getByRole("textbox", { name: c.more }).fill(c.mop);
       await page.getByRole("button", { name: c.send }).click();
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${DIR}/16-foot-thinking-${tag}.png` });
       await expect(page.getByText(locale === "en" ? "Which day?" : "Hari apa?")).toBeVisible({ timeout: 20_000 });
       await page.waitForTimeout(700);
       await page.screenshot({ path: `${DIR}/15-foot-question-speaking-${tag}.png` });

@@ -478,13 +478,16 @@ function RowButton({
         speaking ? t("Stop", "Berhenti") : phase === "thinking" ? t("Kakak is thinking", "Kakak sedang berpikir") : t("Talk to Kakak", "Bicara dengan Kakak")
       }
       className={cn(
-        "flex size-14 shrink-0 items-center justify-center rounded-full transition-colors duration-200 disabled:opacity-60",
-        quiet ? "bg-muted text-foreground" : "bg-primary text-primary-foreground shadow-sm"
+        "flex size-14 shrink-0 items-center justify-center rounded-full transition-colors duration-200",
+        // While she thinks, her dots are the one sign: the disc goes quiet and its mic dims (Fable, #192).
+        phase === "thinking"
+          ? "bg-muted text-subtle-foreground"
+          : quiet
+            ? "bg-muted text-foreground"
+            : "bg-primary text-primary-foreground shadow-sm disabled:opacity-60"
       )}
     >
-      {phase === "thinking" ? (
-        <Loader2 className="size-6 motion-safe:animate-spin" aria-hidden="true" />
-      ) : speaking ? (
+      {speaking ? (
         <Square className="size-5 fill-current" aria-hidden="true" />
       ) : (
         <Mic className="size-6" aria-hidden="true" />

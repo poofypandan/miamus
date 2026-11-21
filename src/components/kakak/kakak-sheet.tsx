@@ -770,7 +770,9 @@ function TypingBox({
           enterKeyHint="send"
           aria-label={placeholder}
           placeholder={placeholder}
-          className="max-h-[7.5rem] min-h-[52px] w-full min-w-0 resize-none overflow-y-auto rounded-2xl py-3.5 text-base"
+          // Focused for as long as anyone types, so no halo here: the ink edge
+          // alone, about 1.5 px (Fable, #192).
+          className="max-h-[7.5rem] min-h-[52px] w-full min-w-0 resize-none overflow-y-auto rounded-2xl py-3.5 text-base focus-visible:border-foreground focus-visible:shadow-[inset_0_0_0_0.5px_var(--foreground)] focus-visible:ring-0"
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
