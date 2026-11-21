@@ -41,9 +41,9 @@ export function OutboxNotice({ locale, staff = false }: { locale: "id" | "en"; s
   const copy = COPY[locale];
   if (unlinked) {
     return (
-      <div role="alert" className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
-        <Unlink className="mt-0.5 size-4 shrink-0 text-red-700" />
-        <div className="min-w-0 flex-1 text-xs text-red-900">
+      <div role="alert" className="flex items-start gap-3 rounded-xl bg-urgent-tint px-3 py-2">
+        <Unlink className="mt-0.5 size-4 shrink-0 text-urgent" />
+        <div className="min-w-0 flex-1 text-xs text-urgent">
           <p>
             <span className="font-medium">{copy.unlinkedTitle}.</span> {copy.unlinkedBody(outboxCount)}
           </p>
@@ -59,10 +59,10 @@ export function OutboxNotice({ locale, staff = false }: { locale: "id" | "en"; s
   return (
     <div
       role="status"
-      className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"
+      className="flex items-start gap-3 rounded-xl bg-attention-tint px-3 py-2"
     >
-      <CloudUpload className="mt-0.5 size-4 shrink-0 text-amber-700" />
-      <p className="min-w-0 flex-1 text-xs text-amber-900">
+      <CloudUpload className="mt-0.5 size-4 shrink-0 text-attention" />
+      <p className="min-w-0 flex-1 text-xs text-attention">
         <span className="font-medium">{copy.title(outboxCount)}.</span> {copy.body}
       </p>
     </div>

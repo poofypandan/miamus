@@ -130,6 +130,7 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
   await page.getByRole("dialog").getByText("Vacuum kamar musik").click();
   const editor = page.getByRole("dialog");
   await expect(editor.getByRole("heading", { name: "Edit Chore" })).toBeVisible();
+  await editor.getByRole("button", { name: /^When/ }).click();
   await editor.locator('input[type="date"]').first().fill(today());
   await editor.getByRole("button", { name: "Save Changes" }).click();
   await expect(editor).toHaveCount(0);

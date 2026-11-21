@@ -94,6 +94,7 @@ test("Bills off hides bill chores and the checklist; the other chores stay", asy
   // The chore form offers no Bill chip, so a new chore never hides as it's saved.
   await page.getByRole("button", { name: "Add Chore" }).first().click();
   const form = page.getByRole("dialog");
+  await form.getByRole("button", { name: "More", exact: true }).click();
   await expect(form.getByRole("button", { name: "Cleaning" })).toBeVisible();
   await expect(form.getByRole("button", { name: "Bills", exact: true })).toHaveCount(0);
 });
