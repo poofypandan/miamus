@@ -5,7 +5,7 @@ import { FOOD_RULES, foodRuleLabel, foodRulesLabel, normalizeFoodRules, type Foo
 import { cn } from "@/lib/utils";
 
 /**
- * The household's food preferences as chips (PR C2, migrations/176): Halal,
+ * The household's food preferences as chips (PR C2, migrations/183): Halal,
  * No alcohol, No beef, Vegetarian, any number of them, and No rules. Used on
  * Kitchen notes and on Kakak's question card ("More"). `value` null: nobody
  * has answered yet, so no chip is on.

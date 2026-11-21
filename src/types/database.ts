@@ -43,7 +43,7 @@ export type Household = {
   kitchen_notes?: string | null;
   kitchen_notes_confirmed_at?: string | null;
   kitchen_notes_confirmed_by?: string | null;
-  // The household's food preferences (PR C2, migrations/176): null until
+  // The household's food preferences (PR C2, migrations/183): null until
   // answered, [] for no rules. Written through set_food_preferences.
   food_preferences?: string[] | null;
   food_preferences_set_at?: string | null;
@@ -1195,7 +1195,7 @@ export interface Database {
         Args: { p_household_id: string; p_notes: string | null; p_confirm?: boolean };
         Returns: { kitchen_notes: string | null; kitchen_notes_confirmed_at: string | null };
       };
-      // The household's food preferences (migrations/176): admins only;
+      // The household's food preferences (migrations/183): admins only;
       // returns what they were, for Undo. null is "not asked yet".
       set_food_preferences: {
         Args: { p_household: string; p_rules: string[] | null };

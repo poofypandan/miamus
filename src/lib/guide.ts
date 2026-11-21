@@ -423,7 +423,7 @@ export const GUIDE: readonly GuideEntry[] = [
     covers: ["menu-2026-11", "cooking-changes-2026-11"],
   },
   {
-    // PR C2 (migrations/176): the food preferences sit above the note.
+    // PR C2 (migrations/183): the food preferences sit above the note.
     id: "kitchen-notes",
     group: "kitchen",
     title: { en: "Kitchen notes and food preferences", id: "Catatan dapur dan preferensi makanan" },

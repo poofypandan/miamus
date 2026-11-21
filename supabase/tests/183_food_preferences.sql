@@ -1,4 +1,4 @@
--- Migration 176 checks: the household's food preferences, and Kakak's two
+-- Migration 183 checks: the household's food preferences, and Kakak's two
 -- new tool names (PR C2).
 -- set_food_preferences: an admin sets them (once each, in the app's order,
 -- with who and when), gets back what they were, and Undo puts "not asked
@@ -8,10 +8,10 @@
 -- column accept save_recipe_idea and ask_food_preferences next to every
 -- name 181 accepted. The export carries the preference. SECURITY DEFINER,
 -- search_path and grants (no anon, no public).
--- LOCAL DATABASE ONLY. One transaction, rolled back. Run after 176 is
+-- LOCAL DATABASE ONLY. One transaction, rolled back. Run after 183 is
 -- applied, or with it in the same transaction:
 --   PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -X -q -t \
---     -f supabase/tests/176_food_preferences.sql
+--     -f supabase/tests/183_food_preferences.sql
 \set ON_ERROR_STOP on
 \pset footer off
 begin;
@@ -53,33 +53,33 @@ $$;
 insert into auth.users (id, instance_id, aud, role, email, is_anonymous, created_at, updated_at)
 select id::uuid, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', email, anon, now(), now()
 from (values
-  ('00000000-0000-0000-0000-0000000176a1', 'one176@test.local', false),
-  ('00000000-0000-0000-0000-0000000176a9', 'nine176@test.local', false),
-  ('00000000-0000-0000-0000-0000000176b1', null, true)
+  ('00000000-0000-0000-0000-0000000183a1', 'one183@test.local', false),
+  ('00000000-0000-0000-0000-0000000183a9', 'nine183@test.local', false),
+  ('00000000-0000-0000-0000-0000000183b1', null, true)
 ) as u(id, email, anon);
 insert into public.households (id, name, owner_auth_id) values
-  ('00000000-0000-0000-0000-0000000176f1', 'Rumah Melati', '00000000-0000-0000-0000-0000000176a1'),
-  ('00000000-0000-0000-0000-0000000176f2', 'Rumah Kenanga', '00000000-0000-0000-0000-0000000176a9');
+  ('00000000-0000-0000-0000-0000000183f1', 'Rumah Melati', '00000000-0000-0000-0000-0000000183a1'),
+  ('00000000-0000-0000-0000-0000000183f2', 'Rumah Kenanga', '00000000-0000-0000-0000-0000000183a9');
 insert into public.household_members (household_id, user_id, role) values
-  ('00000000-0000-0000-0000-0000000176f1', '00000000-0000-0000-0000-0000000176a1', 'owner'),
-  ('00000000-0000-0000-0000-0000000176f2', '00000000-0000-0000-0000-0000000176a9', 'owner');
+  ('00000000-0000-0000-0000-0000000183f1', '00000000-0000-0000-0000-0000000183a1', 'owner'),
+  ('00000000-0000-0000-0000-0000000183f2', '00000000-0000-0000-0000-0000000183a9', 'owner');
 insert into public.device_sessions (user_id, household_id) values
-  ('00000000-0000-0000-0000-0000000176b1', '00000000-0000-0000-0000-0000000176f1');
+  ('00000000-0000-0000-0000-0000000183b1', '00000000-0000-0000-0000-0000000183f1');
 -- Pending requests, as kakak_begin leaves them.
 insert into public.kakak_requests (id, household_id, user_id) values
-  ('00000000-0000-0000-0000-0000000176d1', '00000000-0000-0000-0000-0000000176f1', '00000000-0000-0000-0000-0000000176a1'),
-  ('00000000-0000-0000-0000-0000000176d2', '00000000-0000-0000-0000-0000000176f1', '00000000-0000-0000-0000-0000000176a1'),
-  ('00000000-0000-0000-0000-0000000176d3', '00000000-0000-0000-0000-0000000176f1', '00000000-0000-0000-0000-0000000176a1'),
-  ('00000000-0000-0000-0000-0000000176d4', '00000000-0000-0000-0000-0000000176f1', '00000000-0000-0000-0000-0000000176a1');
+  ('00000000-0000-0000-0000-0000000183d1', '00000000-0000-0000-0000-0000000183f1', '00000000-0000-0000-0000-0000000183a1'),
+  ('00000000-0000-0000-0000-0000000183d2', '00000000-0000-0000-0000-0000000183f1', '00000000-0000-0000-0000-0000000183a1'),
+  ('00000000-0000-0000-0000-0000000183d3', '00000000-0000-0000-0000-0000000183f1', '00000000-0000-0000-0000-0000000183a1'),
+  ('00000000-0000-0000-0000-0000000183d4', '00000000-0000-0000-0000-0000000183f1', '00000000-0000-0000-0000-0000000183a1');
 
-\set a1 '''00000000-0000-0000-0000-0000000176a1'''
-\set a9 '''00000000-0000-0000-0000-0000000176a9'''
-\set p1 '''00000000-0000-0000-0000-0000000176b1'''
-\set f1 '''00000000-0000-0000-0000-0000000176f1'''
-\set r1 '''00000000-0000-0000-0000-0000000176d1'''
-\set r2 '''00000000-0000-0000-0000-0000000176d2'''
-\set r3 '''00000000-0000-0000-0000-0000000176d3'''
-\set r4 '''00000000-0000-0000-0000-0000000176d4'''
+\set a1 '''00000000-0000-0000-0000-0000000183a1'''
+\set a9 '''00000000-0000-0000-0000-0000000183a9'''
+\set p1 '''00000000-0000-0000-0000-0000000183b1'''
+\set f1 '''00000000-0000-0000-0000-0000000183f1'''
+\set r1 '''00000000-0000-0000-0000-0000000183d1'''
+\set r2 '''00000000-0000-0000-0000-0000000183d2'''
+\set r3 '''00000000-0000-0000-0000-0000000183d3'''
+\set r4 '''00000000-0000-0000-0000-0000000183d4'''
 
 -- ---- set_food_preferences ----------------------------------------------------------------
 create function pg_temp.set_stmt(hh uuid, rules text) returns text language sql as $$
@@ -131,7 +131,7 @@ select pg_temp.ok((select food_preferences is null from public.households where 
 do $$
 begin
   begin
-    update public.households set food_preferences = array['halal', 'pescatarian'] where id = '00000000-0000-0000-0000-0000000176f1';
+    update public.households set food_preferences = array['halal', 'pescatarian'] where id = '00000000-0000-0000-0000-0000000183f1';
     raise exception 'FAIL: the check let an unknown value in';
   exception when check_violation then null;
   end;
@@ -170,7 +170,7 @@ begin
   return v;
 end $$;
 select pg_temp.ok((select e->'household'->'food_preferences' = '["halal"]'::jsonb
-                          and e->'household'->>'food_preferences_set_by' = 'one176@test.local'
+                          and e->'household'->>'food_preferences_set_by' = 'one183@test.local'
                           and e->'household' ? 'food_preferences_set_at'
                           and e->'household' ? 'kitchen_notes'
                      from (select pg_temp.export_as(:a1) as e) x),
@@ -194,11 +194,11 @@ select pg_temp.ok(pg_temp.err_as(null, pg_temp.record_stmt(:r4, array['save_reci
 do $$
 begin
   begin
-    update public.kakak_requests set tools = array['ask_food_preferences', 'shell'] where id = '00000000-0000-0000-0000-0000000176d2';
+    update public.kakak_requests set tools = array['ask_food_preferences', 'shell'] where id = '00000000-0000-0000-0000-0000000183d2';
     raise exception 'FAIL: the check let an unknown name in';
   exception when check_violation then null;
   end;
-  update public.kakak_requests set tools = array['ask_food_preferences'] where id = '00000000-0000-0000-0000-0000000176d2';
+  update public.kakak_requests set tools = array['ask_food_preferences'] where id = '00000000-0000-0000-0000-0000000183d2';
 end $$;
 select pg_temp.ok(true, 'the tools check refuses an unknown name and accepts the new ones, even for a direct write');
 

@@ -647,7 +647,7 @@ describe("the database records every tool Kakak has", () => {
     expect(lists).toHaveLength(2); // the column's check and kakak_record's
     // Names another stack's tools use, already on the databases but not
     // merged here yet: staff onboarding's add_staff and remove_staff
-    // (migrations/181), which 176 keeps so neither drops the other's.
+    // (migrations/181), which 183 keeps so neither drops the other's.
     const otherStacks = ["add_staff", "remove_staff"];
     for (const list of lists) {
       expect(list).toEqual(expect.arrayContaining([...KAKAK_TOOL_NAMES]));

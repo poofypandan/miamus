@@ -7,7 +7,7 @@ function today(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Recipe ideas and the household's food preferences (PR C2, migrations/176).
+// Recipe ideas and the household's food preferences (PR C2, migrations/183).
 // /api/kakak is answered here, in the browser, so no key and no Anthropic
 // call: what is under test is the phone's side. The food-rules card is the
 // app's own (D2): the tap is the consent and saves it, with Undo, unless

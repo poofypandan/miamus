@@ -752,7 +752,7 @@ function KakakBubble({ children }: { children: React.ReactNode }) {
  * The household's food rules (PR C2, D2): the app's own question, the same
  * for every household. Halal · Halal, no alcohol · No rules · More (the four
  * chips, any number, then Save). Remember for next time is on by default:
- * the tap is the consent and saves it (migrations/176), with Undo; off,
+ * the tap is the consent and saves it (migrations/183), with Undo; off,
  * nothing is saved and Kakak follows the answer for this conversation only.
  * A typed answer is never saved: the Remember switch says so while typing.
  * Either way the answer then goes to Kakak as the owner's reply.

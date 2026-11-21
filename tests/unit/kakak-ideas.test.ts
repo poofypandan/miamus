@@ -1,5 +1,5 @@
 // Kakak's recipe ideas and the household's food preferences (PR C2, owner
-// 20 Nov; migrations/176). The preference is a closed set, asked once with
+// 20 Nov; migrations/183). The preference is a closed set, asked once with
 // the app's own card (ask_food_preferences) and read by Kakak from the
 // household block; ideas are saved through save_recipe_idea as names only;
 // the guard catches an amount in an idea reply.
@@ -114,7 +114,7 @@ describe("what Kakak is told", () => {
       "Food preferences (for recipe ideas): not asked yet.\nKitchen notes: none.",
     );
     expect(renderHouseholdBlock(built({ foodPreferences: [] }).household)).toContain("Food preferences (for recipe ideas): none.");
-    // An older read (a database before 176): the block is exactly as it was.
+    // An older read (a database before 183): the block is exactly as it was.
     const older = built();
     expect(older.household).not.toHaveProperty("foodRules");
     expect(older.household).not.toHaveProperty("kitchenNotes");
@@ -130,7 +130,7 @@ describe("ask_food_preferences", () => {
     if (!saved.ok) expect(saved.errors.join(" ")).toMatch(/already saved \(halal.*never ask again/);
     const none = validateToolCall(built({ foodPreferences: [] }).household, "ask_food_preferences", { for: "ideas" });
     expect(none.ok).toBe(false);
-    // A database before 176: nothing could be saved, so she doesn't ask.
+    // A database before 183: nothing could be saved, so she doesn't ask.
     expect(validateToolCall(built().household, "ask_food_preferences", { for: "ideas" }).ok).toBe(false);
     const bad = validateToolCall(built({ foodPreferences: null }).household, "ask_food_preferences", { for: "dinner", extra: 1 });
     expect(bad.ok).toBe(false);

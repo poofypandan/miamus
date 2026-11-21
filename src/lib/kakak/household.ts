@@ -156,9 +156,9 @@ export interface KakakHousehold {
    */
   foods?: KakakFood[];
   /**
-   * PR C2 (migrations/176): the household's food preferences, for recipe
+   * PR C2 (migrations/183): the household's food preferences, for recipe
    * ideas: null when nobody has answered yet, [] for no rules. Absent when
-   * they weren't read (a database before 176), so the block says nothing.
+   * they weren't read (a database before 183), so the block says nothing.
    */
   foodRules?: FoodRule[] | null;
   /**

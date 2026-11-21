@@ -1,5 +1,5 @@
 -- ============================================================================
--- 176 — The household's food preferences, and Kakak's recipe ideas (PR C2)
+-- 183 — The household's food preferences, and Kakak's recipe ideas (PR C2)
 -- ============================================================================
 -- Can we cook it?, PR C2 (owner, 20 Nov; plan v3, section 2 and D2/D4).
 -- Kakak may suggest recipe ideas from her own knowledge. Before the first
@@ -34,10 +34,12 @@
 --   kakak_requests_tools_check  the same rule (at most 20 names, all known)
 --        with save_recipe_idea and ask_food_preferences added. It keeps
 --        every name 181 accepts (plan_dish from 174; add_staff and
---        remove_staff from 181, applied to staging and production before
---        this one), so whichever of 176 and 181 runs last, every tool is
---        accepted. Dropped and added again; existing rows hold only known
---        names, so they pass.
+--        remove_staff from 181). Numbered 183, the next unreserved number
+--        (manager, 21 Nov; it was 176 while it lived only on a local
+--        database), so it runs after 177, 180 and 181 everywhere: on staging
+--        and production, which applied those first, and on a fresh build in
+--        number order. Its list is the last word. Dropped and added again;
+--        existing rows hold only known names, so they pass.
 --
 -- RE-CREATED
 --   kakak_record (from its newest definition, 181)  unchanged except the
@@ -60,7 +62,7 @@
 -- notes exist (never their text). Privacy policy (EN and ID) and legal.ts
 -- updated in the same PR. Supabase only, same region, no new service.
 --
--- Test: supabase/tests/176_food_preferences.sql (local only).
+-- Test: supabase/tests/183_food_preferences.sql (local only).
 
 -- --- 1. The preference ----------------------------------------------------------------
 alter table public.households
@@ -233,7 +235,7 @@ begin
                                 'kitchen_notes', h.kitchen_notes,
                                 'kitchen_notes_confirmed_at', h.kitchen_notes_confirmed_at,
                                 'kitchen_notes_confirmed_by', (select u.email from auth.users u where u.id = h.kitchen_notes_confirmed_by),
-                                -- The food preferences, with who set them and when (migrations/176).
+                                -- The food preferences, with who set them and when (migrations/183).
                                 'food_preferences', h.food_preferences,
                                 'food_preferences_set_at', h.food_preferences_set_at,
                                 'food_preferences_set_by', (select u.email from auth.users u where u.id = h.food_preferences_set_by))

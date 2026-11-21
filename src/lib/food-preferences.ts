@@ -1,5 +1,5 @@
 // The household's food preferences (PR C2, owner 20 Nov, D2 and D4;
-// migrations/176). One optional household setting, never per person: a
+// migrations/183). One optional household setting, never per person: a
 // closed set of choices, any number of them, and "no rules" is an answer
 // too. There is no free text, so nothing is typed here and an allergy can't
 // end up in it by accident (allergies stay in Kitchen notes, which are never

@@ -344,9 +344,9 @@ export interface KitchenNotes {
   text: string | null;
   confirmedAt: string | null;
   /**
-   * The household's food preferences (PR C2, migrations/176), shown beside
+   * The household's food preferences (PR C2, migrations/183), shown beside
    * the note: null until answered, [] for no rules. Absent on a database
-   * before 176, where the chips don't show.
+   * before 183, where the chips don't show.
    */
   foodRules?: FoodRule[] | null;
 }
@@ -585,7 +585,7 @@ export interface DataProvider {
   /** Owners only. `confirm`: the one-time health-data OK (D12). */
   setKitchenNotes(notes: string | null, confirm: boolean): Promise<KitchenNotes>;
   /**
-   * Admins only (migrations/176): the household's food preferences ([] for
+   * Admins only (migrations/183): the household's food preferences ([] for
    * no rules; null puts "not asked yet" back, for Undo). Returns what they
    * were and are now.
    */

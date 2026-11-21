@@ -691,7 +691,7 @@ export const supabaseProvider: DataProvider = {
   async getKitchenNotes() {
     const read = (columns: string) => client().from("households").select(columns).eq("id", getActiveHouseholdId()).maybeSingle();
     let { data, error } = await read("kitchen_notes, kitchen_notes_confirmed_at, food_preferences");
-    // A database before migrations/176: the note without the food preferences.
+    // A database before migrations/183: the note without the food preferences.
     if (error?.code === "42703" || error?.code === "PGRST204") ({ data, error } = await read("kitchen_notes, kitchen_notes_confirmed_at"));
     if (error) {
       // A database before migrations/153: no column yet.

@@ -142,7 +142,7 @@ export interface ContextRows {
   foods?: ContextFoodRow[];
   /**
    * PR C2: households.food_preferences as read (null: not asked yet);
-   * absent when it couldn't be read (a database before migrations/176).
+   * absent when it couldn't be read (a database before migrations/183).
    */
   foodPreferences?: unknown;
   /** PR C2: the household has a kitchen note; absent when not read. Its text never leaves the route. */

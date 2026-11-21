@@ -275,7 +275,7 @@ export const LEGAL = {
   // a listed item bought (Enough), saved only when the admin confirms.
   // Nothing new is stored; no new service or region. Set effectiveDate to
   // the merge day.
-  // 2026-11-21.8 (PR C2, ideas and the food preference; migrations/176):
+  // 2026-11-21.8 (PR C2, ideas and the food preference; migrations/183):
   // stored for the first time, the household's food preferences (halal, no
   // alcohol, no beef, vegetarian, or no rules; a fixed list, no free text)
   // with who set them and when, set for the household and never per person.

@@ -111,9 +111,9 @@ async function readStaff(supabase: Awaited<ReturnType<typeof createSupabaseServe
 
 /**
  * The household row: whether it has pets (migrations/133), its food
- * preferences (migrations/176) and whether it has a kitchen note (153).
+ * preferences (migrations/183) and whether it has a kitchen note (153).
  * The note's text is read only to say yes or no: it never leaves this
- * route. On a database without 176 the column doesn't exist (Postgres
+ * route. On a database without 183 the column doesn't exist (Postgres
  * 42703): read the rest as before, so Kakak keeps working while it rolls
  * out, with no food preferences.
  */

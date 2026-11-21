@@ -117,7 +117,7 @@ export interface StubOptions {
    */
   menu?: Record<string, unknown>[];
   kitchenNotes?: string | null;
-  /** households.food_preferences (PR C2, migrations/176): null or absent is not asked yet. */
+  /** households.food_preferences (PR C2, migrations/183): null or absent is not asked yet. */
   foodRules?: string[] | null;
   /** Hold the recipes read until `releaseRecipes()` (cooking must wait for it; Codex, PR #101). */
   holdRecipes?: boolean;
@@ -271,7 +271,7 @@ export interface Stub {
   recipes: Record<string, unknown>[];
   /** menu_dishes as the stub holds them, and the household's kitchen note (Phase 170 PR C). */
   menu: Record<string, unknown>[];
-  /** `foodRules`: households.food_preferences (PR C2, migrations/176); null is not asked yet. */
+  /** `foodRules`: households.food_preferences (PR C2, migrations/183); null is not asked yet. */
   kitchen: { notes: string | null; confirmedAt: string | null; foodRules: string[] | null };
   /** Answer the recipes reads held by `holdRecipes`. */
   releaseRecipes(): void;
@@ -821,7 +821,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
           return route.fulfill({ status: code === "42501" ? 403 : 400, json: { code, message: err.code, details: null, hint: null } });
         }
       }
-      // PR C2 (migrations/176): admins only; returns what they were, for Undo.
+      // PR C2 (migrations/183): admins only; returns what they were, for Undo.
       if (table === "rpc/set_food_preferences") {
         if (who !== OWNER) return route.fulfill({ status: 403, json: { code: "42501", message: "admins_only", details: null, hint: null } });
         const body = request.postDataJSON() as { p_rules: string[] | null };

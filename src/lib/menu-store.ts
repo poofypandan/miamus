@@ -339,7 +339,7 @@ export async function saveKitchenNotes(text: string | null, confirm: boolean): P
 }
 
 /**
- * Admins: the household's food preferences (PR C2, migrations/176), from
+ * Admins: the household's food preferences (PR C2, migrations/183), from
  * the Kitchen notes chips or Kakak's question card. Every screen holding the
  * menu shows the change at once. Returns what they were, for Undo.
  */

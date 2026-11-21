@@ -24,7 +24,7 @@ import type { CookReadiness } from "@/lib/menu";
  * extra care, so the first save asks once and the server records the
  * owner's OK with who and when (set_kitchen_notes). Blank clears it.
  *
- * Above the note, the household's food preferences (PR C2, migrations/176):
+ * Above the note, the household's food preferences (PR C2, migrations/183):
  * chips that save on a tap, for Kakak's recipe ideas and for the cook.
  */
 export function KitchenNotesSheet({
