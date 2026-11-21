@@ -50,6 +50,27 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
+    // 21 Nov (Fable's tab redesigns, PR 1): the tabs reordered and Home
+    // opening on the house. Shown on Home, under the calm-start rules.
+    id: "home-centre-2026-11",
+    date: "2026-11-21",
+    audience: "owner",
+    title: { en: "New: Home is in the middle", id: "Baru: Rumah ada di tengah" },
+    steps: {
+      en: [
+        "Home is now the middle tab, with Pets next to Today. Kitchen and Settings stay where they were.",
+        "Home opens on Rooms, drawn as your house: one band a floor, the top floor first. Tap a room to see what is set up there, or a floor's name for its list.",
+        "A room in amber, with a warning mark, has an open repair or a chore left from an earlier day. The reason is written under the house. Chores and Repairs are next to Rooms.",
+      ],
+      id: [
+        "Rumah sekarang ada di tab tengah, dengan Hewan di samping Hari ini. Dapur dan Pengaturan tetap di tempatnya.",
+        "Rumah dibuka di Ruangan, digambar seperti rumah Anda: satu baris per lantai, lantai teratas paling atas. Ketuk ruangan untuk melihat tugasnya, atau nama lantai untuk daftarnya.",
+        "Ruangan berwarna kuning dengan tanda peringatan punya perbaikan yang belum selesai atau tugas yang tertinggal dari hari sebelumnya. Alasannya tertulis di bawah gambar rumah. Tugas dan Perbaikan ada di samping Ruangan.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 20 Nov (Can we cook it?, Kakak on top): in the Kakak sheet, for
     // households with Kakak only, under the calm-start rules.
     id: "kakak-cook-2026-11",

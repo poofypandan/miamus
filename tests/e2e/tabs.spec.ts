@@ -2,8 +2,9 @@ import { expect, test } from "@playwright/test";
 import { HOUSEHOLD_ID } from "../fixtures/household";
 import { installStub } from "./stub-backend";
 
-// Phase 175, Sunday slice S1 and S4: the owner's tabs read Today · Home ·
-// Pets · Kitchen · Settings in both languages, no URL key changed, Home →
+// Phase 175, Sunday slice S1 and S4, and 21 Nov (Home in the centre): the
+// owner's tabs read Today · Pets · Home · Kitchen · Settings in both
+// languages, no URL key changed, Home →
 // Rooms opens the rooms editor, and Kakak's button is on every area tab but
 // Settings.
 
@@ -21,21 +22,27 @@ test("the tabs, in order, in English and in Bahasa Indonesia", async ({ context,
   await installStub(context, { owner: { locale: "en" } });
   await page.goto("/dashboard");
   const links = tabs(page).getByRole("link");
-  await expect(links).toHaveText(["Today", "Home", "Pets", "Kitchen", "Settings"], { timeout: 20_000 });
+  await expect(links).toHaveText(["Today", "Pets", "Home", "Kitchen", "Settings"], { timeout: 20_000 });
   await expect(links.first()).toHaveAttribute("aria-current", "page");
 
   await page.goto("/dashboard?module=chores");
   const pills = page.getByRole("tablist", { name: "Home" });
-  await expect(pills.getByRole("tab")).toHaveText(["Chores", "Rooms", "Repairs"], { timeout: 20_000 });
+  await expect(pills.getByRole("tab")).toHaveText(["Rooms", "Chores", "Repairs"], { timeout: 20_000 });
+});
+
+test("a home with no pets: Today · Home · Kitchen · Settings", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, household: { hasPets: false, pets: false } });
+  await page.goto("/dashboard");
+  await expect(tabs(page).getByRole("link")).toHaveText(["Today", "Home", "Kitchen", "Settings"], { timeout: 20_000 });
 });
 
 test("the tabs in Bahasa Indonesia", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" } });
   await page.goto("/dashboard?module=chores");
-  await expect(tabs(page, "Bagian").getByRole("link")).toHaveText(["Hari ini", "Rumah", "Hewan", "Dapur", "Pengaturan"], {
+  await expect(tabs(page, "Bagian").getByRole("link")).toHaveText(["Hari ini", "Hewan", "Rumah", "Dapur", "Pengaturan"], {
     timeout: 20_000,
   });
-  await expect(page.getByRole("tablist", { name: "Rumah" }).getByRole("tab")).toHaveText(["Tugas", "Ruangan", "Perbaikan"]);
+  await expect(page.getByRole("tablist", { name: "Rumah" }).getByRole("tab")).toHaveText(["Ruangan", "Tugas", "Perbaikan"]);
 });
 
 test("old links still land: household opens Home, staff opens Settings, inventory opens Kitchen", async ({ context, page }) => {
