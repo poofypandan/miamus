@@ -254,8 +254,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Adding a chore by hand", id: "Menambah tugas sendiri" },
     body: {
-      en: "Home → Chores → Add Chore: What to do, Who does it (or anyone), and When: tap it for the day, a time and whether it repeats. A room, a reminder and a note are under More, all optional. With Kakak on, one sentence to her does the same.",
-      id: "Rumah → Tugas → Tambah Tugas: Apa yang dikerjakan, Siapa yang mengerjakan (atau siapa saja), dan Kapan: ketuk untuk hari, jam, dan apakah berulang. Ruangan, pengingat, dan catatan ada di Lainnya, semuanya opsional. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
+      en: "Home → Chores → Add Chore: What to do, Who does it (a person, or Anyone), and When: tap it for the day, a time and whether it repeats. A room, a reminder and a note are under More, all optional. With Kakak on, one sentence to her does the same.",
+      id: "Rumah → Tugas → Tambah Tugas: Apa yang dikerjakan, Siapa yang mengerjakan (seseorang, atau Siapa saja), dan Kapan: ketuk untuk hari, jam, dan apakah berulang. Ruangan, pengingat, dan catatan ada di Lainnya, semuanya opsional. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
     },
     where: "home_chores",
   },
@@ -317,8 +317,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Bills and upkeep", id: "Tagihan dan perawatan" },
     body: {
-      en: "Home → Bills and upkeep: tick what your home pays or services, like electricity, water or the AC. Miamus reminds you at 07:00 on the day, or a few days before. Mark paid can keep the amount and a photo of the receipt; only owners see those.",
-      id: "Rumah → Tagihan dan perawatan: centang yang rutin dibayar atau dirawat, seperti listrik, air, atau AC. Miamus mengingatkan pukul 07.00 saat jatuh tempo, atau beberapa hari sebelumnya. Tandai sudah dibayar bisa menyimpan jumlah dan foto bukti bayar; hanya pemilik yang melihatnya.",
+      en: "Home → Bills and upkeep: tick what your home pays or services, like electricity, water or the AC; upkeep can go to someone or Anyone. Miamus reminds you at 07:00 on the day or a few days before. Mark paid keeps the amount and a receipt photo, for owners only.",
+      id: "Rumah → Tagihan dan perawatan: centang yang rutin dibayar atau dirawat, seperti listrik, air, atau AC; perawatan bisa untuk seseorang atau Siapa saja. Miamus mengingatkan pukul 07.00 saat jatuh tempo atau beberapa hari sebelumnya. Jumlah dan foto bukti bayar hanya untuk pemilik.",
     },
     where: "home_bills",
     needs: "bills",
