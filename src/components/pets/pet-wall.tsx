@@ -107,12 +107,13 @@ function PetTile({ pet, layout, single }: { pet: TaskEntity; layout: WallLayout;
             loading="lazy"
             className="absolute inset-0 size-full bg-zinc-200 object-cover"
           />
-          {/* The soft shade that keeps the name readable on any photo. */}
+          {/* The soft shade that keeps the name readable on any photo: only
+              the words' height and about 40 px above, no darker than 55 %, so
+              the pet shows (Fable's look, #197). */}
           <span
             aria-hidden
-            className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/60 via-black/25 to-transparent"
-          />
-          <span aria-hidden className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 px-4 pb-3.5">
+            className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 bg-gradient-to-t from-black/55 via-black/35 to-transparent px-4 pt-10 pb-3.5"
+          >
             <span className={cn("truncate font-semibold tracking-[-0.02em] text-[#fff6e8]", nameSize)}>{pet.name}</span>
             {line && <TileLine line={line} onPhoto />}
           </span>

@@ -128,6 +128,29 @@ test("a routine staff said couldn't be done is explained, never late (Codex, PR 
   await expect(wall.getByRole("button", { name: "Mochi. Toy poodle." })).toBeVisible();
 });
 
+test("on the first visit, What's new is one quiet line and the wall keeps its full size (Fable's look, #197)", async ({
+  context,
+  page,
+}) => {
+  // The card not yet seen on this phone (beforeEach marked it seen).
+  await context.addInitScript(() => localStorage.removeItem("miamus.whats-new.pets-wall-2026-11"));
+  await page.setViewportSize({ width: 390, height: 844 });
+  const stub = await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  addPet(stub, "Coco");
+  await openPets(page);
+  const line = page.getByRole("button", { name: "New: all your pets at once" });
+  await expect(line).toBeVisible();
+  await expect(page.getByRole("region", { name: "New: all your pets at once" })).toHaveCount(0);
+  // Every tile whole, above Kakak's band.
+  const band = await page.getByTestId("kakak-band").boundingBox();
+  for (const box of await boxes(page)) expect(box.y + box.height).toBeLessThanOrEqual(band!.y);
+  await line.click();
+  const sheet = page.getByRole("dialog", { name: "New: all your pets at once" });
+  await expect(sheet.getByText(/every pet at once/)).toBeVisible();
+  await sheet.getByRole("button", { name: "Got it" }).click();
+  await expect(line).toHaveCount(0);
+});
+
 test("in Bahasa Indonesia, and a pet at the clinic says so quietly", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "id" } });
   stub.entities[1].status = "admitted";

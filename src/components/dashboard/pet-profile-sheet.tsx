@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Edit2, Plus } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Edit2, Plus, X } from "lucide-react";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -116,9 +116,18 @@ export function PetProfileSheet() {
         // above y=0). An inline style always wins regardless of specificity.
         style={{ height: "92vh" }}
         className="gap-0 overflow-y-auto rounded-t-2xl px-4 pb-10"
+        showCloseButton={false}
       >
         {pet && (
           <>
+            {/* Close, in a dark translucent disc that holds on any photo
+                (Fable's look, #197). */}
+            <SheetClose
+              aria-label={t("Close", "Tutup")}
+              className="absolute top-3 right-3 z-10 flex size-11 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm active:bg-black/60"
+            >
+              <X className="size-5" />
+            </SheetClose>
             {/* The pet's page leads with its full photo, edge to edge, the
                 name and breed on it (21 Nov; Fable's 08, section 5). An old
                 small square is a print on paper, never stretched; no photo is
@@ -284,7 +293,6 @@ function PetHero({ pet, onOpenPhoto }: { pet: TaskEntity; onOpenPhoto?: () => vo
           focus={focus}
           className="absolute inset-0 size-full bg-zinc-200 object-cover"
         />
-        <span aria-hidden className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
       </>
     );
     return (
@@ -301,7 +309,10 @@ function PetHero({ pet, onOpenPhoto }: { pet: TaskEntity; onOpenPhoto?: () => vo
         ) : (
           photo
         )}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col px-5 pb-4">{words}</div>
+        {/* The shade only behind the words, no darker than 55 % (#197). */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col bg-gradient-to-t from-black/55 via-black/35 to-transparent px-5 pt-10 pb-4">
+          {words}
+        </div>
       </div>
     );
   }

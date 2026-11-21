@@ -303,8 +303,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "pets",
     title: { en: "Adding a pet", id: "Menambah hewan" },
     body: {
-      en: "On the Pets tab, tap Add Pet. Miamus then offers the usual routines, already ticked: a morning walk, an evening walk and fresh water for a dog; fresh water and the litter box for a cat. Untick what you don't want, then Add.",
-      id: "Di tab Hewan, ketuk Tambah Hewan. Miamus lalu menawarkan rutinitas yang biasa, sudah dicentang: jalan pagi, jalan sore, dan ganti air minum untuk anjing; ganti air minum dan pasir kucing untuk kucing. Hapus centang yang tidak perlu, lalu Tambah.",
+      en: "On the Pets tab, tap Add pet. Miamus then offers the usual routines, already ticked: a morning walk, an evening walk and fresh water for a dog; fresh water and the litter box for a cat. Untick what you don't want, then Add.",
+      id: "Di tab Hewan, ketuk Tambah hewan. Miamus lalu menawarkan rutinitas yang biasa, sudah dicentang: jalan pagi, jalan sore, dan ganti air minum untuk anjing; ganti air minum dan pasir kucing untuk kucing. Hapus centang yang tidak perlu, lalu Tambah.",
     },
     where: "pets",
     needs: "pets",

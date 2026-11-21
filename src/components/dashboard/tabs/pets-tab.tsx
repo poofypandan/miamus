@@ -58,7 +58,9 @@ export function PetsTab() {
   ) : null;
 
   return (
-    <div className="flex flex-1 flex-col gap-3 px-4 pb-3">
+    // pb-6: the wall ends clear of the fade above Kakak's band, its corners
+    // whole (Fable's look, #197).
+    <div className="flex flex-1 flex-col gap-3 px-4 pb-6">
       {addDialog}
       {/* Outside the wall: the first pet's sheet opens while the empty state is still showing. */}
       {canManagePets && <StarterRoutinesSheet pet={starterPet} onClose={() => setStarterPet(null)} />}
@@ -74,7 +76,7 @@ export function PetsTab() {
         >
           {canManagePets && (
             <Button className="min-h-[44px]" onClick={() => setAddOpen(true)}>
-              <Plus /> {t("Add Pet", "Tambah Hewan")}
+              <Plus /> {t("Add pet", "Tambah hewan")}
             </Button>
           )}
         </EmptyState>
@@ -87,7 +89,7 @@ export function PetsTab() {
                 className="min-h-10 min-w-fit flex-1 rounded-xl text-sm"
                 onClick={() => setAddOpen(true)}
               >
-                <Plus /> {t("Add Pet", "Tambah Hewan")}
+                <Plus /> {t("Add pet", "Tambah hewan")}
               </Button>
               <Button
                 variant="outline"
@@ -98,7 +100,7 @@ export function PetsTab() {
               </Button>
             </div>
           )}
-          <WhatsNewCard id="pets-wall-2026-11" />
+          <WhatsNewCard id="pets-wall-2026-11" line />
           <PetWall pets={pets} />
           {canManagePets && <AddRoutineSheet target={routineTarget} onClose={() => setRoutineTarget(null)} />}
         </>
