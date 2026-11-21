@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Loader2, Trash2 } from "lucide-react";
+import { Clock, Download, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteHouseholdSheet } from "@/components/dashboard/delete-household-sheet";
 import { LEGAL } from "@/config/legal";
@@ -75,7 +75,9 @@ export function HouseholdDataPanel({
 
       {status?.scheduled && (
         <div className="flex flex-col gap-3 rounded-xl bg-attention-tint p-4">
-          <p className="text-sm font-medium text-attention">
+          {/* Attention is never carried by its tint alone: an icon and dark text (04). */}
+          <p className="flex items-start gap-2 text-sm font-medium text-attention">
+            <Clock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             {t(`This home will be deleted on ${deleteDate}.`, `Rumah tangga ini akan dihapus pada ${deleteDate}.`)}
           </p>
           <p className="text-sm text-attention">

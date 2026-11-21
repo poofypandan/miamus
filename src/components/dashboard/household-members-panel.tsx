@@ -124,12 +124,12 @@ export function HouseholdMembersPanel() {
                 </span>
 
                 {member.is_self && (
-                  <Badge variant="secondary" className="shrink-0 text-xs">
+                  <Badge variant="secondary" className="shrink-0">
                     {t("You", "Anda")}
                   </Badge>
                 )}
                 {member.is_founder && !member.is_self && (
-                  <Badge variant="secondary" className="shrink-0 text-xs">
+                  <Badge variant="secondary" className="shrink-0">
                     {t("Owner", "Pemilik")}
                   </Badge>
                 )}

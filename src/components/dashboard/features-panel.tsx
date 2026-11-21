@@ -2,7 +2,7 @@
 
 import { useState, type ComponentType } from "react";
 import { toast } from "sonner";
-import { CookingPot, Loader2, PawPrint, ReceiptText, Scale, Wrench } from "lucide-react";
+import { CircleAlert, CookingPot, Loader2, PawPrint, ReceiptText, Scale, Wrench } from "lucide-react";
 import { useHousehold } from "@/context/household-context";
 import { useT, type Translate } from "@/context/owner-locale-context";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -216,11 +216,15 @@ export function FeaturesPanel() {
                     </p>
                   )}
                   {blocked && (
-                    <p className="mx-3 mb-3 rounded-lg bg-attention-tint px-3 py-2 text-xs text-attention">
-                      {t(
-                        `You have ${livePets} ${livePets === 1 ? "pet" : "pets"} in Miamus. Archive them in Pets first; their history stays.`,
-                        `Ada ${livePets} hewan di Miamus. Arsipkan dulu di tab Hewan; riwayatnya tetap tersimpan.`
-                      )}
+                    // Attention is never carried by its tint alone: an icon and dark text (04).
+                    <p className="mx-3 mb-3 flex items-start gap-2 rounded-lg bg-attention-tint px-3 py-2 text-xs text-attention">
+                      <CircleAlert className="mt-px size-4 shrink-0" aria-hidden="true" />
+                      <span>
+                        {t(
+                          `You have ${livePets} ${livePets === 1 ? "pet" : "pets"} in Miamus. Archive them in Pets first; their history stays.`,
+                          `Ada ${livePets} hewan di Miamus. Arsipkan dulu di tab Hewan; riwayatnya tetap tersimpan.`
+                        )}
+                      </span>
                     </p>
                   )}
                 </div>
