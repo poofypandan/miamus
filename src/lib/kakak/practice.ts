@@ -358,7 +358,26 @@ function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "staff_areas" | "chore" | "thanks" | "question";
+type Intent = "shopping" | "food" | "ingredient" | "new_ingredient" | "pet" | "staff_areas" | "chore" | "thanks" | "question" | "cook";
+
+/**
+ * Can we cook it? (20 Nov): a saved recipe named in the sentence (any word
+ * of its name of four letters or more: "opor" for Opor ayam), with a word
+ * for checking or planning. Null otherwise.
+ */
+function recipeFrom(household: KakakHousehold, text: string): NonNullable<KakakHousehold["recipes"]>[number] | null {
+  // "Cooking" alone is a check only when nobody is named: "Bik Nah masak
+  // rendang tiap Jumat" is a chore for Nah.
+  const checks = has(text, /\b(lengkap|everything|ada semua|cukup|cek|check|do we have|bahannya|menu)\b/);
+  const cooking = has(text, /\b(masak|cooking|making)\b/) && findPerson(household, text) === null;
+  if (!checks && !cooking) return null;
+  const said = words(text);
+  return (
+    (household.recipes ?? []).find((recipe) =>
+      words(`${recipe.name} ${recipe.nameId ?? ""}`).some((w) => w.length >= 4 && said.includes(w)),
+    ) ?? null
+  );
+}
 
 type Place = "fridge" | "freezer" | "pantry" | "counter";
 
@@ -494,7 +513,10 @@ function guideEntryFor(question: string, locale: Locale): GuideEntry | null {
   for (const entry of GUIDE) {
     const title = words(`${entry.title[locale]} ${entry.where ? GUIDE_PLACES[entry.where][locale] : ""}`);
     const body = words(entry.body[locale]);
-    const near = (list: string[], w: string) => list.some((x) => x === w || (w.length >= 4 && (x.startsWith(w) || w.startsWith(x))));
+    // A word inside a longer one counts both ways, never a two-letter word
+    // ("we" in "Can we cook it?" is not "weather").
+    const near = (list: string[], w: string) =>
+      list.some((x) => x === w || (w.length >= 4 && (x.startsWith(w) || (x.length >= 3 && w.startsWith(x)))));
     const score = asked.reduce((sum, w) => sum + (near(title, w) ? 3 : near(body, w) ? 1 : 0), 0);
     // One word from a body isn't enough to call it that entry's question.
     if (score >= 2 && (!best || score > best.score)) best = { entry, score };
@@ -504,6 +526,7 @@ function guideEntryFor(question: string, locale: Locale): GuideEntry | null {
 
 function intentOf(household: KakakHousehold, text: string): Intent {
   if (THANKS.test(text.trim())) return "thanks";
+  if (recipeFrom(household, text)) return "cook";
   // "Sembunyikan Dapur dari Syam" (Phase 178): before "Dapur" reads as a room.
   if (staffAreasFrom(household, text)) return "staff_areas";
   // "Telur sudah di kulkas", "move the beef to the fridge": a listed
@@ -685,6 +708,31 @@ function respond(household: KakakHousehold, model: string, messages: Anthropic.M
     if (after && after.ref !== before?.ref) return message(model, [text(copy.noChange)]);
   }
   const canAsk = asked < 1;
+
+  if (intent === "cook") {
+    const recipe = recipeFrom(household, first)!;
+    const id = household.ownerLocale === "id";
+    const meal = has(first, /\b(siang|lunch)\b/) ? "lunch" : has(first, /\b(pagi|sarapan|breakfast)\b/) ? "breakfast" : "dinner";
+    const day = has(first, /\b(besok|tomorrow)\b/) ? addDays(household.today, 1) : household.today;
+    const addMissing = recipe.missing.length > 0 && !has(first, /\b(jangan|don't|do not)\b/);
+    const dish = recipe.name.toLowerCase();
+    const line =
+      recipe.state === "unknown"
+        ? id
+          ? `(Latihan) Bahan ${dish} belum bisa Kakak cek; belum ada di daftar.`
+          : `(Practice) I couldn't check ${dish}; its ingredients aren't on your lists.`
+        : recipe.missing.length
+          ? id
+            ? `(Latihan) Untuk ${dish}, semua ada kecuali ${recipe.missing.join(", ")}.`
+            : `(Practice) For ${dish}, you have everything but ${recipe.missing.join(", ")}.`
+          : id
+            ? `(Latihan) Bahan ${dish} lengkap.`
+            : `(Practice) You have everything for ${dish}.`;
+    return message(model, [
+      text(line),
+      toolUse("plan_dish", { recipe: recipe.ref, dish_name: "none", day, meal, servings: 0, add_missing: addMissing, put_on_menu: true }),
+    ]);
+  }
 
   if (intent === "staff_areas") {
     const call = staffAreasFrom(household, first);

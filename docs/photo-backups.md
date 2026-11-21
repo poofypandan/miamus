@@ -20,9 +20,11 @@ changed is copied to a private bucket in **AWS S3, Singapore
 - **Versioned, 30 days.** The bucket keeps old versions. "Marked deleted"
   hides a photo but keeps it; a lifecycle rule erases it 30 days later. So
   a photo deleted by mistake can be brought back for 30 days, and a deleted
-  photo leaves the backup within 32 days (the night before the job sees the
-  delete, 30 days, and up to a day for AWS to act). The privacy policy says
-  so (`LEGAL.photoBackup` in `src/config/legal.ts`).
+  photo usually leaves the backup about a month after it leaves Miamus. No
+  fixed total is promised: AWS sets no deadline on when lifecycle deletion
+  runs, and a night that holds removals back waits for a person (see
+  Guards), so the month starts once they've checked. The privacy policy
+  says so (`LEGAL.photoBackup` in `src/config/legal.ts`).
 - **Encrypted at rest** (SSE-S3, the bucket default, and asked for on every
   upload), private (Block Public Access on), TLS in transit.
 - **Stays in Singapore.** The copy runs in the `photo-backup` Supabase Edge

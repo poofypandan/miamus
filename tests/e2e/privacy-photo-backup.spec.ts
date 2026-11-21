@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 // The photo backup (security audit S5, docs/photo-backups.md) in the privacy
 // policy, both languages: who keeps the copy and where, and that a deleted
-// photo leaves it (30 days, gone within 32). The numbers come from
+// photo leaves it (marked the next night, kept 30 days, usually gone about a
+// month later; no fixed total, which AWS can't promise). The numbers come from
 // LEGAL.photoBackup, which must match the bucket's lifecycle rule.
 
 test("the English policy names the photo backup, where it is, and when deleted photos leave it", async ({ page }) => {
@@ -12,8 +13,9 @@ test("the English policy names the photo backup, where it is, and when deleted p
       exact: false,
     })
   ).toBeVisible();
-  await expect(page.getByText("stays in the backup for 30 days after it leaves Miamus", { exact: false })).toBeVisible();
-  await expect(page.getByText("within 32 days of leaving Miamus in all", { exact: false })).toBeVisible();
+  await expect(page.getByText("the backup marks it deleted the next night and keeps it 30 more days", { exact: false })).toBeVisible();
+  await expect(page.getByText("usually leaves the backup about a month after it leaves Miamus", { exact: false })).toBeVisible();
+  await expect(page.getByText("that month starts once we have checked", { exact: false })).toBeVisible();
   await expect(page.getByText("Photos are backed up every night to a private, encrypted copy in Singapore", { exact: false })).toBeVisible();
 });
 
@@ -24,7 +26,8 @@ test("the Indonesian policy says the same", async ({ page }) => {
       exact: false,
     })
   ).toBeVisible();
-  await expect(page.getByText("tetap ada di cadangan selama 30 hari setelah hilang dari Miamus", { exact: false })).toBeVisible();
-  await expect(page.getByText("paling lama 32 hari setelah hilang dari Miamus", { exact: false })).toBeVisible();
+  await expect(page.getByText("cadangan menandainya terhapus pada malam berikutnya dan menyimpannya 30 hari lagi", { exact: false })).toBeVisible();
+  await expect(page.getByText("biasanya hilang dari cadangan sekitar sebulan setelah hilang dari Miamus", { exact: false })).toBeVisible();
+  await expect(page.getByText("hitungan sebulan itu dimulai setelah kami memeriksanya", { exact: false })).toBeVisible();
   await expect(page.getByText("Foto dicadangkan setiap malam ke salinan privat yang terenkripsi di Singapura", { exact: false })).toBeVisible();
 });

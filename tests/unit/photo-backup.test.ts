@@ -476,3 +476,31 @@ describe("runBackup", () => {
     expect(backup.size).toBe(1);
   });
 });
+
+describe("judgeCall (the nightly trigger)", () => {
+  const answer = { ok: true, remaining: 0, summary: { copied: 1, failed: 0, refusal: null } };
+
+  it("counts only a success status with the function's own answer", async () => {
+    const { judgeCall } = await import("../../scripts/photo-backup/judge-call.mjs");
+    expect(judgeCall(200, answer)).toMatchObject({ valid: true, remaining: 0, problem: null });
+    expect(judgeCall(200, { ...answer, ok: false })).toMatchObject({ valid: true });
+  });
+
+  it("never reports a Supabase platform error as complete (Codex, PR #167)", async () => {
+    const { judgeCall } = await import("../../scripts/photo-backup/judge-call.mjs");
+    const boot = judgeCall(503, { code: "BOOT_ERROR", message: "Worker failed to boot (please check logs)" });
+    expect(boot).toMatchObject({ valid: false, problem: "HTTP 503: BOOT_ERROR" });
+    // A success status without the function's answer is not an answer either.
+    expect(judgeCall(200, { code: "SOMETHING" }).valid).toBe(false);
+    expect(judgeCall(200, null).problem).toBe("HTTP 200: no backup answer");
+    expect(judgeCall(200, { ok: true, summary: {} }).valid).toBe(false); // no remaining
+    expect(judgeCall(500, { ok: false, error: "Not set up: X" }).problem).toBe("HTTP 500: Not set up: X");
+    expect(judgeCall(0, { error: "TimeoutError" }).problem).toBe("the call failed: TimeoutError");
+  });
+
+  it("reports a status and a code, never the body's message", async () => {
+    const { judgeCall } = await import("../../scripts/photo-backup/judge-call.mjs");
+    const r = judgeCall(503, { code: "BOOT_ERROR", message: `failed at ${HH}/pets/1.jpg` });
+    expect(r.problem).not.toContain(HH);
+  });
+});

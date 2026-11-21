@@ -9,6 +9,8 @@ import { useRecipes } from "@/hooks/use-recipes";
 import { useStaffProfiles, useStaffNameLookup } from "@/hooks/use-staff-profiles";
 import { MEAL_LABELS, dishServings, dishTitle, recipeOf, weekdayLong, type CookReadiness } from "@/lib/menu";
 import { servingsLabel, type RecipeLang } from "@/lib/recipes";
+import { useToday } from "@/hooks/use-today";
+import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { MenuDish } from "@/types/database";
 
 /**
@@ -118,6 +120,7 @@ function DishBody({
   const { allProfiles } = useStaffProfiles();
   const staffName = useStaffNameLookup(allProfiles, tr("Someone", "Seseorang"));
   const recipe = recipeOf(dish, recipes);
+  const today = formatDateLocal(useToday());
   const title = dishTitle(dish, recipe, !owner);
   const servings = dishServings(dish, recipe);
   const meta = [weekdayLong(dish.day, lang), MEAL_LABELS[lang][dish.meal], servings ? servingsLabel(servings, lang) : null]
@@ -151,7 +154,7 @@ function DishBody({
   );
 
   const footer = (shown: number | null) => (
-    <div className="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-2 border-t bg-background px-4 pt-3 pb-[env(safe-area-inset-bottom)]">
+    <div className="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-2 border-t bg-popover px-4 pt-3 pb-[env(safe-area-inset-bottom)]">
       {dish.cooked_at ? (
         <p className="flex min-h-11 items-center gap-2 text-base font-medium text-emerald-700">
           <CheckCircle2 className="size-5 shrink-0" strokeWidth={1.75} />
@@ -214,6 +217,7 @@ function DishBody({
         title={title}
         before={before}
         footer={(shown) => footer(shown)}
+        cook={dish.cooked_at || dish.day < today ? null : { later: dish.day > today }}
       />
     );
   }

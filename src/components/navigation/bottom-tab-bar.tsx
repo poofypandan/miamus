@@ -115,7 +115,7 @@ export function BottomTabBar() {
                 active ? "text-primary" : "text-muted-foreground"
               )}
             >
-              <Icon className="size-6 shrink-0" strokeWidth={active ? 2.25 : 1.75} />
+              <Icon className="size-6 shrink-0" style={{ strokeWidth: active ? 2 : 1.6 }} />
               <span className="w-full truncate text-center">{label}</span>
             </Link>
           );

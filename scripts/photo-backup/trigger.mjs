@@ -11,6 +11,7 @@
 // otherwise runs a function near the caller, and GitHub's runners are in the
 // United States.
 import { appendFileSync, writeFileSync } from "node:fs";
+import { judgeCall } from "./judge-call.mjs";
 
 const MAX_CALLS = 40;
 const url = process.env.PHOTO_BACKUP_FUNCTION_URL;
@@ -42,12 +43,15 @@ for (;;) {
       signal: AbortSignal.timeout(450_000),
     });
     status = res.status;
-    body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}, not JSON` }));
+    body = await res.json().catch(() => null);
   } catch (err) {
-    body = { ok: false, error: `call failed: ${err?.message ?? err}` };
+    body = { error: String(err?.name ?? "error") };
   }
 
-  const s = body.summary;
+  // Only a success status with the function's own answer counts; a platform
+  // error (a 503 boot failure, a gateway page) is a problem, never "complete".
+  const call = judgeCall(status, body);
+  const s = call.summary;
   if (s) {
     last = s;
     total.copied += s.copied;
@@ -57,18 +61,18 @@ for (;;) {
     total.heldBack = s.heldBack;
     console.log(
       `call ${calls}: copied ${s.copied} (${mb(s.copiedBytes)}), unchanged ${s.unchanged}, removed ${s.removed}, ` +
-        `failed ${s.failed}, left ${body.remaining ?? "?"}`
+        `failed ${s.failed}, left ${call.remaining}`
     );
     if (s.refusal) problems.push(`held back: ${s.refusal}`);
+    if (body.ok === false && !s.refusal && !(s.failed > 0)) problems.push("the function reported not ok");
   } else {
-    console.log(`call ${calls}: HTTP ${status}`);
+    console.log(`call ${calls}: ${call.problem}`);
+    problems.push(call.problem);
   }
-  if (body.error) problems.push(String(body.error).slice(0, 300));
-  if (body.ok === false && !body.error && !s?.refusal && !(s?.failed > 0)) problems.push("the function reported not ok");
 
   // Keep going while copies are left, even past a failed photo or held-back
   // removals (copies still go ahead); stop when the call itself failed.
-  if (!body.summary || body.error || !(body.remaining > 0) || dryRun) break;
+  if (!call.valid || !(call.remaining > 0) || dryRun) break;
   if (calls >= MAX_CALLS) {
     problems.push(`still ${body.remaining} copies left after ${MAX_CALLS} calls; the next night continues`);
     break;

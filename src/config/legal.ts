@@ -230,19 +230,55 @@ export const LEGAL = {
   // 35 days, migrations/172), and asks ElevenLabs to delete each generation
   // from its history right after (zero retention is Enterprise-only); it may
   // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
-  // 2026-11-20.5: photo backups (security audit S5, migrations/179). Amazon
+  // 2026-11-20.1: Can we cook it? (Kakak on top; migrations/174 only lets
+  // the request record name the new tool) — each Kakak request now also
+  // carries the household's saved recipe names and, per recipe, the names
+  // of the ingredients it is missing or that can't be checked (worked out
+  // by the app from the items' status, and their amounts while Kitchen
+  // amounts is on; amounts and steps are never sent), and the dishes on the
+  // menu for the coming week. Kakak may suggest a dish for the menu, and
+  // the missing items for the shopping list, saved only when the admin
+  // confirms. No new kind of personal data stored, no new service or
+  // region; Anthropic's retention is unchanged.
+  // 2026-11-21.1: two questions when asking for access (owner, 2026-11-20;
+  // migrations/175) — what Miamus can help with at home (required on the
+  // screen, but one tap on a suggestion answers it; up to 300 characters)
+  // and, optionally, who introduced them to Miamus (up to 100; may be
+  // another person's name). Used to understand what people want
+  // and how they hear about Miamus; only Poofy Labs sees them (the approvals
+  // page); never in a notification. Cleared 12 months after the request by
+  // the nightly prune, or deleted sooner with the request (a rejected one
+  // after 30 days, an account that is deleted). Short anonymous summaries
+  // of the answers (no names or contact details) may be kept to decide what
+  // to improve (owner, 2026-11-20). No new service.
+  // 2026-11-21.2: who at Poofy Labs can see household data (security audit,
+  // 20 Nov 2026, finding S7) — section 5 now says that the operator can
+  // technically open a household's data and photos through Supabase and
+  // Vercel, that today this is one person signed in with two-step
+  // verification, when we look, and that the full-access keys never leave
+  // the database provider. The Indonesian photo line now also says the
+  // photo's own location data is removed on the phone (the English already
+  // did; PR #161 makes that true when compression fails, too). Nothing
+  // stored, collected or shared changes. Set effectiveDate to the merge day.
+  // 2026-11-21.5: photo backups (security audit S5, migrations/179). Amazon
   // Web Services (Singapore, ap-southeast-1) becomes a processor: every
   // photo in the three photo buckets is copied each night to a private,
   // versioned, encrypted (SSE-S3) bucket there, which only Poofy Labs can
   // open, only to restore. The copy runs in a Supabase Edge Function in
   // Singapore, so photos stay in the region; GitHub only starts it and sees
   // counts. A photo deleted from Miamus is marked deleted in the backup the
-  // next night and expires 30 days later (lifecycle rule), so it is gone
-  // within 32 days. No new kind of personal data; a new copy, location
-  // and retention. Go live the day the backup is switched on
-  // (docs/photo-backups.md).
-  policyVersion: "2026-11-20.5",
-  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
+  // next night and expires 30 days later (lifecycle rule), so it usually
+  // leaves about a month after leaving Miamus; AWS sets no deadline on the
+  // lifecycle, and removals the safety check holds back wait for a person
+  // (the policy says both, without a fixed day count; Codex, PR #167). No
+  // new kind of personal data; a new copy, location
+  // and retention. Section 5's operator access (2026-11-21.2) now names the
+  // backup at AWS, and the one time a full-access key leaves the database
+  // provider: a restore, run from Poofy Labs' own computer. Go live the day
+  // the backup is switched on (docs/photo-backups.md). Set effectiveDate to
+  // the merge day.
+  policyVersion: "2026-11-21.5",
+  effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on
@@ -252,14 +288,14 @@ export const LEGAL = {
   /**
    * The nightly photo backup (docs/photo-backups.md). keepDeletedDays is
    * the backup bucket's lifecycle rule (noncurrent versions expire after
-   * this many days); goneWithinDays adds the night before the delete is
-   * noticed and the day AWS may take to act. Change them with the bucket.
+   * this many days). Change it with the bucket. No total is promised: AWS
+   * sets no deadline on lifecycle deletion, and held-back removals wait for
+   * a person, so the policy says "usually about a month".
    */
   photoBackup: {
     provider: "Amazon Web Services (AWS)",
     region: { en: "Singapore", id: "Singapura" },
     keepDeletedDays: 30,
-    goneWithinDays: 32,
   },
 } as const;
 
