@@ -26,7 +26,7 @@ import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useHousehold } from "@/context/household-context";
-import { useBackToClose } from "@/hooks/use-back-to-close";
+import { afterBackSettles, useBackToClose } from "@/hooks/use-back-to-close";
 import { useChoresView } from "@/hooks/use-chores-view";
 import { useHouseholdLocations, useLocationName } from "@/hooks/use-household-locations";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -380,6 +380,8 @@ export function RoomsView() {
         onClose={() => setSheet(null)}
         onEdit={(task) => openEditor(task, null)}
         onAdd={() => openEditor(null, sheet && sheet !== "none" ? { locationId: sheet } : null)}
+        attentionRepairs={sheet && sheet !== "none" ? openHere.filter((r) => r.location_id === sheet) : []}
+        attentionLate={sheet && sheet !== "none" ? lateHere.filter((o) => o.task.location_id === sheet) : []}
       />
       <FloorSheet
         floor={model.floors.find((f) => f.key === floorSheet) ?? null}
@@ -409,7 +411,19 @@ export function RoomsView() {
  * chores still set up, so a past one-off would not be there). Nothing when
  * nothing needs attention.
  */
-function NeedsAttention({ repairs, late }: { repairs: Repair[]; late: ChoreOccurrence[] }) {
+function NeedsAttention({
+  repairs,
+  late,
+  beforeLeaving,
+}: {
+  repairs: Repair[];
+  late: ChoreOccurrence[];
+  /**
+   * Inside a room's sheet: close it, then go, once its history entry is gone
+   * (afterBackSettles), so Back and the sheet never disagree.
+   */
+  beforeLeaving?: (go: () => void) => void;
+}) {
   const t = useT();
   const { setView } = useChoresView();
   // From earlier shows only on today (expandChores), so the link opens today.
@@ -437,8 +451,12 @@ function NeedsAttention({ repairs, late }: { repairs: Repair[]; late: ChoreOccur
               key={occurrence.key}
               type="button"
               onClick={() => {
-                setSelectedDate(todayDate);
-                setView("today");
+                const go = () => {
+                  setSelectedDate(todayDate);
+                  setView("today");
+                };
+                if (beforeLeaving) beforeLeaving(go);
+                else go();
               }}
               className={cn(
                 "flex min-h-[64px] w-full items-center gap-3 px-3 py-2.5 text-left active:bg-muted",
@@ -749,7 +767,15 @@ function RoomSheet({
   onClose,
   onEdit,
   onAdd,
+  attentionRepairs = [],
+  attentionLate = [],
 }: {
+  /**
+   * Why the room is amber on the house (Fable's look, #196): its open repairs
+   * and the chores in it left from earlier days, led with, as under the house.
+   */
+  attentionRepairs?: Repair[];
+  attentionLate?: ChoreOccurrence[];
   open: boolean;
   title: string;
   /** The room, or null for "No room" (no repairs section then). */
@@ -767,6 +793,7 @@ function RoomSheet({
   const t = useT();
   const { repairs: repairsOn } = useHouseholdFeatures();
   const groups = groupByJobs(chores, locale, t("Other", "Lainnya"));
+  const needsAttention = attentionRepairs.length + attentionLate.length > 0;
   // Back closes the sheet, not the Rooms view under it (as every sheet does).
   useBackToClose(open, onClose);
   return (
@@ -777,8 +804,12 @@ function RoomSheet({
       >
         <SheetHeader>
           <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>
-            {chores.length === 0
+          {/* Never "nothing here" while something here is waiting; then the
+              heading below says it, so this is for screen readers only. */}
+          <SheetDescription className={needsAttention ? "sr-only" : undefined}>
+            {needsAttention
+              ? t("Needs attention", "Perlu perhatian")
+              : chores.length === 0
               ? t("Nothing set up here yet.", "Belum ada tugas di sini.")
               : t(
                   `${chores.length} ${chores.length === 1 ? "chore" : "chores"} set up`,
@@ -787,6 +818,14 @@ function RoomSheet({
           </SheetDescription>
         </SheetHeader>
         <div className="flex flex-col gap-4 px-4">
+          <NeedsAttention
+            repairs={attentionRepairs}
+            late={attentionLate}
+            beforeLeaving={(go) => {
+              onClose();
+              afterBackSettles(go);
+            }}
+          />
           {groups.map((group) => (
             <div key={group.key} className="flex flex-col gap-1.5">
               <h4 className="text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">{group.label}</h4>
@@ -815,7 +854,7 @@ function RoomSheet({
           ))}
           {inside.length > 0 && <RoomsInsideList rooms={inside} onOpen={onOpenRoom} />}
           {/* Phase 159: what's broken here, and what was fixed. */}
-          {locationId && repairsOn && <RoomRepairs locationId={locationId} />}
+          {locationId && repairsOn && <RoomRepairs locationId={locationId} hideOpen={attentionRepairs.length > 0} />}
         </div>
         <SheetFooter>
           <Button className="min-h-[48px] w-full" onClick={onAdd}>
