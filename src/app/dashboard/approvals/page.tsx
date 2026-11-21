@@ -315,7 +315,7 @@ function StatusBadge({ status }: { status: AccessRequest["status"] }) {
     <Badge
       variant="secondary"
       className={cn(
-        "shrink-0 text-xs",
+        "shrink-0",
         status === "approved" && "bg-done-tint text-done-foreground",
         status === "rejected" && "bg-muted text-muted-foreground"
       )}

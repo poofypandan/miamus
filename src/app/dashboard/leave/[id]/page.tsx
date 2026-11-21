@@ -393,7 +393,7 @@ function StatusBadge({ status }: { status: LeaveRequest["status"] }) {
     <Badge
       variant="secondary"
       className={cn(
-        "shrink-0 text-xs",
+        "shrink-0",
         status === "pending" && "bg-muted text-muted-foreground",
         status === "approved" && "bg-done-tint text-done-foreground"
       )}
