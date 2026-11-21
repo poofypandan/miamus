@@ -336,8 +336,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Food that is ready to eat", id: "Makanan siap dimakan" },
     body: {
-      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first, so it gets eaten in time.",
-      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas, supaya sempat dimakan.",
+      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first. Ask Kakak \"What should we eat?\" and she answers from this list.",
+      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas. Tanya Kakak \"Makan apa?\" dan Kakak menjawab dari daftar ini.",
     },
     where: "kitchen_food",
     needs: "food",
@@ -371,8 +371,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "The shopping list", id: "Daftar belanja" },
     body: {
-      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought.",
-      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa.",
+      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought. Or tell Kakak \"I bought the santan\".",
+      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa. Atau bilang ke Kakak \"Santan sudah dibeli\".",
     },
     where: "kitchen_shopping",
   },
@@ -381,8 +381,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Keeping the kitchen up to date", id: "Menjaga stok tetap benar" },
     body: {
-      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out, and tap Sudah dimasak on Menu hari ini. With Food at home on, they mark food Dimakan, Diberikan or Dibuang. Their phone shows them a short tip.",
-      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis, dan menekan Sudah dimasak di Menu hari ini. Kalau Makanan di rumah menyala, mereka menandai makanan Dimakan, Diberikan, atau Dibuang. HP mereka menampilkan tips.",
+      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out. After Sudah dimasak, Miamus asks what ran out: one tap each. With Food at home on, they mark food Dimakan, Diberikan or Dibuang.",
+      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis. Setelah Sudah dimasak, Miamus bertanya bahan apa yang habis: sekali ketuk. Dengan Makanan di rumah, makanan ditandai Dimakan, Diberikan, atau Dibuang.",
     },
     where: "kitchen_shopping",
   },
