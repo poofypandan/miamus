@@ -45,7 +45,9 @@ function tabHref(module: DashboardModule, param?: [string, string]): string {
   if (!param) return base;
   return `${base}${base.includes("?") ? "&" : "?"}${param[0]}=${param[1]}`;
 }
-const home = (view: Exclude<ChoresView, "today">) => tabHref("chores", ["chores", view]);
+// Home opens on Rooms (21 Nov), so Rooms is the bare tab and the others
+// carry their ?chores= value.
+const home = (view: ChoresView) => (view === "rooms" ? tabHref("chores") : tabHref("chores", ["chores", view]));
 const kitchen = (view: KitchenViewValue) => (view === "food" ? tabHref("inventory") : tabHref("inventory", ["kitchen", view]));
 
 /**
@@ -56,12 +58,12 @@ const kitchen = (view: KitchenViewValue) => (view === "food" ? tabHref("inventor
  */
 export const GUIDE_PLACES = {
   today: { en: "Today", id: "Hari ini", href: tabHref("agenda") },
-  home_chores: { en: "Home → Chores", id: "Rumah → Tugas", href: tabHref("chores") },
+  home_chores: { en: "Home → Chores", id: "Rumah → Tugas", href: home("today") },
   home_rooms: { en: "Home → Rooms", id: "Rumah → Ruangan", href: home("rooms") },
   home_repairs: { en: "Home → Repairs", id: "Rumah → Perbaikan", href: home("repairs") },
   // The checklist is a sheet over Home → Chores, opened by ?bills=open
   // (chores-tab.tsx), the way Today's What's new card opens it.
-  home_bills: { en: "Home → Bills and upkeep", id: "Rumah → Tagihan dan perawatan", href: tabHref("chores", ["bills", "open"]) },
+  home_bills: { en: "Home → Bills and upkeep", id: "Rumah → Tagihan dan perawatan", href: `${home("today")}&bills=open` },
   pets: { en: "Pets", id: "Hewan", href: tabHref("pets") },
   kitchen_food: { en: "Kitchen → Food", id: "Dapur → Makanan", href: kitchen("food") },
   kitchen_menu: { en: "Kitchen → Menu", id: "Dapur → Menu", href: kitchen("menu") },
@@ -116,10 +118,11 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "The five tabs", id: "Lima tab" },
     body: {
-      en: "Today shows the day at a glance and what is waiting for you. Home has chores, rooms and repairs. Pets has each pet's routines and health. Kitchen has food, the menu and shopping. Settings has people, features and notifications.",
-      id: "Hari ini menampilkan ringkasan hari dan yang menunggu Anda. Rumah berisi tugas, ruangan, dan perbaikan. Hewan berisi rutinitas dan kesehatan tiap hewan. Dapur berisi makanan, menu, dan belanja. Pengaturan berisi orang, fitur, dan notifikasi.",
+      en: "Today shows the day at a glance and what is waiting for you. Pets has each pet's routines and health. Home, in the middle, has rooms, chores and repairs. Kitchen has food, the menu and shopping. Settings has people, features and notifications.",
+      id: "Hari ini menampilkan ringkasan hari dan yang menunggu Anda. Hewan berisi rutinitas dan kesehatan tiap hewan. Rumah, di tengah, berisi ruangan, tugas, dan perbaikan. Dapur berisi makanan, menu, dan belanja. Pengaturan berisi orang, fitur, dan notifikasi.",
     },
     where: null,
+    covers: ["home-centre-2026-11"],
   },
   {
     id: "today",
@@ -241,8 +244,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Adding a chore by hand", id: "Menambah tugas sendiri" },
     body: {
-      en: "Home → Chores → Add Chore: what to do, who does it or anyone, the day, and whether it repeats. A room, a time and a note are optional. With Kakak on, one sentence to her does the same.",
-      id: "Rumah → Tugas → Tambah Tugas: apa yang dikerjakan, siapa yang mengerjakan atau siapa saja, harinya, dan apakah berulang. Ruangan, jam, dan catatan boleh dikosongkan. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
+      en: "Home → Chores → Add Chore: What to do, Who does it (or anyone), and When: tap it for the day, a time and whether it repeats. A room, a reminder and a note are under More, all optional. With Kakak on, one sentence to her does the same.",
+      id: "Rumah → Tugas → Tambah Tugas: Apa yang dikerjakan, Siapa yang mengerjakan (atau siapa saja), dan Kapan: ketuk untuk hari, jam, dan apakah berulang. Ruangan, pengingat, dan catatan ada di Lainnya, semuanya opsional. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
     },
     where: "home_chores",
   },
@@ -271,8 +274,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Rooms, floors and spots", id: "Ruangan, lantai, dan bagian" },
     body: {
-      en: "Home → Rooms lists every room by floor and what is set up there. A room can hold rooms inside it, like a bathroom in its bedroom; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
-      id: "Rumah → Ruangan menampilkan semua ruangan per lantai beserta tugasnya. Ruangan bisa punya ruangan di dalamnya, seperti kamar mandi di dalam kamar; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
+      en: "Home opens on Rooms: your house, one band a floor, top floor first. Amber means an open repair or a chore left from an earlier day. A room can hold rooms inside it; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
+      id: "Rumah dibuka di Ruangan: rumah Anda, satu baris per lantai, lantai teratas di atas. Kuning berarti ada perbaikan atau tugas tertinggal. Ruangan bisa punya ruangan di dalamnya; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
     },
     where: "home_rooms",
     covers: ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "rooms-inside-2026-11"],
@@ -386,19 +389,20 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Food that is ready to eat", id: "Makanan siap dimakan" },
     body: {
-      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first. Ask Kakak \"What should we eat?\" and she answers from this list.",
-      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas. Tanya Kakak \"Makan apa?\" dan Kakak menjawab dari daftar ini.",
+      en: "Kitchen → Food shows your kitchen as shelves: Use soon first, then Fridge, Freezer, Counter and Cupboard, one tile for each leftover, gift or dish. Miamus never fills in a date by itself. Tap a tile for Eaten, Given away or Thrown out. Ask Kakak \"What should we eat?\"",
+      id: "Dapur → Makanan menampilkan dapur Anda sebagai rak: Segera dipakai di atas, lalu Kulkas, Freezer, Meja, dan Lemari, satu kotak untuk tiap makanan. Miamus tidak pernah mengisi tanggalnya sendiri. Ketuk kotaknya untuk Dimakan, Diberikan, atau Dibuang. Tanya Kakak \"Makan apa?\"",
     },
     where: "kitchen_food",
     needs: "food",
+    covers: ["kitchen-shelves-2026-11"],
   },
   {
     id: "ingredients",
     group: "kitchen",
     title: { en: "Ingredients: places and Use soon", id: "Bahan masakan: tempat dan Segera dipakai" },
     body: {
-      en: "Ingredients sit under Kitchen → Food, grouped by where they are kept: Fridge, Freezer, Counter, Cupboard. Use soon, on top, shows what expires within a week. Tap an ingredient to move it or set its date. Add ingredient adds a new one.",
-      id: "Bahan masakan ada di Dapur → Makanan, dikelompokkan menurut tempatnya: Kulkas, Freezer, Meja, Lemari. Segera dipakai, di paling atas, menunjukkan yang kedaluwarsa dalam seminggu. Ketuk bahan untuk memindahkan atau mengatur tanggalnya. Tambah bahan masakan menambah yang baru.",
+      en: "Ingredients share Kitchen → Food's shelves with the food, by where they are kept. Use soon shows what expires within a week; To buy shows what is running low or out. Tap an ingredient to move it or set its date. Add ingredient adds a new one.",
+      id: "Bahan masakan ada di rak Dapur → Makanan bersama makanan, menurut tempatnya. Segera dipakai: yang kedaluwarsa dalam seminggu; Perlu dibeli: yang hampir habis atau habis. Ketuk bahan untuk memindahkan atau mengatur tanggalnya. Tambah bahan masakan menambah yang baru.",
     },
     where: "kitchen_food",
     needs: "kitchen",
@@ -421,8 +425,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "The shopping list", id: "Daftar belanja" },
     body: {
-      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought. Or tell Kakak \"I bought the santan\".",
-      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa. Atau bilang ke Kakak \"Santan sudah dibeli\".",
+      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping; staff can add to it too. Whoever shops taps Bought; a tracked item asks how much. The home's supplies are under Supplies at home, below the list. Or tell Kakak \"I bought the santan\".",
+      id: "Barang yang Hampir habis atau Habis masuk ke daftar di Dapur → Belanja; staf juga bisa menambahkannya. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan jumlahnya. Stok di rumah ada di bawah daftar. Atau bilang ke Kakak \"Santan sudah dibeli\".",
     },
     where: "kitchen_shopping",
   },
@@ -537,8 +541,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Kakak", id: "Kakak" },
     body: {
-      en: "Kakak is Miamus's AI helper. Type or say what you need and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Read replies aloud lets you hear her voice. Settings → Kakak turns her on or off.",
-      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik atau ucapkan: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Bacakan jawaban Kakak memperdengarkan suaranya. Atur di Pengaturan → Kakak.",
+      en: "Kakak is Miamus's AI helper. Type, say or tap an example and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Close her with the cross or by dragging down. Settings → Kakak turns her on or off.",
+      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik, ucapkan, atau pilih: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Tutup lewat silang atau tarik ke bawah. Atur di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
     covers: ["kakak-routines-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
@@ -549,8 +553,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Talk to Kakak", id: "Bicara dengan Kakak" },
     body: {
-      en: "Tap the mic in Kakak and talk; pauses are fine, she keeps listening. Tap Done to send, then Edit words if one was misheard. Nothing is saved until you confirm her card; Read replies aloud lets you hear her.",
-      id: "Ketuk mikrofon di Kakak lalu bicara; boleh berhenti sejenak, Kakak tetap mendengarkan. Ketuk Selesai untuk mengirim, lalu Ubah kata-kata kalau ada yang salah dengar. Semua disimpan setelah kartunya Anda konfirmasi; Bacakan jawaban Kakak memperdengarkan suaranya.",
+      en: "Tap the mic in Kakak and talk; pauses are fine, she keeps listening. Tap Done to send, then Edit words if one was misheard. After her first reply the mic moves beside the typing box. Read replies aloud lets you hear her.",
+      id: "Ketuk mikrofon di Kakak lalu bicara; boleh berhenti sejenak. Ketuk Selesai untuk mengirim, lalu Ubah kata-kata kalau ada yang salah dengar. Setelah jawaban pertama, mikrofon pindah ke samping kotak ketik. Bacakan jawaban Kakak memperdengarkan suaranya.",
     },
     where: null,
     covers: ["kakak-voice-2026-11", "kakak-tap-to-talk-2026-11"],

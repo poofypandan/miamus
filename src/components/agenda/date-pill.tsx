@@ -127,7 +127,7 @@ export function DatePill({
               onClick={() => setOpen(true)}
               data-testid="date-pill"
               aria-label={t(`${label}. Choose a day`, `${label}. Pilih hari`)}
-              className={`flex min-h-12 items-center gap-2 rounded-full bg-card pr-4 text-base font-semibold text-gray-900 tabular-nums shadow-float active:scale-[0.98] ${isToday ? "pl-3.5" : "pl-4"}`}
+              className={`flex min-h-12 items-center gap-2 rounded-full bg-card pr-4 text-base font-semibold text-gray-900 tabular-nums shadow-float press ${isToday ? "pl-3.5" : "pl-4"}`}
             >
               {/* Only on today: beside the Today pill the day's name says what
                   this pill is, and the room keeps Indonesian on one line at
@@ -140,7 +140,7 @@ export function DatePill({
                 ref={todayRef}
                 type="button"
                 onClick={jumpToToday}
-                className="flex min-h-12 items-center rounded-full bg-card px-4 text-sm font-semibold text-gray-900 shadow-float active:scale-[0.98]"
+                className="flex min-h-12 items-center rounded-full bg-card px-4 text-sm font-semibold text-gray-900 shadow-float press"
               >
                 {t("Today", "Hari ini")}
               </button>

@@ -105,3 +105,16 @@ export function kakakExamples({ locale, staffNames, petNames }: ExampleHousehold
   });
   return list;
 }
+
+/**
+ * The three the idle sheet shows (07, decision 7, approved 21 Nov): the sheet
+ * was too tall at 16 px with six. What she is most for, a chore with a
+ * person; then the household's pets if it has any, else shopping; and, last,
+ * that she can be asked. The rest still work when typed or said.
+ */
+export function idleExamples(list: KakakExample[]): KakakExample[] {
+  const pick = (kind: KakakExampleKind) => list.find((example) => example.kind === kind);
+  return [pick("chore"), pick("pet") ?? pick("shopping"), pick("question")].filter(
+    (example): example is KakakExample => !!example,
+  );
+}

@@ -88,8 +88,10 @@ export function CouldntDoSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="mx-auto max-h-[92dvh] max-w-md overflow-y-auto rounded-t-2xl">
-        {/* Keyed, so every opening starts at the reasons with nothing filled in. */}
-        {open && <CouldntDoBody target={target} onDone={() => onOpenChange(false)} onFiled={onFiled} />}
+        {/* Every opening starts at the reasons with nothing filled in: the
+            sheet's content unmounts once it has closed. Not gated on open, so
+            the whole sheet travels down as it closes (Fable, PR 7). */}
+        <CouldntDoBody target={target} onDone={() => onOpenChange(false)} onFiled={onFiled} />
       </SheetContent>
     </Sheet>
   );
