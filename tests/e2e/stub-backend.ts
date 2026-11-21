@@ -175,6 +175,11 @@ export interface StubOptions {
    */
   taskCardTip?: boolean;
   /**
+   * Can we cook it? (20 Nov): its owner card and staff tip are the newest
+   * and would hold the one slot. Seen unless a test asks for them.
+   */
+  readyToCookTip?: boolean;
+  /**
    * Notifications on a staff phone (Phase 166, migrations/141): what
    * my_phone_push_people answers the phone; with pushKey, the phone also
    * gets the VAPID key. set_my_push_person calls are recorded in seen.
@@ -371,6 +376,14 @@ export async function installStub(context: BrowserContext, options: StubOptions 
     await context.addCookies([
       { name: "sb-supabase-auth-token", value: `base64-${b64u(options.stored)}`, domain: "localhost", path: "/" },
     ]);
+  }
+  if (!options.readyToCookTip) {
+    await context.addInitScript(() => {
+      if (sessionStorage.getItem("stub-seeded-cook")) return;
+      sessionStorage.setItem("stub-seeded-cook", "1");
+      localStorage.setItem("miamus.whats-new.ready-to-cook-2026-11", "seen");
+      localStorage.setItem("miamus.whats-new.staff-ready-to-cook-2026-11", "seen");
+    });
   }
   if (options.staffPhone) {
     await context.addInitScript(

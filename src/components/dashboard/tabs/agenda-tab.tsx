@@ -239,7 +239,7 @@ export function AgendaTab() {
 
   // Food to eat soon (Phase 156): the same kind of quiet line, above it.
   // Food at home and Repairs switched off (Phase 171): their lines go.
-  const { food: foodOn, repairs: repairsOn, kitchen: kitchenOn } = useHouseholdFeatures();
+  const { food: foodOn, repairs: repairsOn } = useHouseholdFeatures();
   const eatSoon = useMemo(
     () => (foodOn ? countEatSoon(foodItems, formatDateLocal(today)) : 0),
     [foodItems, today, foodOn]
@@ -391,10 +391,11 @@ export function AgendaTab() {
     );
   }, [showsToday, clock, summaryHour, todayKey, allChores, groups, exceptions, leaveRequests, pets, logs]);
 
-  // Today's menu (Phase 170 PR C, D9): one quiet line while the Kitchen
-  // switch is on and today has a plan.
-  const { dishes: menuDishes } = useMenuWeek(todayKey, { enabled: kitchenOn });
-  const menuLine = kitchenOn && showsToday ? todayMenuLine(menuDishes, todayKey, locale) : null;
+  // Today's menu (Phase 170 PR C, D9): one quiet line when today has a
+  // plan. Every home since 20 Nov (recipes and the menu left the Kitchen
+  // switch).
+  const { dishes: menuDishes } = useMenuWeek(todayKey);
+  const menuLine = showsToday ? todayMenuLine(menuDishes, todayKey, locale) : null;
   const menuHref = `${moduleHref("inventory")}&kitchen=menu`;
   function switchToMenu(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;

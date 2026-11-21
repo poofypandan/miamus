@@ -77,9 +77,10 @@ test("staff get the tip on Today once there is a menu, in Indonesian", async ({ 
   await shot(page, "staff-id-tip");
 });
 
-test("staff with the Kitchen switch off never get it", async ({ context, page }) => {
+test("staff with Kitchen amounts off never get it (nothing comes off stock to change)", async ({ context, page }) => {
   await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: false }, menu: [dish] });
   await page.goto("/staff");
-  await expect(page.getByRole("region", { name: "Baru: Kirim masukan" })).toBeVisible({ timeout: 20_000 });
+  // Since 20 Nov the menu is there with the switch off: its own tip shows instead.
+  await expect(page.getByRole("region", { name: "Baru: Menu hari ini" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("region", { name: STAFF_ID })).toHaveCount(0);
 });
