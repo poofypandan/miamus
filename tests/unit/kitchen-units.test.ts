@@ -22,6 +22,7 @@ import {
   parseAmount,
   startingAmount,
   undoPurchasePatch,
+  undoStatusShortfall,
 } from "@/lib/kitchen-units";
 import { amountsOn, ingredientsUnderFood } from "@/lib/features";
 import { PLANS_ENFORCED, PLUS_FEATURES, planFor } from "@/lib/plans";
@@ -295,5 +296,18 @@ describe("where things show", () => {
     expect(planFor("kitchen")).toBe("plus");
     expect(planFor("repairs")).toBe("free");
     expect(PLANS_ENFORCED).toBe(false);
+  });
+});
+
+describe("undoStatusShortfall (Kakak's Bought card, E2)", () => {
+  it("puts back the menu's shortfall that marking it bought cleared (Codex, PR #168)", () => {
+    expect(undoStatusShortfall({ to_buy_amount: 400 }, "out", "ok")).toBe(400);
+    expect(undoStatusShortfall({ to_buy_amount: 2 }, "low", "ok")).toBe(2);
+  });
+  it("puts back nothing when there was none, when the item was already Enough, or for Running low and Out", () => {
+    expect(undoStatusShortfall({ to_buy_amount: null }, "out", "ok")).toBeNull();
+    expect(undoStatusShortfall(undefined, "out", "ok")).toBeNull();
+    expect(undoStatusShortfall({ to_buy_amount: 400 }, "ok", "ok")).toBeNull();
+    expect(undoStatusShortfall({ to_buy_amount: 400 }, "out", "low")).toBeNull();
   });
 });

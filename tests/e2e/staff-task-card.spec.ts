@@ -56,7 +56,7 @@ test("staff finish a chore on its card: Sebelum, Sesudah, then Selesai", async (
   const stub = await installStub(context, { stored: freshSession(), staffPhone: true, chores: [mop], rooms });
   await page.goto("/staff");
 
-  const card = page.locator("div.rounded-xl", { has: page.getByText("Pel teras", { exact: true }) }).last();
+  const card = page.locator("[data-chore-card]", { has: page.getByText("Pel teras", { exact: true }) }).last();
   await expect(card).toBeVisible({ timeout: 20_000 });
   // The name says Teras: no room line. No "Untuk Anda" on a person's own list, no category.
   await expect(card.getByText("Teras", { exact: true })).toHaveCount(0);
@@ -89,7 +89,7 @@ test("staff finish a chore on its card: Sebelum, Sesudah, then Selesai", async (
 test("a photo taken on the card is in the chore's sheet, and the other way round", async ({ context, page }) => {
   await installStub(context, { stored: freshSession(), staffPhone: true, chores: [chore({ title: "Lap meja", location_id: DAPUR })], rooms });
   await page.goto("/staff");
-  const card = page.locator("div.rounded-xl", { has: page.getByText("Lap meja", { exact: true }) }).last();
+  const card = page.locator("[data-chore-card]", { has: page.getByText("Lap meja", { exact: true }) }).last();
   // "Lap meja" doesn't say Dapur: the room shows.
   await expect(card.getByText("Dapur")).toBeVisible({ timeout: 20_000 });
   await photo(page, card, "Sebelum");
@@ -110,7 +110,7 @@ test("the tip says where the photos are now, once", async ({ context, page }) =>
 test("the card's menu keeps Tidak bisa dikerjakan one tap away", async ({ context, page }) => {
   await installStub(context, { stored: freshSession(), staffPhone: true, chores: [chore({ title: "Cuci mobil" })] });
   await page.goto("/staff");
-  const card = page.locator("div.rounded-xl", { has: page.getByText("Cuci mobil", { exact: true }) }).last();
+  const card = page.locator("[data-chore-card]", { has: page.getByText("Cuci mobil", { exact: true }) }).last();
   await card.getByRole("button", { name: "Pilihan lain" }).click({ timeout: 20_000 });
   await page.getByRole("dialog").getByRole("button", { name: "Tidak bisa dikerjakan" }).click();
   await expect(page.getByRole("dialog", { name: "Kenapa tidak bisa?" })).toBeVisible();
@@ -119,7 +119,7 @@ test("the card's menu keeps Tidak bisa dikerjakan one tap away", async ({ contex
 test("a chore for Anyone is taken first: no photo places until it is someone's", async ({ context, page }) => {
   await installStub(context, { stored: freshSession(), staffPhone: true, chores: [chore({ title: "Buang sampah", assigned_to: null })] });
   await page.goto("/staff");
-  const card = page.locator("div.rounded-xl", { has: page.getByText("Buang sampah", { exact: true }) }).last();
+  const card = page.locator("[data-chore-card]", { has: page.getByText("Buang sampah", { exact: true }) }).last();
   await expect(card.getByText("Saya kerjakan")).toBeVisible({ timeout: 20_000 });
   await expect(card.getByRole("button", { name: /^Sebelum/ })).toHaveCount(0);
 });
@@ -128,7 +128,7 @@ test("a chore done with an owner there: Selesai first shows the sheet's warning"
   const glass = chore({ title: "Lap kaca", requires_supervision: true });
   await installStub(context, { stored: freshSession(), staffPhone: true, chores: [glass] });
   await page.goto("/staff");
-  const card = page.locator("div.rounded-xl", { has: page.getByText("Lap kaca", { exact: true }) }).last();
+  const card = page.locator("[data-chore-card]", { has: page.getByText("Lap kaca", { exact: true }) }).last();
   await expect(card).toBeVisible({ timeout: 20_000 });
   await photo(page, card, "Sebelum");
   await expect(card.getByRole("img", { name: "Foto Sebelum" })).toBeVisible();

@@ -12,7 +12,7 @@
 
 import { cookCheck } from "@/lib/can-cook";
 import { ROUTINE_KINDS } from "@/lib/pet-routine-kinds";
-import type { RecipeWithLines } from "@/lib/recipes";
+import { lineName, type RecipeWithLines } from "@/lib/recipes";
 import { isIngredient, isStockUnit } from "@/lib/kitchen-units";
 import { hiddenAreasOf } from "@/lib/staff-areas";
 import type { FoodPlace, InventoryCategory, InventoryItem, InventoryUnit, MenuMeal, RoutineKind } from "@/types/database";
@@ -97,6 +97,15 @@ export interface ContextRecipeRow {
   ingredients: { id: string; item_id: string | null; name: string; name_id: string | null; amount: number | null; unit: string | null; position: number }[];
 }
 
+/** A ready-to-eat food at home (migrations/123), as the route reads it: name, place and date only. */
+export interface ContextFoodRow {
+  name: string | null;
+  kept_in: string | null;
+  expires_on: string | null;
+  expiry_unknown: boolean | null;
+  created_at: string;
+}
+
 /** A planned dish (migrations/153), as the route reads it. */
 export interface ContextDishRow {
   day: string;
@@ -128,6 +137,8 @@ export interface ContextRows {
   recipes?: ContextRecipeRow[];
   /** The menu from today (Phase 170 PR C); absent or failed reads as none. */
   menu?: ContextDishRow[];
+  /** E1: ready-to-eat food still at home (outcome null); absent on an older read. */
+  foods?: ContextFoodRow[];
 }
 
 /**
@@ -345,6 +356,8 @@ export function buildContext(
       ref,
       name,
       pet: item.scope === "pet",
+      ...(item.stock_status === "low" || item.stock_status === "out" ? { status: item.stock_status } : {}),
+      ...(rows.kitchenOn === true && item.track_amount === true ? { tracked: true } : {}),
       ...(ingredient
         ? {
             ingredient: true,
@@ -363,7 +376,7 @@ export function buildContext(
     }
   }
 
-  const { recipes, menu } = kitchenFor(rows, refs, today);
+  const { recipes, menu } = kitchenFor(rows, refs, today, ingredientsOn);
 
   return {
     household: {
@@ -378,12 +391,16 @@ export function buildContext(
       ...(rows.hasPets === false ? { petsOff: true } : {}),
       ...(rows.foodOn === false ? { foodOff: true } : {}),
       ...(ingredientsOn ? { ingredientsOn: true } : {}),
+      // E2: every row carried its status (the route reads stock_status).
+      ...(rows.items.length > 0 && rows.items.every((i) => typeof i.stock_status === "string") ? { statusesRead: true } : {}),
       // Only when the switches were read: a failed read says nothing is off.
       ...(rows.featuresRead && rows.repairsOn === false ? { repairsOff: true } : {}),
       ...(rows.featuresRead && rows.billsOn === false ? { billsOff: true } : {}),
       ...(rows.featuresRead && rows.kitchenOn !== true ? { kitchenOff: true } : {}),
       ...(recipes.length ? { recipes } : {}),
       ...(menu.length ? { menu } : {}),
+      // Only once the switches were read: a failed read never assumes Food at home is on (Codex, PR #166).
+      ...(rows.featuresRead && rows.foodOn !== false && rows.foods ? { foods: foodsFor(rows.foods, today) } : {}),
     },
     refs,
     names,
@@ -403,6 +420,7 @@ function kitchenFor(
   rows: ContextRows,
   refs: RefMap,
   today: string,
+  ingredientsOn = false,
 ): { recipes: NonNullable<KakakHousehold["recipes"]>; menu: NonNullable<KakakHousehold["menu"]> } {
   const recipes: NonNullable<KakakHousehold["recipes"]> = [];
   refs.recipes = {};
@@ -422,6 +440,18 @@ function kitchenFor(
   );
   const amounts = rows.kitchenOn === true;
   const byId = new Map<string, string>();
+  // Uses soon (PR C1): an ingredient's use-by date, already in the block
+  // while Ingredients are on, within USES_SOON_DAYS of today.
+  const soonUntil = addDays(today, USES_SOON_DAYS);
+  const expiresOn = new Map<string, string>();
+  if (ingredientsOn) {
+    for (const item of rows.items) {
+      const day = typeof item.expires_on === "string" ? item.expires_on.slice(0, 10) : "";
+      if (!DAY.test(day) || day < today || day > soonUntil || item.stock_status === "out") continue;
+      if (!isIngredient({ category: item.category as InventoryCategory })) continue;
+      expiresOn.set(item.id, day);
+    }
+  }
   for (const row of [...(rows.recipes ?? [])].sort((a, b) => byAge({ ...a }, { ...b }))) {
     const ref = `D${recipes.length + 1}`;
     const recipe = {
@@ -447,6 +477,16 @@ function kitchenFor(
     });
     const name = cleanName(row.name, 60);
     const nameId = row.name_id && cleanName(row.name_id, 60) !== name ? cleanName(row.name_id, 60) : null;
+    const usesSoon: { name: string; expiresOn: string }[] = [];
+    for (const line of recipe.ingredients) {
+      const day = line.item_id ? expiresOn.get(line.item_id) : undefined;
+      if (!day) continue;
+      // Named as the recipe screen and the missing list name it ("Beras (Merah)").
+      const name = cleanName(lineName(line, items, false, recipe.written_in), 60);
+      if (!name || usesSoon.some((u) => u.name === name)) continue;
+      usesSoon.push({ name, expiresOn: day });
+    }
+    usesSoon.sort((a, b) => a.expiresOn.localeCompare(b.expiresOn));
     recipes.push({
       ref,
       name,
@@ -455,6 +495,7 @@ function kitchenFor(
       missing: check.missing.map((m) => cleanName(m.name, 60)),
       ...(check.missing.some((m) => m.listed) ? { onList: check.missing.filter((m) => m.listed).map((m) => cleanName(m.name, 60)) } : {}),
       unchecked: check.unchecked.map((n) => cleanName(n, 60)),
+      ...(usesSoon.length ? { usesSoon } : {}),
     });
     refs.recipes[ref] = {
       id: row.id,
@@ -475,7 +516,59 @@ function kitchenFor(
       title: cleanName(dish.title, 80),
       recipe: dish.recipe_id ? (byId.get(dish.recipe_id) ?? null) : null,
     }));
-  return { recipes, menu };
+  return { recipes: recipes.sort(byUsefulness), menu };
+}
+
+/** E1: the food as the block lists it, soonest use-by first, then no date (newest first). */
+function foodsFor(rows: ContextFoodRow[], today: string): NonNullable<KakakHousehold["foods"]> {
+  // What can still be eaten comes first (Codex, PR #166): soonest date
+  // first, then no date (newest first), then past its date (most recently
+  // past first). Food past its date stays listed until someone marks it
+  // finished, so it must never crowd out a dish that is due today.
+  const rank = (day: string | null) => (day === null ? 1 : day < today ? 2 : 0);
+  return rows
+    .map((row) => {
+      const day = typeof row.expires_on === "string" ? row.expires_on.slice(0, 10) : "";
+      const name = typeof row.name === "string" ? cleanName(row.name, 60) : "";
+      return {
+        name: name || null,
+        keptIn: PLACES.has(row.kept_in ?? "") ? (row.kept_in as FoodPlace) : null,
+        expiresOn: DAY.test(day) ? day : null,
+        expiryUnknown: row.expiry_unknown === true,
+        createdAt: row.created_at,
+      };
+    })
+    .sort((a, b) => {
+      const ra = rank(a.expiresOn);
+      const rb = rank(b.expiresOn);
+      if (ra !== rb) return ra - rb;
+      const byDay = ra === 0 ? (a.expiresOn ?? "").localeCompare(b.expiresOn ?? "") : ra === 2 ? (b.expiresOn ?? "").localeCompare(a.expiresOn ?? "") : 0;
+      return byDay || b.createdAt.localeCompare(a.createdAt);
+    })
+    .map((food) => ({ name: food.name, keptIn: food.keptIn, expiresOn: food.expiresOn, expiryUnknown: food.expiryUnknown }));
+}
+
+/** How many days ahead "uses soon" looks (PR C1): today, tomorrow and the day after. */
+export const USES_SOON_DAYS = 2;
+
+const STATE_ORDER: Record<string, number> = { ready: 0, missing: 1, unknown: 2 };
+
+/**
+ * The order the recipe lines are listed in (PR C1, display only: the
+ * D-refs keep their age order, so they never move): ready first, then the
+ * fewest missing, then what couldn't be checked; among equals, one that
+ * uses something soon first, soonest first (a recipe missing five never
+ * goes ahead of one missing one: Codex, PR #162). The 40-recipe cap then keeps the
+ * most useful lines. Stable, so ties keep their age order.
+ */
+function byUsefulness(a: NonNullable<KakakHousehold["recipes"]>[number], b: NonNullable<KakakHousehold["recipes"]>[number]): number {
+  const soonA = a.usesSoon?.[0]?.expiresOn ?? "9999-12-31";
+  const soonB = b.usesSoon?.[0]?.expiresOn ?? "9999-12-31";
+  return (
+    STATE_ORDER[a.state] - STATE_ORDER[b.state] ||
+    (a.state === "missing" ? a.missing.length - b.missing.length : 0) ||
+    soonA.localeCompare(soonB)
+  );
 }
 
 /** Today and now in Asia/Jakarta (UTC+7, no daylight saving). */
