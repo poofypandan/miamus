@@ -374,8 +374,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "The shopping list", id: "Daftar belanja" },
     body: {
-      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought. Or tell Kakak \"I bought the santan\".",
-      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa. Atau bilang ke Kakak \"Santan sudah dibeli\".",
+      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping; staff can add to it too. Whoever shops taps Bought; a tracked item asks how much. The home's supplies are under Supplies at home, below the list. Or tell Kakak \"I bought the santan\".",
+      id: "Barang yang Hampir habis atau Habis masuk ke daftar di Dapur → Belanja; staf juga bisa menambahkannya. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan jumlahnya. Stok di rumah ada di bawah daftar. Atau bilang ke Kakak \"Santan sudah dibeli\".",
     },
     where: "kitchen_shopping",
   },
