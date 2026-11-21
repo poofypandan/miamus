@@ -19,6 +19,32 @@ async function cameraJpeg(orientation?: number): Promise<Buffer> {
   return image.jpeg().toBuffer();
 }
 
+const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+function crc32(b: Buffer): number {
+  let c = 0xffffffff;
+  for (const byte of b) c = CRC_TABLE[(c ^ byte) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+function pngChunk(type: string, data: string): Buffer {
+  const body = Buffer.concat([Buffer.from(type, "latin1"), Buffer.from(data, "latin1")]);
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(body.length - 4);
+  const crc = Buffer.alloc(4);
+  crc.writeUInt32BE(crc32(body));
+  return Buffer.concat([length, body, crc]);
+}
+function riffChunk(type: string, data: string): Buffer {
+  const payload = Buffer.from(data, "latin1");
+  const header = Buffer.alloc(8);
+  header.write(type, 0, "latin1");
+  header.writeUInt32LE(payload.length, 4);
+  return Buffer.concat([header, payload, payload.length % 2 ? Buffer.alloc(1) : Buffer.alloc(0)]);
+}
+
 function text(b: Uint8Array): string {
   return Buffer.from(b).toString("latin1");
 }
@@ -111,6 +137,56 @@ describe("stripImageMetadata", () => {
     expect([meta.width, meta.height]).toEqual([40, 20]);
     // Still a picture sharp can decode.
     await expect(sharp(out).raw().toBuffer()).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("drops Content Credentials (C2PA) and any unlisted chunk from a PNG", async () => {
+    const png = await pixels().png().toBuffer();
+    const iend = png.length - 12;
+    const input = Buffer.concat([png.subarray(0, iend), pngChunk("caBX", "c2pa GPS -6.2088 106.8456"), pngChunk("zzZz", "GPS later"), png.subarray(iend)]);
+    const out = stripImageMetadata(input)!;
+    expect(text(out)).not.toContain("GPS");
+    expect(Buffer.compare(Buffer.from(out), png)).toBe(0);
+  });
+
+  it("refuses a PNG with a critical chunk it doesn't know", async () => {
+    const png = await pixels().png().toBuffer();
+    const iend = png.length - 12;
+    expect(stripImageMetadata(Buffer.concat([png.subarray(0, iend), pngChunk("ZZZZ", "?"), png.subarray(iend)]))).toBeNull();
+  });
+
+  it("drops Content Credentials (C2PA) and any unlisted chunk from a WebP", async () => {
+    const webp = await pixels().withMetadata({ orientation: 1 }).webp().toBuffer();
+    const body = Buffer.concat([webp.subarray(12), riffChunk("C2PA", "c2pa GPS -6.2088 106.8456"), riffChunk("ICCP", "profile GPS")]);
+    const header = Buffer.from(webp.subarray(0, 12));
+    header.writeUInt32LE(body.length + 4, 4);
+    const out = stripImageMetadata(Buffer.concat([header, body]))!;
+    expect(text(out)).not.toContain("GPS");
+    expect(Buffer.from(out).readUInt32LE(4)).toBe(out.length - 8);
+    const meta = await sharp(out).metadata();
+    expect([meta.width, meta.height]).toEqual([40, 20]);
+  });
+
+  it("cuts the JFIF thumbnail and drops a JFXX thumbnail, with whatever they hide", async () => {
+    const jpeg = await pixels().jpeg().toBuffer();
+    // A JFXX extension holding a JPEG thumbnail with a GPS comment inside it,
+    // and a JFIF header with a 1 x 1 RGB thumbnail.
+    const note = Buffer.from("GPS -6.2088 106.8456");
+    const thumb = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xfe, 0, note.length + 2]), note, Buffer.from([0xff, 0xd9])]);
+    const jfxx = Buffer.concat([Buffer.from("JFXX\0"), Buffer.from([0x10]), thumb]);
+    const jfif = Buffer.concat([Buffer.from("JFIF\0"), Buffer.from([1, 1, 0, 0, 1, 0, 1, 1, 1]), Buffer.from("GPS")]);
+    const seg = (payload: Buffer) => Buffer.concat([Buffer.from([0xff, 0xe0, (payload.length + 2) >> 8, (payload.length + 2) & 0xff]), payload]);
+    const input = Buffer.concat([jpeg.subarray(0, 2), seg(jfif), seg(jfxx), jpeg.subarray(2)]);
+    const out = stripImageMetadata(input)!;
+    expect(out).not.toBeNull();
+    expect(text(out)).not.toContain("GPS");
+    expect(text(out)).not.toContain("JFXX");
+    const meta = await sharp(out).metadata();
+    expect([meta.width, meta.height]).toEqual([40, 20]);
+  });
+
+  it("refuses a JPEG with a marker it doesn't know", async () => {
+    const jpeg = await pixels().jpeg().toBuffer();
+    expect(stripImageMetadata(Buffer.concat([jpeg.subarray(0, 2), Buffer.from([0xff, 0xc8, 0x00, 0x04, 0x00, 0x00]), jpeg.subarray(2)]))).toBeNull();
   });
 
   it("gives null for anything it can't clean", () => {

@@ -12,15 +12,17 @@
  * and all, while the privacy policy says the phone removes it.
  *
  * This removes, without decoding the image:
- *   JPEG  every APPn segment except APP0 (JFIF) and APP14 (Adobe colour
- *         transform), and comments, wherever they are: before the first
- *         scan and between the scans of a progressive JPEG. Anything after
- *         the end marker goes too (phones append depth maps and second
- *         pictures there, each with its own EXIF). EXIF and XMP live in APP1,
- *         ICC colour profiles in APP2, IPTC in APP13.
- *   PNG   eXIf, tEXt, zTXt, iTXt and tIME chunks, and anything after IEND.
- *   WebP  EXIF and XMP chunks, and the XMP flag in the VP8X header; anything
- *         past the RIFF size.
+ *   JPEG  keeps only the segments that make the picture (keptJpegSegment),
+ *         before the first scan and between the scans of a progressive JPEG,
+ *         with the JFIF header's thumbnail cut off; every APPn else (EXIF,
+ *         XMP, ICC, IPTC, C2PA), comments, and anything after the end marker
+ *         (phones append depth maps and second pictures there) goes.
+ *   PNG   keeps only the picture's own chunks (PNG_KEPT): eXIf, text, caBX
+ *         and every other ancillary chunk go, and anything after IEND.
+ *   WebP  keeps only VP8X, VP8, VP8L and ALPH: EXIF, XMP, ICCP, C2PA and the
+ *         rest go, with their VP8X flags; anything past the RIFF size.
+ * Kept by name, never by a list of what to drop, so a metadata container
+ * nobody listed yet is dropped too.
  * The one EXIF field that changes how a photo looks, its orientation, is
  * written back on its own (JPEG and WebP), so a photo taken sideways still
  * shows the right way up.
@@ -133,6 +135,35 @@ function scanEnd(b: Uint8Array, i: number): number {
   return b.length;
 }
 
+/**
+ * What of a segment (before or between scans) is kept: the segment, a
+ * rewritten copy, null to drop it, or undefined for a marker this doesn't
+ * know (the whole file is then refused, never passed on unchecked). Kept by
+ * name, not by dropping known metadata, so a container nobody listed yet
+ * goes too (Codex, PR #161):
+ *   SOFn, DHT, DAC, DQT, DRI, DNL, DHP, EXP   what the picture is made of;
+ *   APP0 "JFIF"    its density, with the optional thumbnail cut off (a JFXX
+ *                  extension's thumbnail is a whole JPEG of its own, with
+ *                  room for its own comments and EXIF: dropped);
+ *   APP14 "Adobe"  the 12-byte colour-transform note, nothing longer.
+ * Every other APPn, comments and the reserved JPGn markers are dropped.
+ */
+function keptJpegSegment(marker: number, segment: Uint8Array): Uint8Array | null | undefined {
+  const payload = segment.subarray(4);
+  if (marker === 0xe0) {
+    if (payload.length < 12 || ascii(payload, 0, 5) !== "JFIF\0") return null;
+    // JFIF\0, version, units, X and Y density: then 0 x 0 thumbnail.
+    return concat([Uint8Array.from([0xff, 0xe0, 0x00, 0x10]), payload.subarray(0, 12), Uint8Array.from([0, 0])]);
+  }
+  if (marker === 0xee) return payload.length === 12 && ascii(payload, 0, 5) === "Adobe" ? segment : null;
+  if (marker >= 0xe1 && marker <= 0xef) return null; // APP1-APP15: EXIF, XMP, ICC, IPTC, MPF, C2PA...
+  if (marker === 0xfe) return null; // comments
+  if (marker >= 0xf0 && marker <= 0xfd) return null; // JPGn, reserved extensions
+  if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc8) return segment; // SOFn, DHT, DAC
+  if (marker >= 0xdb && marker <= 0xdf) return segment; // DQT, DNL, DRI, DHP, EXP
+  return undefined;
+}
+
 function stripJpeg(b: Uint8Array): Uint8Array | null {
   const parts: Uint8Array[] = [b.subarray(0, 2)];
   let orientation: number | null = null;
@@ -186,10 +217,10 @@ function stripJpeg(b: Uint8Array): Uint8Array | null {
       const payload = segment.subarray(4);
       if (ascii(payload, 0, 6) === EXIF_HEADER) orientation = tiffOrientation(payload.subarray(6));
     }
-    const isApp = marker >= 0xe0 && marker <= 0xef;
-    const keepApp = marker === 0xe0 || marker === 0xee;
-    if (!(isApp && !keepApp) && marker !== 0xfe) {
-      parts.push(segment);
+    const kept = keptJpegSegment(marker, segment);
+    if (kept === undefined) return null;
+    if (kept) {
+      parts.push(kept);
       if (marker === 0xe0 && parts.length === 2) orientationAt = 2;
     }
     i += 2 + length;
@@ -199,7 +230,15 @@ function stripJpeg(b: Uint8Array): Uint8Array | null {
 
 // --- PNG ------------------------------------------------------------------------------
 
-const PNG_DROPPED = new Set(["eXIf", "tEXt", "zTXt", "iTXt", "tIME"]);
+/**
+ * Chunks kept by name: the picture, its palette and transparency, and how
+ * its colours and pixels are meant to be read. Everything else ancillary
+ * goes (eXIf, tEXt, zTXt, iTXt, tIME, caBX Content Credentials, iCCP, and
+ * any chunk not invented yet; Codex, PR #161). An unknown critical chunk
+ * (capital first letter) means a file this can't vouch for: refused.
+ * Animation chunks are ancillary, so an animated PNG becomes its still frame.
+ */
+const PNG_KEPT = new Set(["IHDR", "PLTE", "IDAT", "IEND", "tRNS", "gAMA", "cHRM", "sRGB", "sBIT", "bKGD", "pHYs"]);
 
 function stripPng(b: Uint8Array): Uint8Array | null {
   const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
@@ -210,7 +249,8 @@ function stripPng(b: Uint8Array): Uint8Array | null {
     const end = i + 12 + length;
     if (end > b.length) return null;
     const type = ascii(b, i + 4, 4);
-    if (!PNG_DROPPED.has(type)) parts.push(b.subarray(i, end));
+    if (PNG_KEPT.has(type)) parts.push(b.subarray(i, end));
+    else if (type.charCodeAt(0) < 0x61) return null; // unknown critical chunk
     i = end;
     if (type === "IEND") return concat(parts);
   }
@@ -219,6 +259,9 @@ function stripPng(b: Uint8Array): Uint8Array | null {
 
 // --- WebP -----------------------------------------------------------------------------
 
+// VP8X flags: ICC profile, alpha, EXIF, XMP, animation.
+const VP8X_ICC = 0x20;
+const VP8X_EXIF = 0x08;
 const VP8X_XMP = 0x04;
 
 function webpChunk(type: string, data: Uint8Array): Uint8Array {
@@ -249,17 +292,23 @@ function stripWebp(b: Uint8Array): Uint8Array | null {
       // Usually a bare TIFF block; some writers keep JPEG's "Exif\0\0" prefix.
       const tiff = ascii(data, 0, 6) === EXIF_HEADER ? data.subarray(6) : data;
       if (orientation === null) orientation = tiffOrientation(tiff);
-    } else if (type !== "XMP ") {
+    } else if (type === "VP8 " || type === "VP8L" || type === "ALPH") {
       parts.push(b.subarray(i, Math.min(end, riffEnd)));
+    } else if (type === "ANIM" || type === "ANMF") {
+      // An animation's frames nest chunks of their own: not vouched for here
+      // (photos never are animated); refused, so the server re-encodes it.
+      return null;
     }
+    // Anything else (XMP, ICCP, C2PA Content Credentials, chunks not
+    // invented yet) is dropped: kept by name only (Codex, PR #161).
     i = end;
   }
   if (vp8x) {
-    // The flags say which optional chunks exist: XMP never does now, EXIF
-    // only when an orientation is written back (bit 0x08).
+    // The flags say which optional chunks exist: ICC and XMP never do now,
+    // EXIF only when an orientation is written back.
     const keepOrientation = orientation !== null && orientation !== 1;
-    vp8x[8] &= ~VP8X_XMP;
-    vp8x[8] = keepOrientation ? vp8x[8] | 0x08 : vp8x[8] & ~0x08;
+    vp8x[8] &= ~(VP8X_ICC | VP8X_XMP);
+    vp8x[8] = keepOrientation ? vp8x[8] | VP8X_EXIF : vp8x[8] & ~VP8X_EXIF;
     if (keepOrientation) parts.push(webpChunk("EXIF", orientationTiff(orientation!)));
   }
   const body = concat(parts);
