@@ -1,4 +1,5 @@
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import type { PhotoFrame } from "@/lib/image-crop";
 import type { TaskEntity, TaskLog } from "@/types/database";
 
 export interface PetMeta {
@@ -17,7 +18,39 @@ export interface PetMeta {
    * succeeded, which is why nothing reads it without a fallback.
    */
   full_image_url?: string | null;
+  /**
+   * Where the framed square sits in the full photo, in percent (21 Nov;
+   * Fable's 08, decision 23). Saved when a photo is framed; absent on every
+   * pet framed before, which read from 50 % across and 40 % down.
+   */
+  frame?: PhotoFrame | null;
   archived?: boolean;
+}
+
+/**
+ * Where a tile cut from the full photo centres, as CSS percentages: the
+ * framed square's centre, or 50 % across and 40 % down (faces sit a little
+ * above the middle) for a pet framed before it was kept.
+ */
+export function petFocus(entity: TaskEntity): { x: number; y: number } {
+  const frame = getPetMeta(entity).frame;
+  if (!frame) return { x: 50, y: 40 };
+  return {
+    x: Math.round((frame.x + frame.width / 2) * 10) / 10,
+    y: Math.round((frame.y + frame.height / 2) * 10) / 10,
+  };
+}
+
+/**
+ * Which picture a pet's tile shows (Fable's 08, section 5): its full photo,
+ * edge to edge; only the old small square, shown as a print and never
+ * stretched; or none, a paper portrait with its initial.
+ */
+export function petPictureKind(entity: TaskEntity): "full" | "print" | "none" {
+  const meta = getPetMeta(entity);
+  if (meta.full_image_url) return "full";
+  if (meta.avatar_url) return "print";
+  return "none";
 }
 
 /** The framed square, for small avatars. */

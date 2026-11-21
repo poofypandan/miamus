@@ -240,6 +240,7 @@ people are **staf** and **admin**.
 | Other routines | **Rutinitas lain** | Phase 173: replaces Others / Lainnya in Manage routines. |
 | Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (D9): starter list after adding a pet. |
 | Coco is added. Staff see these from today; untick what you don't want. | **Coco sudah ditambahkan. Staf melihatnya mulai hari ini; hapus centang yang tidak perlu.** | Phase 173 PR B: the starter list's one line, in place of the "Pet added" toast ("Hapus centang", as Phase 172's setup review). |
+| The Pets wall: All your pets at once · Late: Makan malam · At the vet · Add a photo | **Semua hewan sekaligus · Makan malam terlambat · Di klinik · Tambah foto** | 21 Nov: the Pets tab as a wall (Fable's 08, section 5). The late line names the routine as the owner named it. Photo help: **Dekat jendela, sejajar mata mereka, memenuhi bingkai.** |
 | Dog · Cat | **Anjing · Kucing** | Phase 173 PR B: the starter list's pill control. |
 | Morning walk · Evening walk · Clean the litter box | **Jalan pagi · Jalan sore · Bersihkan pasir kucing** | Phase 173 PR B: starter routines; also the saved titles staff read. |
 | Add Coco to Lights off / with Mocha, Matcha | **Tambahkan Coco ke Matikan lampu / bersama Mocha, Matcha** | Phase 173 PR B: a household routine the new pet can join. |

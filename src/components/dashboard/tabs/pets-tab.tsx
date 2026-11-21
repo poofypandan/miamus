@@ -1,52 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { PawPrint, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
-import { DateRibbon } from "@/components/date-ribbon";
 import { PetFormDialog } from "@/components/dashboard/pet-form-dialog";
 import { AddRoutineSheet, type AddRoutineTarget } from "@/components/dashboard/add-routine-sheet";
 import { StarterRoutinesSheet } from "@/components/dashboard/starter-routines-sheet";
-import { PhotoStream } from "@/components/dashboard/photo-stream";
-import { UnifiedSummaryCard } from "@/components/dashboard/unified-summary-card";
 import { useHousehold } from "@/context/household-context";
-import { useOwnerLocale, useT } from "@/context/owner-locale-context";
-import { useToday } from "@/hooks/use-today";
-import { dayLabel } from "@/lib/date-label";
-import { petPhotoLogs } from "@/lib/pets";
-import { formatDateLocal } from "@/lib/scheduleEngine";
+import { useT } from "@/context/owner-locale-context";
+import { PetWall } from "@/components/pets/pet-wall";
+import { WhatsNewCard } from "@/components/shared/whats-new";
 import type { TaskEntity } from "@/types/database";
 
 /**
- * The pets dashboard: how each dog's day is going, and what came back on
- * camera.
+ * The Pets tab (21 Nov; Fable's 08, section 5, accepted by the owner): every
+ * pet at once on a wall, the same size, as large as the screen allows, down
+ * to Kakak's pill. A tap opens the pet's page, which holds its day, its
+ * photos and its health record; the day belongs there and to Today, so the
+ * wall has no date.
  *
- * ONE LIST (Phase 103). This tab briefly held two: a static directory above a
- * progress list, both of them every pet, both of them opening the same profile
- * sheet. The progress rows were already tappable, so the directory was a
- * second copy that only added scrolling between the ribbon and the thing worth
- * reading.
- *
- * ITS OWN DATE (Phase 102). The ribbon drives local state, not the shared
- * selectedDate the Agenda and chores use, so browsing back through last week's
- * photos does not drag the Agenda along with it.
+ * Adding a pet or a routine sits above the wall as two quiet buttons until
+ * the one "+" at the top right (07, rule 3).
  *
  * Owner-facing, in the language the owner chose (Phase 149).
  */
 export function PetsTab() {
-  const {
-    pets,
-    entities,
-    logs,
-    loading,
-    userRole,
-    createEntity,
-    updateEntity,
-    deleteEntity,
-  } = useHousehold();
-  const locale = useOwnerLocale();
+  const { pets, loading, userRole, createEntity, updateEntity, deleteEntity } = useHousehold();
   const t = useT();
   const [addOpen, setAddOpen] = useState(false);
   // Add routine from here starts with every pet ticked (Phase 173, D1).
@@ -55,32 +36,15 @@ export function PetsTab() {
   const [starterPet, setStarterPet] = useState<TaskEntity | null>(null);
   const canManagePets = userRole === "owner";
 
-  // Null until the owner picks a day, so the view follows the clock over
-  // midnight rather than sitting on the date it mounted.
-  const today = useToday();
-  const [chosenDate, setChosenDate] = useState<Date | null>(null);
-  const date = chosenDate ?? today;
-  const dateStr = formatDateLocal(date);
-
-  // Pet routines only — never a chore's before/after shot. See petPhotoLogs
-  // for why that is a filter rather than something to take on trust.
-  const photoLogs = useMemo(
-    () => petPhotoLogs({ logs, entities, date: dateStr }),
-    [logs, entities, dateStr]
-  );
-
   if (loading) {
     return (
-      <div className="flex flex-col gap-3 px-4">
-        <Skeleton className="h-8 w-32 rounded-lg" />
-        <Skeleton className="h-20 w-full rounded-xl" />
-        <Skeleton className="h-20 w-full rounded-xl" />
+      <div className="flex flex-1 flex-col gap-2 px-4 pb-3">
+        <Skeleton className="min-h-40 w-full flex-1 rounded-[24px]" />
+        <Skeleton className="min-h-40 w-full flex-1 rounded-[24px]" />
       </div>
     );
   }
 
-  // One dialog, two triggers: the empty state's primary button and the quiet
-  // full-width one under the list.
   const addDialog = canManagePets ? (
     <PetFormDialog
       open={addOpen}
@@ -93,27 +57,13 @@ export function PetsTab() {
     />
   ) : null;
 
-  const addButton = canManagePets ? (
-    <Button
-      onClick={() => setAddOpen(true)}
-      variant="outline"
-      className="min-h-[48px] w-full rounded-xl border-zinc-200 bg-white text-sm font-medium text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700"
-    >
-      <Plus /> {t("Add Pet", "Tambah Hewan")}
-    </Button>
-  ) : null;
-
   return (
-    <div className="flex flex-col gap-3 px-4 pb-6">
+    <div className="flex flex-1 flex-col gap-3 px-4 pb-3">
       {addDialog}
-      {/* Outside the list: the first pet's sheet opens while the empty state is still showing. */}
+      {/* Outside the wall: the first pet's sheet opens while the empty state is still showing. */}
       {canManagePets && <StarterRoutinesSheet pet={starterPet} onClose={() => setStarterPet(null)} />}
 
       {pets.length === 0 ? (
-        // No date ribbon until there is a pet: it would pick a day for a
-        // summary that cannot exist yet (Phase 120). And the empty state gets
-        // the primary button the Agenda and Chores ones have — the quiet
-        // list-footer style read as disabled on a page with nothing else on it.
         <EmptyState
           icon={PawPrint}
           title={t("No pets yet", "Belum ada hewan")}
@@ -130,38 +80,27 @@ export function PetsTab() {
         </EmptyState>
       ) : (
         <>
-          {/* Local to this tab: moving it does not move the Agenda. */}
-          <DateRibbon value={date} onChange={setChosenDate} locale={locale} />
-
-          <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-gray-900">
-              {t(`${dayLabel(date, today, locale)}'s Progress`, `Progres ${dayLabel(date, today, locale)}`)}
-            </h2>
-            {/* Quiet, above the pets: a routine for every pet, or untick some. */}
-            {canManagePets && (
+          {canManagePets && (
+            <div className="flex flex-wrap gap-2">
               <Button
                 variant="outline"
-                size="sm"
+                className="min-h-10 min-w-fit flex-1 rounded-xl text-sm"
+                onClick={() => setAddOpen(true)}
+              >
+                <Plus /> {t("Add Pet", "Tambah Hewan")}
+              </Button>
+              <Button
+                variant="outline"
+                className="min-h-10 min-w-fit flex-1 rounded-xl text-sm"
                 onClick={() => setRoutineTarget({ petIds: pets.map((p) => p.id) })}
-                className="min-h-10 rounded-lg text-sm font-medium text-zinc-700"
               >
                 <Plus /> {t("Add routine", "Tambah rutinitas")}
               </Button>
-            )}
-          </div>
-          {/* Every row opens that pet's profile sheet — details, routines,
-              medical records — which is what the directory above this used to
-              be for. */}
-          <UnifiedSummaryCard date={date} />
-          {addButton}
-
-          <h2 className="mt-2 text-sm font-semibold text-gray-900">{t("Photos", "Foto")}</h2>
-          {/* No "Flag Low Stock" here: reporting is staff data entry and lives
-              in the staff view. The owner reads reports and restocks. */}
-          <PhotoStream logs={photoLogs} entities={entities} showAvatar />
-          {canManagePets && (
-            <AddRoutineSheet target={routineTarget} onClose={() => setRoutineTarget(null)} />
+            </div>
           )}
+          <WhatsNewCard id="pets-wall-2026-11" />
+          <PetWall pets={pets} />
+          {canManagePets && <AddRoutineSheet target={routineTarget} onClose={() => setRoutineTarget(null)} />}
         </>
       )}
     </div>
