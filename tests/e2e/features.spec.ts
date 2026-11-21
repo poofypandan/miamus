@@ -98,11 +98,13 @@ test("Bills off hides bill chores and the checklist; the other chores stay", asy
   await expect(form.getByRole("button", { name: "Bills", exact: true })).toHaveCount(0);
 });
 
-test("Food off: Kitchen opens on Shopping with no pills", async ({ context, page }) => {
+test("Food off: Kitchen opens on Shopping, with only Shopping · Menu (recipes and the menu are on for every home)", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, features: { food: false } });
   await page.goto("/dashboard?module=inventory");
   await expect(page.getByRole("heading", { name: /Shopping|To buy/ }).first()).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("tablist", { name: "Kitchen" })).toHaveCount(0);
+  const pills = page.getByRole("tablist", { name: "Kitchen" });
+  await expect(pills.getByRole("tab")).toHaveText(["Shopping", "Menu"]);
+  await expect(pills.getByRole("tab", { name: "Food" })).toHaveCount(0);
 });
 
 test("staff phone: Repairs and Food off take their buttons away, and the line gets shorter", async ({ context, page }) => {
@@ -120,9 +122,9 @@ test("staff phone: Repairs and Food off take their buttons away, and the line ge
   await expect(sheet.getByRole("button", { name: /Makanan masuk/ })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
-  // Dapur opens on Belanja, with no Makanan pill.
+  // Dapur opens on Belanja, with no Makanan pill: Belanja · Menu.
   await page.getByRole("tab", { name: "Dapur" }).or(page.getByRole("button", { name: "Dapur" })).first().click();
-  await expect(page.getByRole("tablist", { name: "Dapur" })).toHaveCount(0);
+  await expect(page.getByRole("tablist", { name: "Dapur" }).getByRole("tab")).toHaveText(["Belanja", "Menu"]);
 });
 
 test("staff phone with everything on keeps both buttons", async ({ context, page }) => {

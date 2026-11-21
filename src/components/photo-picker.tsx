@@ -382,7 +382,7 @@ function QueuedThumb({ url }: { url: string }) {
         <span
           className={cn(
             "absolute bottom-1 left-1 flex size-6 items-center justify-center rounded-full shadow-sm",
-            state === "failed" ? "bg-destructive text-white" : "bg-background/90 text-muted-foreground"
+            state === "failed" ? "bg-destructive text-white" : "bg-card/90 text-muted-foreground"
           )}
         >
           {state === "uploading" ? (

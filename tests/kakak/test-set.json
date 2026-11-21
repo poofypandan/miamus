@@ -3572,36 +3572,67 @@
                   "items": {
                     "items": [
                       {
-                        "item": null,
+                        "item": "I13",
                         "status": {
                           "anyOf": [
                             "low",
                             "out"
                           ]
                         },
-                        "note": {
-                          "textHas": [
-                            [
-                              "santan"
-                            ]
+                        "note": null
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "masak"
+                      ],
+                      [
+                        "opor"
+                      ]
+                    ]
+                  },
+                  "assignee": "S2",
+                  "due_date": "2026-11-13"
+                }
+              },
+              {
+                "tool": "add_to_shopping_list",
+                "fields": {
+                  "items": {
+                    "items": [
+                      {
+                        "item": "I12",
+                        "status": {
+                          "anyOf": [
+                            "low",
+                            "out"
                           ]
-                        }
+                        },
+                        "note": null
                       },
                       {
-                        "item": null,
+                        "item": "I13",
                         "status": {
                           "anyOf": [
                             "low",
                             "out"
                           ]
                         },
-                        "note": {
-                          "textHas": [
-                            [
-                              "ayam"
-                            ]
-                          ]
-                        }
+                        "note": null
                       }
                     ]
                   }
@@ -3610,7 +3641,8 @@
             ]
           }
         ]
-      ]
+      ],
+      "note": "Since #156 the shared household lists Santan (I12, Out, so already on the shopping list) and Ayam (I13). Ayam goes on the list as I13; Santan is already there, so leaving it out is right, and naming I12 is fine too. The case expected two new notes before those items existed (run 44723348875)."
     },
     {
       "id": "K081",
@@ -6488,6 +6520,1275 @@
         ]
       ],
       "note": "Two rooms named Lounge, on LT1 and LT2: ask which."
+    },
+    {
+      "id": "K161",
+      "sentence": "Kak, malam ini kita masak opor. Bahannya lengkap?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The film's sentence. Opor (D1) misses Santan; Serai isn't checked. One line, one card: tonight's dinner and Santan on Shopping."
+    },
+    {
+      "id": "K162",
+      "sentence": "We're making opor tonight. Do we have everything?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan",
+                "coconut milk"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The film's English sentence. 'Everything but coconut milk' (the item's own name, Santan, is fine too)."
+    },
+    {
+      "id": "K163",
+      "sentence": "Nasi goreng besok siang, bahannya ada semua?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "lengkap",
+                "ada semua",
+                "semua ada",
+                "sudah ada"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Nasi goreng (D2) is ready and already on tomorrow's lunch: say so, plan nothing twice."
+    },
+    {
+      "id": "K164",
+      "sentence": "Sabtu malam soto ayam ya, cek bahannya",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D3",
+                  "dish_name": "none",
+                  "day": "2026-11-14",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "ayam"
+              ],
+              [
+                "bihun"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Several missing: Ayam (running low) and Bihun (out)."
+    },
+    {
+      "id": "K165",
+      "sentence": "Besok malam sayur asem, bahannya lengkap nggak?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D4",
+                  "dish_name": "none",
+                  "day": "2026-11-12",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "belum bisa",
+                "tidak bisa",
+                "belum dicek",
+                "tidak dicek",
+                "belum ada di daftar",
+                "tidak ada di daftar"
+              ]
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "belum bisa",
+                "tidak bisa",
+                "belum dicek",
+                "tidak dicek",
+                "belum ada di daftar",
+                "tidak ada di daftar"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Nothing in sayur asem (D4) is on the lists: she can't check it and says so, never 'lengkap'."
+    },
+    {
+      "id": "K166",
+      "sentence": "Jumat malam masak rendang, bahannya cukup?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "which rendang",
+            "answersInclude": [
+              [
+                "daging",
+                "sapi"
+              ],
+              [
+                "ayam"
+              ]
+            ],
+            "reply": "Rendang daging"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D5",
+                  "dish_name": "none",
+                  "day": "2026-11-13",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "mustNever": [
+        "guess_lookalike"
+      ],
+      "note": "Two saved recipes match (Rendang daging D5, Rendang ayam D6): ask which, never guess."
+    },
+    {
+      "id": "K167",
+      "sentence": "Gulai kambing malam ini, bahannya ada?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "invents_ingredient"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "resep"
+              ],
+              [
+                "Dapur",
+                "Menu"
+              ]
+            ],
+            "avoids": [
+              "bawang",
+              "kemiri",
+              "lengkuas",
+              "daun salam",
+              "ketumbar",
+              "garlic",
+              "shallot",
+              "galangal",
+              "coriander",
+              "candlenut",
+              "santan",
+              "cabai",
+              "jahe"
+            ]
+          }
+        ]
+      ],
+      "note": "No saved recipe: she says she has no recipe for it and where to add one. Never a guessed ingredient list."
+    },
+    {
+      "id": "K168",
+      "sentence": "Opor for 8 on Saturday evening, and add whatever is missing",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-14",
+                  "meal": "dinner",
+                  "servings": 8,
+                  "add_missing": true
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "id": "K169",
+      "sentence": "Besok malam opor ya, tapi jangan tambah ke daftar belanja",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-12",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": false
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "The owner says not to add to Shopping: add_missing false."
+    },
+    {
+      "id": "K170",
+      "sentence": "Tonight masak nasi goreng, cek bahannya dong",
+      "ownerLocale": "id",
+      "lang": "mixed",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D2",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "lengkap",
+                "ada semua",
+                "semua ada"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Ready: 'Bahan nasi goreng lengkap', and tonight's dinner."
+    },
+    {
+      "id": "K171",
+      "sentence": "How much coconut milk do we need for opor?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Kitchen",
+                "Menu",
+                "recipe"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "She is never given amounts: she points to the recipe in Kitchen → Menu."
+    },
+    {
+      "id": "K172",
+      "sentence": "Apa saja bahan opor?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "invents_ingredient"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Dapur",
+                "Menu",
+                "resep"
+              ]
+            ],
+            "avoids": [
+              "bawang",
+              "kemiri",
+              "lengkuas",
+              "daun salam",
+              "ketumbar",
+              "garlic",
+              "shallot",
+              "galangal",
+              "coriander",
+              "candlenut"
+            ]
+          }
+        ]
+      ],
+      "note": "She sees only what is missing or unchecked, not the full list: points to the recipe, invents nothing."
+    },
+    {
+      "id": "K173",
+      "sentence": "Put opor on Sunday lunch",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-15",
+                  "meal": "lunch",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ]
+    },
+    {
+      "id": "K174",
+      "sentence": "Kamis siang masak ayam bakar madu",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "invents_ingredient"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "none",
+                  "dish_name": {
+                    "textHas": [
+                      [
+                        "ayam bakar"
+                      ]
+                    ]
+                  },
+                  "day": "2026-11-12",
+                  "meal": "lunch",
+                  "servings": 0,
+                  "add_missing": false
+                }
+              }
+            ],
+            "avoids": [
+              "bawang",
+              "kemiri",
+              "lengkuas",
+              "daun salam",
+              "ketumbar",
+              "garlic",
+              "shallot",
+              "galangal",
+              "coriander",
+              "candlenut"
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "resep"
+              ]
+            ],
+            "avoids": [
+              "bawang",
+              "kemiri",
+              "lengkuas",
+              "daun salam",
+              "ketumbar",
+              "garlic",
+              "shallot",
+              "galangal",
+              "coriander",
+              "candlenut"
+            ]
+          }
+        ]
+      ],
+      "note": "No saved recipe, but the owner asked to plan it: a typed dish with add_missing false, or she says there's no recipe. Never an ingredient list."
+    },
+    {
+      "id": "K175",
+      "sentence": "Kak, Sari mops the terrace every morning. Joko picks up Maya at 1. Opor tonight: do we have everything?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "pel",
+                        "mengepel"
+                      ],
+                      [
+                        "teras"
+                      ]
+                    ]
+                  },
+                  "assignee": "S1",
+                  "due_date": {
+                    "dateBetween": [
+                      "2026-11-11",
+                      "2026-11-12"
+                    ]
+                  },
+                  "due_time": {
+                    "timeBetween": [
+                      "05:00",
+                      "10:00"
+                    ],
+                    "orNull": true
+                  },
+                  "recurrence": "daily",
+                  "room": "R1",
+                  "category": "cleaning"
+                }
+              },
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "jemput"
+                      ],
+                      [
+                        "maya"
+                      ]
+                    ]
+                  },
+                  "assignee": "S7",
+                  "due_date": "2026-11-11",
+                  "due_time": "13:00",
+                  "category": {
+                    "anyOf": [
+                      "errand",
+                      "maintenance",
+                      "cleaning",
+                      "groceries"
+                    ]
+                  },
+                  "room": {
+                    "anyOf": [
+                      null
+                    ]
+                  }
+                }
+              },
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan",
+                "coconut milk"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The film's sentence (owner, 20 Nov, decision 7): one turn, one card with three sections (owner, 20 Nov: \"yes, 3 sections\"): the daily mopping, the one-off pickup, and opor tonight with its check (\"Missing 1: Santan\", \"On the shopping list: Santan\"); the button reads \"Save 3\" / \"Simpan 3\". Maya isn't on the list: the pickup is a chore for Joko. Her line must survive the guard (200 characters or fewer, no amount): a dropped line fails the case (Fable S0)."
+    },
+    {
+      "id": "K176",
+      "sentence": "Kak, Sari pel teras setiap pagi. Joko jemput Maya jam 1. Malam ini opor: bahannya lengkap?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "pel",
+                        "mengepel"
+                      ],
+                      [
+                        "teras"
+                      ]
+                    ]
+                  },
+                  "assignee": "S1",
+                  "due_date": {
+                    "dateBetween": [
+                      "2026-11-11",
+                      "2026-11-12"
+                    ]
+                  },
+                  "due_time": {
+                    "timeBetween": [
+                      "05:00",
+                      "10:00"
+                    ],
+                    "orNull": true
+                  },
+                  "recurrence": "daily",
+                  "room": "R1",
+                  "category": "cleaning"
+                }
+              },
+              {
+                "tool": "create_chore",
+                "fields": {
+                  "title": {
+                    "textHas": [
+                      [
+                        "jemput"
+                      ],
+                      [
+                        "maya"
+                      ]
+                    ]
+                  },
+                  "assignee": "S7",
+                  "due_date": "2026-11-11",
+                  "due_time": "13:00",
+                  "category": {
+                    "anyOf": [
+                      "errand",
+                      "maintenance",
+                      "cleaning",
+                      "groceries"
+                    ]
+                  },
+                  "room": {
+                    "anyOf": [
+                      null
+                    ]
+                  }
+                }
+              },
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The film's sentence in Bahasa Indonesia; the same three suggestions. Her line must survive the guard (200 characters or fewer, no amount): a dropped line fails the case (Fable S0). The card has three sections (owner, 20 Nov: \"yes, 3 sections\"); the button reads \"Save 3\" / \"Simpan 3\"."
+    },
+    {
+      "id": "K177",
+      "sentence": "Rendang daging untuk 20 orang Sabtu malam, bahannya cukup?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D5",
+                  "dish_name": "none",
+                  "day": "2026-11-14",
+                  "meal": "dinner",
+                  "servings": 20,
+                  "add_missing": true
+                }
+              }
+            ],
+            "avoids": [
+              "lengkap",
+              "semua ada",
+              "ada semua",
+              "everything"
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A1: the check she was given is for the recipe's own servings, so for 20 she never says it is all there; the card works out 20 (add_missing true)."
+    },
+    {
+      "id": "K178",
+      "sentence": "Bahan opor lengkap nggak?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "santan"
+              ]
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "question",
+            "about": "which day (and meal)",
+            "reply": "Malam ini"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A2: no day and no meal. A plain answer, or one question about the day. Never a card with a day she made up."
+    },
+    {
+      "id": "K179",
+      "sentence": "Minggu malam soto ayam, bahannya lengkap?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "ayam"
+              ],
+              [
+                "bihun"
+              ],
+              [
+                "sudah ada di menu",
+                "sudah di menu",
+                "sudah masuk menu",
+                "sudah ada",
+                "sudah direncanakan"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A3: soto ayam (missing Ayam and Bihun) is already on Sunday's dinner: she answers and plans nothing twice."
+    },
+    {
+      "id": "K180",
+      "sentence": "Malam ini opor sama sayur asem, lengkap?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              },
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D4",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "santan"
+              ],
+              [
+                "sayur asem"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A4: two dishes in one sentence; sayur asem can't be checked, so never 'lengkap' for it."
+    },
+    {
+      "id": "K181",
+      "sentence": "What's for dinner tonight?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "nothing",
+                "not planned",
+                "no dinner",
+                "haven't",
+                "isn't anything",
+                "no dish",
+                "nothing planned"
+              ]
+            ],
+            "avoids": [
+              "opor",
+              "soto",
+              "sayur asem",
+              "rendang ayam"
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A5, the film hook's own question: nothing is planned for tonight. She says so; never invents a dish. She may offer the ready recipes (Nasi goreng, Rendang daging), never one that isn't ready: run 44705966410 banned every rendang by mistake."
+    },
+    {
+      "id": "K182",
+      "sentence": "Makan malam ini apa?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "belum ada",
+                "belum direncanakan",
+                "belum ada menu",
+                "tidak ada"
+              ]
+            ],
+            "avoids": [
+              "opor",
+              "soto",
+              "sayur asem",
+              "rendang ayam"
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A5 in Bahasa Indonesia. She may offer the ready recipes (Nasi goreng, Rendang daging), never one that isn't ready: run 44705966410 banned every rendang by mistake."
+    },
+    {
+      "id": "K183",
+      "sentence": "Batalkan nasi goreng besok siang",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "Dapur",
+                "Menu"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A6: she can't remove a dish; she says where it is done by hand. Never claims it was removed."
+    },
+    {
+      "id": "K184",
+      "sentence": "Buat sahur besok opor ya, cek bahannya",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-12",
+                  "meal": "breakfast",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "question",
+            "about": "which meal",
+            "reply": "Sarapan"
+          },
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-12",
+                  "meal": "breakfast",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A7: sahur is breakfast (buka puasa is dinner). Never lunch."
+    },
+    {
+      "id": "K185",
+      "sentence": "Tambah santan ke belanja, terus malam ini opor",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_to_shopping_list",
+                "fields": {
+                  "items": {
+                    "items": [
+                      {
+                        "item": "I12",
+                        "status": {
+                          "anyOf": [
+                            "out",
+                            "low"
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": false
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A8: Santan once: either add_missing alone, or the shopping item with add_missing false. Never in two places."
+    },
+    {
+      "id": "K186",
+      "sentence": "Do we have lemongrass for the opor?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "couldn't check",
+                "can't check",
+                "cannot check",
+                "isn't on your list",
+                "not on your list",
+                "isn't on the list",
+                "not on the list"
+              ]
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A9: Serai isn't checked (not on the lists): she says she couldn't check it. Never 'yes'."
+    },
+    {
+      "id": "K187",
+      "sentence": "Besok malam sayur asam ya",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D4",
+                  "dish_name": "none",
+                  "day": "2026-11-12",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": {
+                    "any": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "Fable A10: saved as 'Sayur asem'; she finds it despite the spelling."
+    },
+    {
+      "id": "K188",
+      "sentence": "Opor malam ini ya, tambahkan yang kurang ke belanja",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D1",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": true
+                }
+              }
+            ],
+            "avoids": [
+              "kakak tambahkan santan",
+              "menambahkan santan",
+              "tambahkan santan"
+            ]
+          }
+        ]
+      ],
+      "note": "Fable S1 (with the three-section card): Santan is Out, so already on the shopping list. Her line may say so; it must never say she is adding it."
     }
   ]
 }

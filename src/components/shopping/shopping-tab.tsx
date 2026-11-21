@@ -153,7 +153,7 @@ export function ShoppingTab() {
       <section className="flex flex-col gap-2" aria-labelledby="to-buy-title">
         <h2 id="to-buy-title" className="text-sm font-semibold text-gray-900">
           {t("To buy", "Perlu dibeli")}
-          {count > 0 && <span className="text-gray-400"> ({count})</span>}
+          {count > 0 && <span className="text-gray-500"> ({count})</span>}
         </h2>
 
         <form onSubmit={addToList} className="flex gap-2">

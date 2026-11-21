@@ -13,6 +13,8 @@ import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { reloadStaffProfiles } from "@/hooks/use-staff-profiles";
 import { dataProvider } from "@/lib/data";
 import { stockStatus } from "@/lib/inventory";
+import { MENU_LIMITS, nextPosition, weekStart } from "@/lib/menu";
+import { addDishes, deleteDishes, getMenuSnapshot, loadMenuWeek } from "@/lib/menu-store";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { hiddenAreasOf, withAreas, type StaffArea } from "@/lib/staff-areas";
 import { petRoutineRows } from "./pet-routine-rows";
@@ -216,6 +218,41 @@ export function useKakakSave() {
                 if ((saved.expires_on ?? null) !== item.expiresOn) {
                   throw new Error("The ingredient's date was not kept (it is marked Out)");
                 }
+              }
+              break;
+            }
+            case "menu_dish": {
+              // Can we cook it? (20 Nov): as the owner's dish form adds one,
+              // after what is already planned for that day and meal. The week
+              // may never have been opened on this phone: read it first, so
+              // the position appends and the per-meal limit holds (Codex, PR #156).
+              await loadMenuWeek(item.day);
+              const menu = getMenuSnapshot();
+              if (menu.household !== household.activeHouseholdId || !menu.weeks.includes(weekStart(item.day))) {
+                throw new Error("That week's menu couldn't be read");
+              }
+              const held = menu.dishes;
+              const taken = held.filter((d) => d.day === item.day && d.meal === item.meal).length;
+              if (taken >= MENU_LIMITS.dishesPerMeal) throw new Error("That meal already has as many dishes as it can hold");
+              const [dish] = await addDishes([
+                {
+                  day: item.day,
+                  meal: item.meal,
+                  recipe_id: item.recipeId,
+                  title: item.title,
+                  servings: item.servings,
+                  notes: null,
+                  position: nextPosition(held, item.day, item.meal),
+                },
+              ]);
+              undos.push(() => deleteDishes([dish.id]));
+              // Fable (a): what the card adds to the shopping list, as Add
+              // missing marks it; Undo puts each back as it was.
+              for (const entry of item.toBuy ?? []) {
+                const current = household.inventoryItems.find((i) => i.id === entry.itemId);
+                const before: StockStatus = current ? stockStatus(current) : "ok";
+                await household.setInventoryStatus(entry.itemId, entry.status);
+                undos.push(() => household.setInventoryStatus(entry.itemId, before));
               }
               break;
             }

@@ -17,6 +17,16 @@ export const BRAND_INK = "#171717";
 export const BRAND_PAPER = "#ffffff";
 
 /**
+ * The page behind the launch mark and the phone's system bars (21 Nov, warm
+ * paper): globals.css --background, viewport.themeColor (layout.tsx), the
+ * manifest's theme_color and background_color (Android paints its splash in
+ * it), and the iPhone launch screens. One value, or the hand-over from the
+ * phone's splash to the app shows a colour step. The mark itself keeps its
+ * ink tile and white house.
+ */
+export const LAUNCH_BACKGROUND = "#f5f2ec";
+
+/**
  * The tile's corner radius as a share of its edge (2026-11-09): iOS's app
  * icon ratio, so the mark inside the app is the same rounded square as the
  * icon on the home screen. One value for every tile the app draws.

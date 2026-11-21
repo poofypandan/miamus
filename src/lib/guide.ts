@@ -162,6 +162,18 @@ export const GUIDE: readonly GuideEntry[] = [
     },
     where: "settings_invite",
   },
+  // Request access (migrations/175): so Kakak can tell an owner how a friend
+  // gets their own home. Joining this home is Inviting family, above.
+  {
+    id: "asking-for-access",
+    group: "start",
+    title: { en: "A friend who wants Miamus", id: "Teman yang ingin memakai Miamus" },
+    body: {
+      en: "Miamus is invite-only while in beta. To set up a new home, a friend signs in with Google, answers What can Miamus help with at home? (one tap on a suggestion is enough) and taps Request access. Poofy Labs reviews each request and tells them by WhatsApp or email.",
+      id: "Miamus masih beta dan hanya dengan undangan. Untuk membuat rumah baru, teman masuk dengan Google, menjawab Miamus bisa bantu apa di rumah Anda? (cukup ketuk satu pilihan), lalu mengetuk Minta akses. Poofy Labs meninjau setiap permintaan dan mengabari lewat WhatsApp atau email.",
+    },
+    where: null,
+  },
   {
     id: "photos-as-proof",
     group: "start",
@@ -373,19 +385,28 @@ export const GUIDE: readonly GuideEntry[] = [
       id: "Dapur → Menu → Resep baru: nama, porsi, dan bahan dari daftar Anda; cara membuat opsional. Ditulis dalam bahasa Inggris? Tambahkan versi Bahasa Indonesia untuk staf. Yang memasak bisa mengubah porsinya, dan jumlah bahannya ikut berubah.",
     },
     where: "kitchen_menu",
-    needs: "kitchen",
     covers: ["recipes-2026-11"],
+  },
+  {
+    id: "ready-to-cook",
+    group: "kitchen",
+    title: { en: "Can we cook it?", id: "Bahannya lengkap?" },
+    body: {
+      en: "Each recipe and planned dish shows Ready to cook, or what is missing, such as Missing 1: coconut milk, from what is at home now. Link a recipe's ingredients to your list so they can be checked. Staff see the same on Menu hari ini.",
+      id: "Setiap resep dan masakan di menu menunjukkan Bahan lengkap, atau yang kurang, misalnya Kurang 1: santan, dari stok di rumah saat ini. Hubungkan bahan resep ke daftar Anda supaya bisa dicek. Staf melihat hal yang sama di Menu hari ini.",
+    },
+    where: "kitchen_menu",
+    covers: ["ready-to-cook-2026-11"],
   },
   {
     id: "menu",
     group: "kitchen",
     title: { en: "The week's menu", id: "Menu seminggu" },
     body: {
-      en: "Plan the week in Kitchen → Menu: tap + on a day and pick a recipe or type a dish. Add missing to Shopping works out what the week needs. Staff see the day's menu on their phone; when they tap Sudah dimasak, the ingredients come off what is at home.",
-      id: "Rencanakan menu seminggu di Dapur → Menu: ketuk + di satu hari, lalu pilih resep atau ketik masakan. Tambahkan yang kurang ke Belanja menghitung kebutuhan seminggu. Staf melihat menu hari itu di HP mereka; saat mereka menekan Sudah dimasak, bahannya dikurangi dari stok di rumah.",
+      en: "Plan the week in Kitchen → Menu: tap + on a day and pick a recipe or type a dish. Add missing to Shopping works out what the week needs. Staff see the day's menu on their phone and tap Sudah dimasak; with Kitchen amounts on, the ingredients come off what is at home.",
+      id: "Rencanakan menu seminggu di Dapur → Menu: ketuk + di satu hari, lalu pilih resep atau ketik masakan. Tambahkan yang kurang ke Belanja menghitung kebutuhan seminggu. Staf melihat menu hari itu di HP dan menekan Sudah dimasak; dengan Jumlah bahan, bahannya dikurangi dari stok.",
     },
     where: "kitchen_menu",
-    needs: "kitchen",
     covers: ["menu-2026-11", "cooking-changes-2026-11"],
   },
   // ------------------------------------------------------------- settings
@@ -394,8 +415,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Features on and off", id: "Fitur aktif dan mati" },
     body: {
-      en: "Settings → Features: switch off what you don't use, such as Repairs, Bills and upkeep, Food at home, Kitchen amounts and recipes, or Pets. It hides for staff too. Nothing is deleted, and it all comes back with the switch.",
-      id: "Pengaturan → Fitur: matikan yang tidak Anda pakai, seperti Perbaikan, Tagihan dan perawatan, Makanan di rumah, Jumlah bahan dan resep, atau Hewan. Di HP staf juga ikut hilang. Tidak ada yang dihapus, dan semuanya kembali saat dinyalakan lagi.",
+      en: "Settings → Features: switch off what you don't use, such as Repairs, Bills and upkeep, Food at home, Kitchen amounts, or Pets. It hides for staff too. Nothing is deleted, and it all comes back with the switch.",
+      id: "Pengaturan → Fitur: matikan yang tidak Anda pakai, seperti Perbaikan, Tagihan dan perawatan, Makanan di rumah, Jumlah bahan, atau Hewan. Di HP staf juga ikut hilang. Tidak ada yang dihapus, dan semuanya kembali saat dinyalakan lagi.",
     },
     where: "settings_features",
     covers: ["features-2026-11"],
@@ -473,6 +494,17 @@ export const GUIDE: readonly GuideEntry[] = [
     },
     where: null,
     covers: ["kakak-voice-2026-11", "kakak-tap-to-talk-2026-11"],
+  },
+  {
+    id: "kakak-cook",
+    group: "settings",
+    title: { en: "Ask Kakak: can we cook it?", id: "Tanya Kakak: bahannya lengkap?" },
+    body: {
+      en: "Ask Kakak \"We're making opor tonight. Do we have everything?\" She answers from your saved recipes and what is at home, and her card puts the dish on the menu and what is missing on Shopping. With no saved recipe, she says so; add it in Kitchen → Menu.",
+      id: "Tanya Kakak \"Malam ini opor, bahannya lengkap?\" Kakak menjawab dari resep yang tersimpan dan stok di rumah, lalu kartunya memasukkan masakan ke menu dan yang kurang ke Belanja. Kalau resepnya belum ada, Kakak bilang; tambahkan di Dapur → Menu.",
+    },
+    where: "kitchen_menu",
+    covers: ["kakak-cook-2026-11"],
   },
   {
     id: "kakak-card",
