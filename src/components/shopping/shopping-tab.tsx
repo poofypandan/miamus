@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ClipboardCopy, Loader2, MessageCircle, Package, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ClipboardCopy, Loader2, MessageCircle, Package, Plus, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,6 +16,7 @@ import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { amountsOn, ingredientsUnderFood } from "@/lib/features";
 import { amountLine, isIngredient, isTracked, toBuyAmountLabel } from "@/lib/kitchen-units";
 import {
@@ -27,6 +29,7 @@ import {
   stockStatus,
 } from "@/lib/inventory";
 import { isActiveAlert } from "@/lib/inventory-status";
+import { pushInPlace } from "@/lib/in-place-navigation";
 import { DATE_LOCALE } from "@/lib/owner-locale";
 import type { InventoryAlert } from "@/types/database";
 
@@ -66,6 +69,23 @@ export function ShoppingTab() {
     [flags, inventoryItems]
   );
   const purchase = usePurchase(locale);
+  // Supplies at home is one row that opens the list (21 Nov; Fable's 07,
+  // Shopping): it is checked now and then, the shopping list is used at the
+  // shop. Open is `&supplies=open`, a push, so Back returns to the list.
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const suppliesOpen = searchParams.get("supplies") === "open";
+  // Opened from below a long list, the supplies start at their heading, and
+  // the list starts at its top again on the way back (Codex, PR #191).
+  useScrollTopOnChange(suppliesOpen ? "supplies" : "list");
+  function hrefWithSupplies(open: boolean) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (open) params.set("supplies", "open");
+    else params.delete("supplies");
+    const query = params.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }
+  const runningLow = useMemo(() => supplies.filter(isLowStock).length, [supplies]);
   const [jot, setJot] = useState("");
   const [jotting, setJotting] = useState(false);
 
@@ -144,6 +164,54 @@ export function ShoppingTab() {
       <div className="flex flex-col gap-3 px-4 pb-6">
         <Skeleton className="h-24 w-full rounded-xl" />
         <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (suppliesOpen) {
+    return (
+      <div className="flex flex-col gap-4 px-4 pb-6">
+        <button
+          type="button"
+          onClick={() => pushInPlace(hrefWithSupplies(false))}
+          className="-ml-2 flex min-h-11 items-center gap-1 self-start rounded-lg px-2 text-sm font-medium text-gray-700 active:bg-muted"
+        >
+          <ChevronLeft className="size-4" aria-hidden /> {t("Shopping", "Belanja")}
+        </button>
+        <StockItemsPanel
+          id="everything-title"
+          title={t("Supplies at home", "Stok di rumah")}
+          items={supplies}
+          lang={locale}
+          owner
+          // No pet shelf to start on in a home without pets (Phase 162).
+          defaultScope={petsOn ? "pet" : "home"}
+          addLabel={t("Add item", "Tambah barang")}
+          empty={
+            inventoryItems.length > 0 ? (
+              <p className="rounded-2xl px-3 py-5 text-center text-sm text-muted-foreground">
+                {t("Food items are under Food → Ingredients.", "Bahan masakan ada di Makanan → Bahan masakan.")}
+              </p>
+            ) : (
+              <EmptyState
+                icon={Package}
+                title={t("Nothing on the list yet", "Belum ada barang")}
+                description={
+                  petsOn
+                    ? t(
+                        "Add the things your home keeps — dog food, pee pads, cleaning supplies — and your staff can say when they run low.",
+                        "Tambahkan barang yang selalu ada di rumah — makanan anjing, pee pad, sabun — supaya staf bisa memberi tahu kalau hampir habis."
+                      )
+                    : t(
+                        "Add the things your home keeps — rice, gallon water, cleaning supplies — and your staff can say when they run low.",
+                        "Tambahkan barang yang selalu ada di rumah — beras, galon, sabun — supaya staf bisa memberi tahu kalau hampir habis."
+                      )
+                }
+              />
+            )
+          }
+        />
+        {purchase.sheet}
       </div>
     );
   }
@@ -234,39 +302,31 @@ export function ShoppingTab() {
         )}
       </section>
 
-      <StockItemsPanel
-        id="everything-title"
-        title={t("Supplies at home", "Stok di rumah")}
-        items={supplies}
-        lang={locale}
-        owner
-        // No pet shelf to start on in a home without pets (Phase 162).
-        defaultScope={petsOn ? "pet" : "home"}
-        addLabel={t("Add item", "Tambah barang")}
-        empty={
-          inventoryItems.length > 0 ? (
-            <p className="rounded-2xl px-3 py-5 text-center text-sm text-muted-foreground">
-              {t("Food items are under Food → Ingredients.", "Bahan masakan ada di Makanan → Bahan masakan.")}
-            </p>
+      <button
+        type="button"
+        onClick={() => pushInPlace(hrefWithSupplies(true))}
+        className="flex min-h-16 w-full items-center gap-3 rounded-2xl bg-card px-4 py-3 text-left shadow-card active:bg-muted"
+      >
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-base font-semibold text-gray-900">{t("Supplies at home", "Stok di rumah")}</span>
+          {runningLow > 0 ? (
+            <span className="flex items-center gap-1 text-sm font-medium text-amber-800">
+              <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
+              {t(`${runningLow} running low`, `${runningLow} hampir habis`)}
+            </span>
           ) : (
-            <EmptyState
-              icon={Package}
-              title={t("Nothing on the list yet", "Belum ada barang")}
-              description={
-                petsOn
-                  ? t(
-                      "Add the things your home keeps — dog food, pee pads, cleaning supplies — and your staff can say when they run low.",
-                      "Tambahkan barang yang selalu ada di rumah — makanan anjing, pee pad, sabun — supaya staf bisa memberi tahu kalau hampir habis."
-                    )
-                  : t(
-                      "Add the things your home keeps — rice, gallon water, cleaning supplies — and your staff can say when they run low.",
-                      "Tambahkan barang yang selalu ada di rumah — beras, galon, sabun — supaya staf bisa memberi tahu kalau hampir habis."
-                    )
-              }
-            />
-          )
-        }
-      />
+            <span className="text-sm text-muted-foreground">
+              {supplies.length === 0
+                ? t("Nothing added yet", "Belum ada barang")
+                : t(
+                    `${supplies.length} ${supplies.length === 1 ? "thing" : "things"}, none running low`,
+                    `${supplies.length} barang, tidak ada yang hampir habis`
+                  )}
+            </span>
+          )}
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      </button>
       {purchase.sheet}
     </div>
   );

@@ -45,7 +45,7 @@ const chore = (over: Record<string, unknown>) => ({
 
 test("the checklist adds bills for me, upkeep for anyone in Indonesian, and gas to supplies", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, chores: [] });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
 
   await page.getByRole("button", { name: "Bills and upkeep" }).click();
   const sheet = page.getByRole("dialog");
@@ -132,10 +132,14 @@ test("Bahasa Indonesia: Coming up on Today, the tutorial, and a yearly bill's fo
   await expect(sheet).toHaveCount(0);
 
   // The yearly bill in the chore form: Setiap tahun, reminded a week before.
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await page.getByRole("button", { name: "Tambah Tugas" }).first().click();
   const form = page.getByRole("dialog");
-  await expect(form.getByRole("button", { name: "Setiap 3 bulan" })).toBeVisible({ timeout: 20_000 });
+  // Short by default (21 Nov): the repeat is under Kapan, the reminder under Lainnya.
+  await expect(form.getByRole("button", { name: /^Kapan Hari ini, sekali/ })).toBeVisible({ timeout: 20_000 });
+  await form.getByRole("button", { name: /^Kapan/ }).click();
+  await form.getByRole("button", { name: "Lainnya", exact: true }).click();
+  await expect(form.getByRole("button", { name: "Setiap 3 bulan" })).toBeVisible();
   await expect(form.getByRole("button", { name: "Setiap tahun" })).toBeVisible();
   await expect(form.getByRole("button", { name: "Mati" })).toHaveAttribute("aria-pressed", "true");
 
@@ -156,7 +160,7 @@ test("Bahasa Indonesia: Coming up on Today, the tutorial, and a yearly bill's fo
 
 test("electricity on token: its own date and reminder are the ones saved (Codex, PR #60)", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, chores: [] });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await page.getByRole("button", { name: "Bills and upkeep" }).click();
   const sheet = page.getByRole("dialog");
   await sheet.getByRole("checkbox", { name: "Electricity (PLN)" }).click();
@@ -200,7 +204,7 @@ test("Coming up leaves out a day ahead that's already done (Codex, PR #60)", asy
 
 test("a failed supply after saved chores: the retry sends only the rest (Codex, PR #60)", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, chores: [] });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await page.getByRole("button", { name: "Bills and upkeep" }).click();
   const sheet = page.getByRole("dialog");
   await sheet.getByRole("checkbox", { name: "Water (PDAM)" }).click();
@@ -227,7 +231,7 @@ test("editing one written day of a repeat changes the repeat's reminder (Codex, 
   });
   const claimed = chore({ title: "Servis AC", category: "maintenance", parent_task_id: ac.id, assigned_to: STAFF_ID });
   const stub = await installStub(context, { owner: { locale: "en" }, chores: [ac, claimed] });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await page.getByText("Servis AC").first().click();
   const form = page.getByRole("dialog");
   await expect(form.getByText("(for the whole repeat)")).toBeVisible({ timeout: 20_000 });
@@ -243,7 +247,7 @@ test("editing one written day of a repeat changes the repeat's reminder (Codex, 
 test("a bill set up for later, outside the week on screen, shows as added (Codex, PR #60)", async ({ context, page }) => {
   const pbb = chore({ title: "PBB", due_date: ymd(dateIn(40)), remind_days_before: 7 });
   const stub = await installStub(context, { owner: { locale: "en" }, chores: [pbb] });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await page.getByRole("button", { name: "Bills and upkeep" }).click();
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByRole("button", { name: /^PBB \(land and building tax\) Added/ })).toBeVisible({ timeout: 20_000 });

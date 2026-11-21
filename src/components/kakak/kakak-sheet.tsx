@@ -33,7 +33,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useUiLabels } from "@/components/ui/ui-labels";
 import { KAKAK_SETTLE_MS, KakakAvatar, type KakakBeat } from "@/components/kakak/kakak-avatar";
 import { KakakExamples } from "@/components/kakak/kakak-examples";
 import { WhatsNewCard } from "@/components/shared/whats-new";
@@ -41,10 +42,11 @@ import { KakakThinking } from "@/components/kakak/kakak-thinking";
 import { KakakVoice } from "@/components/kakak/kakak-voice";
 import { KakakVoiceNew } from "@/components/kakak/kakak-voice-new";
 import { useNewVoice } from "@/components/kakak/new-voice-switch";
-import { KakakRemindChips } from "@/components/kakak/kakak-remind-chips";
+import { KAKAK_CHIP, KAKAK_CHIP_OFF, KAKAK_CHIP_ON, KakakRemindChips } from "@/components/kakak/kakak-remind-chips";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useDragToClose } from "@/hooks/use-drag-to-close";
 import { askKakak, historyForNextTurn, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
 import { addsSomething, choreGlance, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
@@ -119,24 +121,76 @@ export function KakakSheet({
 }) {
   useBackToClose(open, onClose);
   const t = useT();
+  const closeLabel = useUiLabels().close;
   /** What her heart in the header is doing: following her voice, or the saved settle. */
   const [beat, setBeat] = useState<KakakBeat | null>(null);
+  /** The conversation has scrolled under her header: a hairline parts them. */
+  const [scrolled, setScrolled] = useState(false);
+  // Each opening starts at the top, with no hairline (state reset on a prop change, during render).
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) setScrolled(false);
+  }
+  // The grabber means it: pull her sheet down by the grabber or her header to close it.
+  const { sheet, handle } = useDragToClose<HTMLDivElement>(onClose);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="bottom" className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-2xl pb-safe">
-        {/* Her lock-up (the warm seal, 20 Nov): the mark on the left, her name
-            beside it in the app's face, semi-bold and slightly tight. */}
-        <SheetHeader className="flex-row items-center gap-3 px-4 pb-2 pt-4 text-left">
-          <KakakAvatar className="size-10" beat={open ? beat : null} />
-          <div className="min-w-0">
-            <SheetTitle className="text-lg leading-tight font-semibold tracking-[-0.01em]">Kakak</SheetTitle>
-            <SheetDescription className="text-xs">
-              {t("Nothing is saved until you confirm.", "Tidak ada yang disimpan sebelum Anda konfirmasi.")}
-            </SheetDescription>
-          </div>
-        </SheetHeader>
-        {/* Keyed by open: each opening starts a new conversation. */}
-        {open && <Conversation onClose={onClose} onSaved={onSaved} onBeat={setBeat} />}
+      {/* The sheet as one warm object (04, PR 5): a softer corner, a grabber,
+          a warm scrim, and light above it in place of a line. */}
+      <SheetContent
+        ref={sheet}
+        side="bottom"
+        showCloseButton={false}
+        overlayClassName="bg-[rgb(20_16_14/0.4)]"
+        className="max-h-[92dvh] gap-0 overflow-hidden rounded-t-[30px] border-t-0 pb-safe shadow-[0_-12px_44px_rgb(31_26_23/0.2)]"
+      >
+        {/* The handle: the grabber and her header drag the sheet down (the
+            conversation below scrolls on its own). Tap outside and Close still work. */}
+        <div data-testid="kakak-handle" className="flex shrink-0 cursor-grab flex-col active:cursor-grabbing" {...handle}>
+          <div aria-hidden className="mx-auto mt-2.5 h-[5px] w-9 shrink-0 rounded-full bg-muted" />
+          {/* Her lock-up (the warm seal, 20 Nov): the mark on the left, her name
+              beside it at the headline size, and Close in the same row. */}
+          {/* The grabber and her header stay put; only the conversation scrolls,
+              under a hairline once it has (Fable, PR 5), so Close is always in reach. */}
+          <SheetHeader
+            className={cn(
+              "shrink-0 flex-row items-center gap-3 border-b pb-3 pl-5 pr-2.5 pt-2 text-left transition-colors",
+              scrolled ? "border-border" : "border-transparent"
+            )}
+          >
+            <KakakAvatar large className="size-11" beat={open ? beat : null} />
+            <div className="min-w-0 flex-1">
+              {/* Its own span: cn() reads text-headline as a colour and would drop the title's. */}
+              <SheetTitle className="leading-none">
+                <span className="block text-headline">Kakak</span>
+              </SheetTitle>
+              <SheetDescription>
+                {t("Nothing is saved until you confirm.", "Tidak ada yang disimpan sebelum Anda konfirmasi.")}
+              </SheetDescription>
+            </div>
+            <SheetClose asChild>
+              {/* On her name's row in both languages, however the line under it wraps. */}
+              <button
+                type="button"
+                aria-label={closeLabel}
+                className="-mt-2 flex size-11 shrink-0 items-center justify-center self-start rounded-full text-muted-foreground active:bg-muted"
+              >
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            </SheetClose>
+          </SheetHeader>
+        </div>
+        <div
+          data-testid="kakak-scroll"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 0)}
+        >
+          {/* Each opening starts a new conversation: the sheet's content unmounts
+              once it has closed. Not gated on open, so the whole sheet travels down
+              as it closes instead of its body vanishing first (Fable, PR 7). */}
+          <Conversation onClose={onClose} onSaved={onSaved} onBeat={setBeat} />
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -466,11 +520,37 @@ function Conversation({
     screen.kind === "typing" ||
     (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||
     ((screen.kind === "question" || screen.kind === "card") && typingAnswer);
+  /**
+   * Once a conversation exists, the foot is one row: the mic at 56 px, then
+   * the field (07, screen 9; Fable, 21 Nov). Also while she thinks, so the
+   * foot stays put. Not with a card on screen (Looks right, Change, Cancel),
+   * nor where there is nothing to type (a question with fixed answers, a
+   * problem that ends the conversation). The first screen stays as it is.
+   */
+  const compact =
+    newVoice &&
+    said.length > 0 &&
+    (showTyping || screen.kind === "waiting" || (screen.kind === "question" && screen.allowTyping)) &&
+    screen.kind !== "card";
+  const placeholder =
+    screen.kind === "card"
+      ? t("What should change?", "Apa yang perlu diubah?")
+      : screen.kind === "question"
+        ? compact
+          ? t("Or type an answer", "Atau ketik jawaban")
+          : t("Type your answer", "Ketik jawaban Anda")
+        : screen.kind === "message" && !screen.problem
+          ? // After her answer, the conversation goes on (2026-11-14).
+            t("Anything else?", "Ada lagi?")
+          : screen.kind === "waiting"
+            ? t("Anything else?", "Ada lagi?")
+            : t("What should I set up?", "Mau Kakak atur apa?");
 
   return (
-    <div className="flex flex-col gap-4 px-4 pb-4">
+    <div className="flex flex-col gap-3 px-5 pb-5">
+      {/* Information about a mode, not something that needs the owner: quiet, not amber (Fable, PR 5). */}
       {practice && (
-        <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+        <p role="note" className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground">
           {t(
             "Practice mode: Kakak's answers are scripted and nothing is sent to the AI. Saving still saves.",
             "Mode latihan: jawaban Kakak sudah disiapkan dan tidak ada yang dikirim ke AI. Menyimpan tetap tersimpan."
@@ -484,7 +564,7 @@ function Conversation({
               <div key={index} className="flex max-w-[85%] flex-col items-end gap-1 self-end">
                 <p
                   ref={index === said.length - 1 ? latestSaid : undefined}
-                  className="scroll-mt-2 rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900"
+                  className="scroll-mt-2 rounded-[20px] rounded-br-md bg-muted px-4 py-2.5 text-base text-foreground"
                 >
                   {line.text}
                 </p>
@@ -495,17 +575,18 @@ function Conversation({
                     type="button"
                     onClick={editSpoken}
                     disabled={saving}
-                    className="flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground active:bg-muted disabled:opacity-50"
+                    className="flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-sm font-medium text-muted-foreground active:bg-muted disabled:opacity-50"
                   >
-                    <Pencil className="size-3.5" aria-hidden="true" />
+                    <Pencil className="size-4" aria-hidden="true" />
                     {t("Edit words", "Ubah kata-kata")}
                   </button>
                 )}
               </div>
             ) : (
               // Her earlier lines: the same bubble, a little quieter than her latest.
-              <div key={index} className="opacity-80" data-testid="kakak-earlier">
-                <KakakBubble>{line.text}</KakakBubble>
+              // Only the words dim: her light disc keeps its edge (mark D).
+              <div key={index} data-testid="kakak-earlier">
+                <KakakBubble quiet>{line.text}</KakakBubble>
               </div>
             )
           )}
@@ -522,18 +603,19 @@ function Conversation({
               <Button
                 key={answer}
                 type="button"
-                variant="outline"
-                className="min-h-12 rounded-xl text-sm"
+                variant="secondary"
+                className="min-h-12 rounded-xl text-base"
                 onClick={() => void send(answer)}
               >
                 {answer}
               </Button>
             ))}
           </div>
-          {screen.allowTyping && !typingAnswer && (
+          {/* In the compact foot the field is already there, its placeholder saying this. */}
+          {screen.allowTyping && !typingAnswer && !compact && (
             <button
               type="button"
-              className="self-start text-sm font-medium text-muted-foreground underline-offset-4 active:underline"
+              className="min-h-11 self-start text-sm font-medium text-muted-foreground underline-offset-4 active:underline"
               onClick={() => setTypingAnswer(true)}
             >
               {t("Or type an answer", "Atau ketik jawaban")}
@@ -643,7 +725,22 @@ function Conversation({
         <KakakVoiceNew
           screen={screen}
           onSpeaking={setSpeaking}
-          listenHere={showTyping || screen.kind === "question"}
+          listenHere={compact ? screen.kind !== "waiting" : showTyping || screen.kind === "question"}
+          compact={compact}
+          hasWords={!!draft.trim()}
+          field={
+            compact ? (
+              <TypingBox
+                compact
+                draft={draft}
+                setDraft={setDraft}
+                onSend={(text) => void send(text)}
+                placeholder={placeholder}
+                disabled={screen.kind === "waiting"}
+                showExamples={false}
+              />
+            ) : null
+          }
           onSpoken={(text, by) => {
             const words = (draft.trim() ? `${draft.trim()} ${text}` : text).slice(0, MAX_TYPED);
             if (by === "owner") {
@@ -666,32 +763,16 @@ function Conversation({
         />
       )}
 
-      {(screen.kind === "typing" ||
-        (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||
-        ((screen.kind === "question" || screen.kind === "card") && typingAnswer)) && (
+      {showTyping && !compact && (
         <TypingBox
           draft={draft}
           setDraft={setDraft}
           onSend={(text) => void send(text)}
-          placeholder={
-            screen.kind === "card"
-              ? t("What should change?", "Apa yang perlu diubah?")
-              : screen.kind === "question"
-                ? t("Type your answer", "Ketik jawaban Anda")
-                : screen.kind === "message" && !screen.problem
-                  ? // After her answer, the conversation goes on (2026-11-14).
-                    t("Anything else?", "Ada lagi?")
-                  : t("What should I set up?", "Mau Kakak atur apa?")
-          }
+          placeholder={placeholder}
           showExamples={screen.kind === "typing" && said.length === 0}
         />
       )}
-
-      {screen.kind === "message" && (
-        <Button type="button" variant="ghost" className="self-center rounded-xl" onClick={onClose}>
-          {t("Close", "Tutup")}
-        </Button>
-      )}
+      {/* No Close at the foot: the cross in her pinned header closes the sheet (Fable, 21 Nov). */}
     </div>
   );
 }
@@ -733,16 +814,17 @@ function kakakLine(screen: Screen, cardIntro: string): string | null {
 }
 
 /**
- * Her replies on her own blush with its hairline (the warm seal, 20 Nov), so
- * her warmth reaches her words; the owner's lines and the cards stay as they are.
+ * Her replies on her own blush (the warm seal, 20 Nov), so her warmth reaches
+ * her words. No outline since the sheet went warm (04, PR 5): the blush alone
+ * parts her from the sheet, and the corner by her mark is the small one.
  */
-const KAKAK_BUBBLE = "max-w-[85%] rounded-2xl rounded-tl-md border border-kakak-line bg-kakak-tint px-3 py-2 text-sm text-gray-900";
+const KAKAK_BUBBLE = "max-w-[85%] rounded-[20px] rounded-bl-md bg-kakak-tint px-4 py-2.5 text-base text-foreground";
 
-function KakakBubble({ children }: { children: React.ReactNode }) {
+function KakakBubble({ children, quiet = false }: { children: React.ReactNode; quiet?: boolean }) {
   return (
-    <div className="flex items-start gap-2">
-      <KakakAvatar className="size-7" />
-      <p className={KAKAK_BUBBLE}>{children}</p>
+    <div className="flex items-start gap-2.5">
+      <KakakAvatar className="mt-2 size-7 shrink-0" />
+      <p className={cn(KAKAK_BUBBLE, quiet && "opacity-80")}>{children}</p>
     </div>
   );
 }
@@ -750,15 +832,18 @@ function KakakBubble({ children }: { children: React.ReactNode }) {
 /** Kakak couldn't answer: the same bubble, with a quiet icon saying why. Calm, not red. */
 function ProblemBubble({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2" role="alert">
-      <KakakAvatar className="size-7" />
+    <div className="flex items-start gap-2.5" role="alert">
+      <KakakAvatar className="mt-2 size-7 shrink-0" />
       <div className={cn("flex items-start gap-2", KAKAK_BUBBLE)}>
-        <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
         <p>{children}</p>
       </div>
     </div>
   );
 }
+
+/** Whether the typing field had the focus, so the compact one takes it back only after typing. */
+const fieldFocus = { had: false };
 
 function TypingBox({
   draft,
@@ -766,18 +851,68 @@ function TypingBox({
   onSend,
   placeholder,
   showExamples,
+  compact = false,
+  disabled = false,
 }: {
   draft: string;
   setDraft: (value: string) => void;
   onSend: (text: string) => void;
   placeholder: string;
   showExamples: boolean;
+  /** The field in the compact row: one line growing to three; Send only when there are words. */
+  compact?: boolean;
+  /** She is thinking: nothing to send yet. */
+  disabled?: boolean;
 }) {
   const t = useT();
   const box = useRef<HTMLTextAreaElement>(null);
   function submit(event: FormEvent) {
     event.preventDefault();
     onSend(draft);
+  }
+  if (compact) {
+    const words = !!draft.trim();
+    return (
+      <form onSubmit={submit} className={cn("grid items-end gap-2.5", words ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)]")}>
+        <Textarea
+          ref={box}
+          // Only if the field had the focus when it went (a typed send): never
+          // after the mic, so the keyboard doesn't jump up over a spoken turn.
+          autoFocus={fieldFocus.had}
+          value={draft}
+          maxLength={MAX_TYPED}
+          rows={1}
+          disabled={disabled}
+          enterKeyHint="send"
+          aria-label={placeholder}
+          placeholder={placeholder}
+          // Focused for as long as anyone types, so no halo here: the ink edge
+          // alone, about 1.5 px (Fable, #192).
+          className="max-h-[7.5rem] min-h-[52px] w-full min-w-0 resize-none overflow-y-auto rounded-2xl py-3.5 text-base focus-visible:border-foreground focus-visible:shadow-[inset_0_0_0_0.5px_var(--foreground)] focus-visible:ring-0"
+          onChange={(event) => setDraft(event.target.value)}
+          onFocus={() => (fieldFocus.had = true)}
+          onBlur={() => (fieldFocus.had = false)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              onSend(draft);
+            }
+          }}
+        />
+        {/* Only with words to send, and then the one solid shape (the mic goes quiet). */}
+        {words && (
+          <Button
+            type="submit"
+            size="icon"
+            className="size-12 shrink-0 animate-[view-fade_200ms_var(--ease-arrive)] rounded-2xl motion-reduce:animate-none"
+            disabled={disabled}
+            aria-label={t("Send", "Kirim")}
+          >
+            <Send className="size-5" />
+          </Button>
+        )}
+      </form>
+    );
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
@@ -793,6 +928,8 @@ function TypingBox({
           placeholder={placeholder}
           className="min-h-[52px] flex-1 resize-none rounded-xl text-base"
           onChange={(event) => setDraft(event.target.value)}
+          onFocus={() => (fieldFocus.had = true)}
+          onBlur={() => (fieldFocus.had = false)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
@@ -902,7 +1039,7 @@ function SuggestionCard({
   return (
     <div className="flex flex-col gap-3">
       <KakakBubble>{text || t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:")}</KakakBubble>
-      <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card shadow-sm" id="kakak-card">
+      <div className="flex flex-col divide-y overflow-hidden rounded-[22px] bg-background" id="kakak-card">
         {items.map((item, index) => {
           // A staff-areas card's "nobody would see" counts every card on screen (Codex, PR #140).
           const card = describeSuggestion(item, locale, item.kind === "staff_areas" ? staffAreasNobody(items, index) : undefined);
@@ -913,10 +1050,10 @@ function SuggestionCard({
           const Icon =
             (item.kind === "pet_routine" ? routineKindInfo(item.routine as RoutineKind)?.icon : undefined) ?? KIND_ICONS[item.kind];
           return (
-            <div key={index} className="flex flex-col gap-2 px-4 py-3">
+            <div key={index} className="flex flex-col gap-2.5 px-[18px] pb-4 pt-3.5">
               <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  <Icon className="size-3.5" aria-hidden="true" />
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  <Icon className="size-4" aria-hidden="true" />
                   {card.heading}
                 </p>
                 {items.length > 1 && (
@@ -924,18 +1061,21 @@ function SuggestionCard({
                     type="button"
                     onClick={() => onDrop(index)}
                     aria-label={t("Remove", "Hapus")}
-                    className="-mr-2 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
+                    className="-mr-3 flex size-11 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
                   >
                     <X className="size-4" />
                   </button>
                 )}
               </div>
-              <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1.5">
+              <dl className="grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-2">
                 {rows.map((row, r) => {
                   // The card assembles itself, one row after another (motion-reduce: at once).
                   const motion = { className: "animate-kakak-row motion-reduce:animate-none", style: { animationDelay: `${r * 90}ms` } };
-                  // Values larger and heavier than their labels; a chore's name is the card's headline.
-                  const value = glance && r === 0 ? "text-headline" : "text-base font-semibold leading-snug";
+                  // Values larger and heavier than their labels. What the card adds is
+                  // its headline, on every kind that names one (Fable, PR 5): a chore's
+                  // name, a food's, an ingredient's. Not a list of Buy rows or of pets.
+                  const value =
+                    r === 0 && !row.toggle && row.label === t("What", "Apa") ? "text-headline" : "text-base font-semibold leading-snug";
                   return (
                     <div key={r} className="contents">
                       <dt className={cn("text-sm text-muted-foreground", motion.className)} style={motion.style}>
@@ -943,7 +1083,7 @@ function SuggestionCard({
                       </dt>
                       {row.toggle ? (
                         <dd className={cn("flex min-h-9 items-center justify-between gap-2", motion.className)} style={motion.style}>
-                          <span className={cn(value, row.toggle.on ? "text-gray-900" : "text-muted-foreground")}>
+                          <span className={cn(value, row.toggle.on ? "text-foreground" : "text-muted-foreground")}>
                             {row.value}
                           </span>
                           <Switch
@@ -960,7 +1100,7 @@ function SuggestionCard({
                           />
                         </dd>
                       ) : (
-                        <dd className={cn("text-gray-900", row.guess && "text-amber-700", motion.className)} style={motion.style}>
+                        <dd className={cn("text-foreground", row.guess && "text-attention", motion.className)} style={motion.style}>
                           {/* Its own span: cn() reads text-headline as a colour and would drop it beside one. */}
                           <span className={value}>{row.value}</span>
                         </dd>
@@ -976,7 +1116,7 @@ function SuggestionCard({
                   data-kakak-check={check.tone}
                   className={cn(
                     "flex items-start gap-1.5 text-sm font-medium",
-                    check.tone === "ready" ? "text-emerald-700" : check.tone === "missing" ? "text-amber-700" : "text-muted-foreground"
+                    check.tone === "ready" ? "text-done-foreground" : check.tone === "missing" ? "text-attention" : "text-muted-foreground"
                   )}
                 >
                   {check.tone === "ready" ? (
@@ -989,7 +1129,7 @@ function SuggestionCard({
                   <span>{check.text}</span>
                 </p>
               ))}
-              {card.note && <p className="text-xs text-muted-foreground">{card.note}</p>}
+              {card.note && <p className="text-sm text-muted-foreground">{card.note}</p>}
               {item.kind === "chore" && open && (
                 <>
                   <ChoreChips item={item} disabled={saving} onRefine={(change) => onRefine(index, change)} />
@@ -1008,9 +1148,9 @@ function SuggestionCard({
             type="button"
             disabled={saving}
             onClick={onChange}
-            className="flex min-h-12 items-center gap-2 px-4 text-left text-sm font-medium text-gray-900 active:bg-muted disabled:opacity-50"
+            className="flex min-h-12 items-center gap-2 px-[18px] text-left text-sm font-medium text-foreground active:bg-muted disabled:opacity-50"
           >
-            <MessageSquare className="size-4 text-muted-foreground" aria-hidden="true" />
+            <MessageSquare className="size-5 text-muted-foreground" aria-hidden="true" />
             {t("Or tell Kakak what to change", "Atau bilang ke Kakak apa yang diubah")}
           </button>
         )}
@@ -1019,7 +1159,7 @@ function SuggestionCard({
         <>
           <Button
             type="button"
-            className="min-h-12 rounded-xl text-base"
+            className="min-h-[54px] rounded-xl text-base font-semibold"
             disabled={saving || saveable === 0}
             onClick={onConfirm}
           >
@@ -1046,23 +1186,23 @@ function SuggestionCard({
               onClick={hasChore ? () => onDetails(!details) : onChange}
               aria-expanded={hasChore ? details : undefined}
               aria-controls={hasChore ? "kakak-card" : undefined}
-              className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-sm font-semibold text-gray-900 active:bg-muted disabled:opacity-50"
+              className="flex min-h-11 items-center gap-1 rounded-lg px-2 text-base font-semibold text-foreground active:bg-muted disabled:opacity-50"
             >
               {t("Change", "Ubah")}
               {hasChore && (
-                <ChevronDown className={cn("size-4 transition-transform", details && "rotate-180")} aria-hidden="true" />
+                <ChevronDown className={cn("size-5 transition-transform", details && "rotate-180")} aria-hidden="true" />
               )}
             </button>
             <button
               type="button"
               disabled={saving}
               onClick={onCancel}
-              className="min-h-11 rounded-lg px-2 text-sm font-medium text-muted-foreground active:bg-muted disabled:opacity-50"
+              className="min-h-11 rounded-lg px-2 text-base text-muted-foreground active:bg-muted disabled:opacity-50"
             >
               {t("Cancel", "Batal")}
             </button>
           </div>
-          <p className="text-center text-xs text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground">
             {removeCard
               ? t("You can bring them back later in Settings → Staff.", "Bisa dikembalikan nanti di Pengaturan → Staf.")
               : addCard
@@ -1092,7 +1232,7 @@ function ChoreChips({
   const t = useT();
   const locale = useOwnerLocale();
   return (
-    <div className="mt-2 flex flex-col gap-2 border-t pt-3">
+    <div className="mt-2 flex flex-col gap-3 border-t pt-3">
       <ChipRow label={t("How often", "Seberapa sering")}>
         {REPEAT_CHOICES.map((choice) => (
           <Chip
@@ -1164,13 +1304,13 @@ function WhoChips({
 function ChipRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5" role="group" aria-label={label}>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm text-muted-foreground">{label}</p>
       <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>
   );
 }
 
-/** The food form's choice chip, a little smaller for the card. */
+/** A choice chip on the card: lifted paper when chosen, the warm track when not (as FilterPill). */
 function Chip({
   on,
   disabled,
@@ -1189,8 +1329,8 @@ function Chip({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "min-h-9 rounded-full border px-3 text-sm disabled:opacity-50",
-        on ? "border-primary bg-primary text-primary-foreground" : "text-gray-700 active:bg-muted"
+        KAKAK_CHIP,
+        on ? KAKAK_CHIP_ON : KAKAK_CHIP_OFF
       )}
     >
       {children}
@@ -1224,7 +1364,7 @@ function SavedRoutine({
   return (
     <div className="flex flex-col gap-3" data-testid="kakak-saved">
       <div className="flex justify-center py-1">
-        <span className="flex size-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 animate-kakak-done motion-reduce:animate-none">
+        <span className="flex size-12 items-center justify-center rounded-full bg-done-tint text-done-foreground animate-kakak-done motion-reduce:animate-none">
           <CheckCircle2 className="size-7" aria-hidden="true" />
         </span>
       </div>
@@ -1232,29 +1372,29 @@ function SavedRoutine({
         <KakakBubble>{text}</KakakBubble>
       </div>
       <div
-        className="flex flex-col gap-1 rounded-xl border bg-card px-4 py-3 shadow-sm animate-kakak-row motion-reduce:animate-none"
+        className="flex flex-col gap-1 rounded-[22px] bg-background px-[18px] pb-3 pt-3.5 animate-kakak-row motion-reduce:animate-none"
         style={{ animationDelay: "240ms" }}
       >
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
           {t("In your routines", "Di rutinitas Anda")}
         </p>
         {lines.map(({ item, line }, index) => {
           const Icon = routineKindInfo(item.routine as RoutineKind)?.icon ?? PawPrint;
           return (
             <div key={index} className="flex min-h-11 items-center gap-3">
-              <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
               <span className="flex min-w-0 flex-col">
-                <span className="text-sm font-medium text-gray-900">{line.title}</span>
-                <span className="text-xs text-muted-foreground">{line.detail}</span>
+                <span className="text-base font-semibold text-foreground">{line.title}</span>
+                <span className="text-sm text-muted-foreground">{line.detail}</span>
               </span>
             </div>
           );
         })}
       </div>
-      <Button type="button" className="min-h-12 rounded-xl text-base" disabled={busy} onClick={onDone}>
+      <Button type="button" className="min-h-[54px] rounded-xl text-base font-semibold" disabled={busy} onClick={onDone}>
         {t("Done", "Selesai")}
       </Button>
-      <Button type="button" variant="ghost" className="min-h-11 rounded-xl" disabled={busy} onClick={onUndo}>
+      <Button type="button" variant="ghost" className="min-h-11 rounded-xl text-base text-muted-foreground" disabled={busy} onClick={onUndo}>
         {busy ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Undo2 className="size-4" aria-hidden="true" />}
         {t("Undo", "Batalkan")}
       </Button>

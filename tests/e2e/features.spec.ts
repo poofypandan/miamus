@@ -73,11 +73,11 @@ test("Repairs off hides its pill at once; on brings it back, no reload", async (
   expect(await page.evaluate(() => (window as unknown as { __noReload?: boolean }).__noReload)).toBe(true);
 });
 
-test("a stale Repairs link opens Home → Chores while Repairs is off", async ({ context, page }) => {
+test("a stale Repairs link opens Home → Rooms while Repairs is off", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, features: { repairs: false } });
   await page.goto("/dashboard?module=chores&chores=repairs");
   const pills = page.getByRole("tablist", { name: "Home" });
-  await expect(pills.getByRole("tab", { name: "Chores", exact: true })).toHaveAttribute("aria-selected", "true", { timeout: 20_000 });
+  await expect(pills.getByRole("tab", { name: "Rooms", exact: true })).toHaveAttribute("aria-selected", "true", { timeout: 20_000 });
   await expect(pills.getByRole("tab", { name: "Repairs" })).toHaveCount(0);
 });
 
@@ -87,13 +87,14 @@ test("Bills off hides bill chores and the checklist; the other chores stay", asy
     features: { bills: false },
     chores: [chore("01", "Bayar listrik", "bill"), chore("02", "Sapu teras", "cleaning")],
   });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await expect(page.getByText("Sapu teras")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Bayar listrik")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Bills and upkeep" })).toHaveCount(0);
   // The chore form offers no Bill chip, so a new chore never hides as it's saved.
   await page.getByRole("button", { name: "Add Chore" }).first().click();
   const form = page.getByRole("dialog");
+  await form.getByRole("button", { name: "More", exact: true }).click();
   await expect(form.getByRole("button", { name: "Cleaning" })).toBeVisible();
   await expect(form.getByRole("button", { name: "Bills", exact: true })).toHaveCount(0);
 });
