@@ -59,7 +59,7 @@ export function StaffShopping() {
       {toBuy.length > 0 && (
         <section className="flex flex-col gap-2" aria-labelledby="staff-to-buy">
           <h2 id="staff-to-buy" className="text-sm font-semibold text-gray-900">
-            Perlu dibeli <span className="text-gray-400">({toBuy.length})</span>
+            Perlu dibeli <span className="text-gray-500">({toBuy.length})</span>
           </h2>
           <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
             {toBuy.map((item) => {
