@@ -430,6 +430,31 @@ function Conversation({
     screen.kind === "typing" ||
     (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||
     ((screen.kind === "question" || screen.kind === "card") && typingAnswer);
+  /**
+   * Once a conversation exists, the foot is one row: the mic at 56 px, then
+   * the field (07, screen 9; Fable, 21 Nov). Also while she thinks, so the
+   * foot stays put. Not with a card on screen (Looks right, Change, Cancel),
+   * nor where there is nothing to type (a question with fixed answers, a
+   * problem that ends the conversation). The first screen stays as it is.
+   */
+  const compact =
+    newVoice &&
+    said.length > 0 &&
+    (showTyping || screen.kind === "waiting" || (screen.kind === "question" && screen.allowTyping)) &&
+    screen.kind !== "card";
+  const placeholder =
+    screen.kind === "card"
+      ? t("What should change?", "Apa yang perlu diubah?")
+      : screen.kind === "question"
+        ? compact
+          ? t("Or type an answer", "Atau ketik jawaban")
+          : t("Type your answer", "Ketik jawaban Anda")
+        : screen.kind === "message" && !screen.problem
+          ? // After her answer, the conversation goes on (2026-11-14).
+            t("Anything else?", "Ada lagi?")
+          : screen.kind === "waiting"
+            ? t("Anything else?", "Ada lagi?")
+            : t("What should I set up?", "Mau Kakak atur apa?");
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-5">
@@ -495,7 +520,8 @@ function Conversation({
               </Button>
             ))}
           </div>
-          {screen.allowTyping && !typingAnswer && (
+          {/* In the compact foot the field is already there, its placeholder saying this. */}
+          {screen.allowTyping && !typingAnswer && !compact && (
             <button
               type="button"
               className="min-h-11 self-start text-sm font-medium text-muted-foreground underline-offset-4 active:underline"
@@ -586,7 +612,22 @@ function Conversation({
         <KakakVoiceNew
           screen={screen}
           onSpeaking={setSpeaking}
-          listenHere={showTyping || screen.kind === "question"}
+          listenHere={compact ? screen.kind !== "waiting" : showTyping || screen.kind === "question"}
+          compact={compact}
+          hasWords={!!draft.trim()}
+          field={
+            compact ? (
+              <TypingBox
+                compact
+                draft={draft}
+                setDraft={setDraft}
+                onSend={(text) => void send(text)}
+                placeholder={placeholder}
+                disabled={screen.kind === "waiting"}
+                showExamples={false}
+              />
+            ) : null
+          }
           onSpoken={(text, by) => {
             const words = (draft.trim() ? `${draft.trim()} ${text}` : text).slice(0, MAX_TYPED);
             if (by === "owner") {
@@ -609,32 +650,16 @@ function Conversation({
         />
       )}
 
-      {(screen.kind === "typing" ||
-        (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||
-        ((screen.kind === "question" || screen.kind === "card") && typingAnswer)) && (
+      {showTyping && !compact && (
         <TypingBox
           draft={draft}
           setDraft={setDraft}
           onSend={(text) => void send(text)}
-          placeholder={
-            screen.kind === "card"
-              ? t("What should change?", "Apa yang perlu diubah?")
-              : screen.kind === "question"
-                ? t("Type your answer", "Ketik jawaban Anda")
-                : screen.kind === "message" && !screen.problem
-                  ? // After her answer, the conversation goes on (2026-11-14).
-                    t("Anything else?", "Ada lagi?")
-                  : t("What should I set up?", "Mau Kakak atur apa?")
-          }
+          placeholder={placeholder}
           showExamples={screen.kind === "typing" && said.length === 0}
         />
       )}
-
-      {screen.kind === "message" && (
-        <Button type="button" variant="ghost" className="self-center rounded-xl" onClick={onClose}>
-          {t("Close", "Tutup")}
-        </Button>
-      )}
+      {/* No Close at the foot: the cross in her pinned header closes the sheet (Fable, 21 Nov). */}
     </div>
   );
 }
@@ -710,18 +735,62 @@ function TypingBox({
   onSend,
   placeholder,
   showExamples,
+  compact = false,
+  disabled = false,
 }: {
   draft: string;
   setDraft: (value: string) => void;
   onSend: (text: string) => void;
   placeholder: string;
   showExamples: boolean;
+  /** The field in the compact row: one line growing to three; Send only when there are words. */
+  compact?: boolean;
+  /** She is thinking: nothing to send yet. */
+  disabled?: boolean;
 }) {
   const t = useT();
   const box = useRef<HTMLTextAreaElement>(null);
   function submit(event: FormEvent) {
     event.preventDefault();
     onSend(draft);
+  }
+  if (compact) {
+    const words = !!draft.trim();
+    return (
+      <form onSubmit={submit} className={cn("grid items-end gap-2.5", words ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)]")}>
+        <Textarea
+          ref={box}
+          autoFocus
+          value={draft}
+          maxLength={MAX_TYPED}
+          rows={1}
+          disabled={disabled}
+          enterKeyHint="send"
+          aria-label={placeholder}
+          placeholder={placeholder}
+          className="max-h-[7.5rem] min-h-[52px] w-full min-w-0 resize-none overflow-y-auto rounded-2xl py-3.5 text-base"
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              onSend(draft);
+            }
+          }}
+        />
+        {/* Only with words to send, and then the one solid shape (the mic goes quiet). */}
+        {words && (
+          <Button
+            type="submit"
+            size="icon"
+            className="size-12 shrink-0 animate-[view-fade_200ms_var(--ease-arrive)] rounded-2xl motion-reduce:animate-none"
+            disabled={disabled}
+            aria-label={t("Send", "Kirim")}
+          >
+            <Send className="size-5" />
+          </Button>
+        )}
+      </form>
+    );
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">

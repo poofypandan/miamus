@@ -201,4 +201,65 @@ for (const locale of ["en", "id"] as const) {
     await page.waitForTimeout(400);
     await page.screenshot({ path: `${DIR}/11-change-open-${locale}.png` });
   });
+
+  // The compact foot once a conversation exists (Fable, 21 Nov): at rest,
+  // typing, listening, speaking and her question; at 360 px too in Indonesian.
+  for (const width of locale === "id" ? [390, 360] : [390]) {
+    test(`screens ${locale}: the compact foot at ${width}`, async ({ context, page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await context.addInitScript(() => {
+        const w = window as unknown as Record<string, unknown>;
+        // Speaking: an utterance that never ends, so the foot stays in its speaking state.
+        w.__speak = false;
+        if (window.speechSynthesis) window.speechSynthesis.speak = () => { w.__speak = true; };
+        class FakeRecognition {
+          lang = ""; continuous = true; interimResults = false; maxAlternatives = 1;
+          onresult: ((event: unknown) => void) | null = null;
+          onerror: ((event: { error: string }) => void) | null = null;
+          onend: (() => void) | null = null;
+          start() { w.__recognition = this; }
+          stop() { setTimeout(() => this.onend?.(), 20); }
+          abort() { setTimeout(() => this.onend?.(), 20); }
+        }
+        Object.defineProperty(window, "webkitSpeechRecognition", { value: FakeRecognition, configurable: true });
+        Object.defineProperty(window, "SpeechRecognition", { value: undefined, configurable: true });
+      });
+      await installStub(context, { owner: { locale }, kakak: { allowed: true, enabled: true } });
+      await kakakSays(page, [
+        { kind: "message", text: c.answer },
+        { kind: "question", question: locale === "en" ? "Which day?" : "Hari apa?", answers: locale === "en" ? ["Monday", "Saturday"] : ["Senin", "Sabtu"], allowTyping: true },
+        { kind: "message", text: c.welcome },
+      ]);
+      const tag = width === 390 ? locale : `${locale}-360`;
+      await page.goto("/dashboard");
+      await page.getByRole("button", { name: c.open }).click({ timeout: 20_000 });
+      await page.getByRole("textbox", { name: c.box }).fill(c.ask);
+      await page.getByRole("button", { name: c.send }).click();
+      await expect(page.getByText(c.answer)).toBeVisible({ timeout: 20_000 });
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${DIR}/12-foot-rest-${tag}.png` });
+      await page.getByRole("textbox", { name: c.more }).fill(locale === "en" ? "And remind Ari about the terrace" : "Dan ingatkan Ari soal teras");
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `${DIR}/13-foot-typing-${tag}.png` });
+      if (width !== 390) return;
+      await page.getByRole("textbox", { name: c.more }).fill("");
+      await page.getByRole("button", { name: c.talk }).click();
+      await page.waitForTimeout(300);
+      await page.evaluate((words) => {
+        const r = (window as unknown as { __recognition: { onresult: (e: unknown) => void } }).__recognition;
+        r.onresult({ resultIndex: 0, results: [Object.assign([{ transcript: words }], { isFinal: false })] });
+      }, c.heard);
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `${DIR}/14-foot-listening-${tag}.png` });
+      await page.getByRole("button", { name: c.cancel, exact: true }).click();
+      await page.waitForTimeout(400);
+      // Her question, read aloud: the speaking line above the row, the disc as Stop.
+      await page.getByRole("button", { name: c.aloud }).click();
+      await page.getByRole("textbox", { name: c.more }).fill(c.mop);
+      await page.getByRole("button", { name: c.send }).click();
+      await expect(page.getByText(locale === "en" ? "Which day?" : "Hari apa?")).toBeVisible({ timeout: 20_000 });
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${DIR}/15-foot-question-speaking-${tag}.png` });
+    });
+  }
 }
