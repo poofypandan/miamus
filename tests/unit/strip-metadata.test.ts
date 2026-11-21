@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
 import { stripImageMetadata } from "@/lib/strip-metadata";
-import { withoutHiddenData } from "@/lib/photo-resize";
+import { servableOriginal } from "@/lib/photo-resize";
 
 // A photo of someone's home must never reach storage, or leave /api/photo,
 // with the camera's GPS position in it (security audit, 20 Nov 2026).
@@ -54,6 +54,42 @@ describe("stripImageMetadata", () => {
     expect([shown.info.width, shown.info.height]).toEqual([20, 40]);
   });
 
+  it("cleans between the scans of a progressive JPEG, and drops what follows the end", async () => {
+    const progressive = await pixels(64, 48).jpeg({ progressive: true }).toBuffer();
+    const scans: number[] = [];
+    for (let n = 0; n < progressive.length - 1; n++) if (progressive[n] === 0xff && progressive[n + 1] === 0xda) scans.push(n);
+    expect(scans.length).toBeGreaterThan(1);
+    const note = Buffer.from("GPS -6.2088 106.8456 rumah");
+    const com = Buffer.concat([Buffer.from([0xff, 0xfe, 0, note.length + 2]), note]);
+    const app1 = Buffer.concat([Buffer.from([0xff, 0xe1, 0, note.length + 2]), note]);
+    // A comment and an APP1 between the first and second scans, and a second
+    // picture's EXIF appended after the end marker.
+    const input = Buffer.concat([
+      progressive.subarray(0, scans[1]),
+      com,
+      app1,
+      progressive.subarray(scans[1]),
+      Buffer.from("Exif\0\0 GPS -6.2088 106.8456"),
+    ]);
+    await expect(sharp(input).raw().toBuffer()).resolves.toBeInstanceOf(Buffer);
+    const out = stripImageMetadata(input)!;
+    expect(out).not.toBeNull();
+    expect(text(out)).not.toContain("GPS");
+    expect(Buffer.compare(Buffer.from(out), progressive)).toBe(0);
+  });
+
+  it("keeps a sideways WebP's orientation, and nothing else of its EXIF", async () => {
+    const input = await pixels().withExif({ ...CAMERA, ...GPS }).withMetadata({ orientation: 6 }).webp().toBuffer();
+    expect((await sharp(input).metadata()).orientation).toBe(6);
+    const out = stripImageMetadata(input)!;
+    expect(text(out)).not.toContain("PhoneCo");
+    expect(Buffer.from(out).readUInt32LE(4)).toBe(out.length - 8);
+    const meta = await sharp(out).metadata();
+    expect(meta.orientation).toBe(6);
+    const shown = await sharp(out).rotate().toBuffer({ resolveWithObject: true });
+    expect([shown.info.width, shown.info.height]).toEqual([20, 40]);
+  });
+
   it("takes EXIF and text chunks out of a PNG", async () => {
     const input = await pixels().withExif({ ...CAMERA, ...GPS }).withMetadata().png().toBuffer();
     expect(text(input)).toContain("PhoneCo");
@@ -83,17 +119,35 @@ describe("stripImageMetadata", () => {
   });
 });
 
-describe("withoutHiddenData (what /api/photo serves full size)", () => {
-  it("serves a camera JPEG without its GPS, turned the way it is shown", async () => {
-    const out = (await withoutHiddenData(await cameraJpeg(6)))!;
+describe("servableOriginal (what /api/photo serves full size)", () => {
+  it("serves a camera JPEG without its GPS, orientation kept", async () => {
+    const out = (await servableOriginal(await cameraJpeg(6), "image/jpeg"))!;
     expect(out.type).toBe("image/jpeg");
+    expect(text(out.body)).not.toContain("PhoneCo");
     const meta = await sharp(out.body).metadata();
-    expect(meta.exif).toBeUndefined();
-    expect([meta.width, meta.height]).toEqual([20, 40]);
+    expect(meta.orientation).toBe(6);
+    expect([meta.width, meta.height]).toEqual([40, 20]);
   });
 
-  it("leaves a clean photo alone (no re-encode)", async () => {
-    expect(await withoutHiddenData(await pixels().webp().toBuffer())).toBeNull();
+  it("cleans a photo too large for sharp to decode, rather than serving it as stored", async () => {
+    // 48 megapixels of one colour: a few hundred KB, under the bucket's 2 MB,
+    // over the proxy's 40-megapixel decode limit (Codex, PR #161).
+    const big = await pixels(8000, 6000).withExif({ ...CAMERA, ...GPS }).jpeg().toBuffer();
+    expect(big.length).toBeLessThan(2 * 1024 * 1024);
+    const out = (await servableOriginal(big, "image/jpeg"))!;
+    expect(out).not.toBeNull();
+    expect(text(out.body)).not.toContain("PhoneCo");
+  });
+
+  it("refuses what it can neither clean nor check", async () => {
+    expect(await servableOriginal(Buffer.from("not a picture at all"), "image/avif")).toBeNull();
+  });
+
+  it("serves a clean photo as it is", async () => {
+    const clean = await pixels().webp().toBuffer();
+    const out = (await servableOriginal(clean, "image/webp"))!;
+    expect(Buffer.compare(out.body, clean)).toBe(0);
+    expect(out.type).toBe("image/webp");
   });
 });
 

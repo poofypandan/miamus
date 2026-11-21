@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isPhotoBucket } from "@/lib/photos";
-import { resizeForWidth, withoutHiddenData } from "@/lib/photo-resize";
+import { resizeForWidth, servableOriginal } from "@/lib/photo-resize";
 
 // sharp is a native module: Node, never the edge runtime.
 export const runtime = "nodejs";
@@ -66,14 +66,17 @@ export async function GET(request: NextRequest) {
   // original. Scaled to fit the width, never upscaled; an original no wider
   // than asked (or one that can't be read) is served as it is.
   const original = Buffer.from(await data.arrayBuffer());
-  // Served as stored unless it still carries hidden data such as where it
-  // was taken (security audit, 20 Nov 2026): then without it. That covers
-  // the full-size view and a thumbnail asked wider than the photo; a resized
-  // thumbnail never carries any.
-  const resized = (width ? await resizeForWidth(original, width) : null) ?? (await withoutHiddenData(original));
-  const body = resized ? new Uint8Array(resized.body) : new Uint8Array(original);
-  const bodyType = resized ? resized.type : contentType;
-  const bodySize = resized ? resized.body.byteLength : original.byteLength;
+  // Never with hidden data such as where it was taken (security audit,
+  // 20 Nov 2026). A resized thumbnail carries none; otherwise the original
+  // is cleaned, and one that can't be cleaned or checked is not served
+  // (the same answer as a missing photo).
+  const out = (width ? await resizeForWidth(original, width) : null) ?? (await servableOriginal(original, contentType));
+  if (!out) {
+    return new NextResponse("Not found", { status: 404 });
+  }
+  const body = new Uint8Array(out.body);
+  const bodyType = out.type;
+  const bodySize = out.body.byteLength;
 
   return new NextResponse(body, {
     headers: {

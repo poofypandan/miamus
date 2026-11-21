@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { stripImageMetadata } from "@/lib/strip-metadata";
 
 /**
  * Thumbnails made by the app, not by Supabase (Phase 160).
@@ -57,28 +58,41 @@ export async function resizeForWidth(
 }
 
 /**
- * The original without its hidden data, or null when it has none (or can't
- * be read). Security audit, 20 Nov 2026: photos are cleaned on the phone
- * before upload (lib/image.ts), but an older build uploaded the camera file
- * as it was when compression failed, so a stored photo may still carry where
- * it was taken. Thumbnails never do (sharp writes no metadata unless asked);
- * this covers the full-size view. The photo is turned the way it is shown
- * first, since the orientation tag goes with the rest.
+ * The full-size photo as it may be served: without hidden data, or null when
+ * that can't be guaranteed (the caller then refuses to serve it). Security
+ * audit, 20 Nov 2026: photos are cleaned on the phone before upload
+ * (lib/image.ts), but an older build uploaded the camera file as it was when
+ * compression failed, so a stored photo may still carry where it was taken.
+ * Thumbnails never do (sharp writes no metadata unless asked); this covers
+ * the full-size view and a thumbnail asked wider than the photo.
+ *
+ *   JPEG, PNG, WebP  cleaned byte by byte, lossless, no decode
+ *                    (lib/strip-metadata.ts), so even a photo too large for
+ *                    sharp is served clean; the orientation stays.
+ *   anything else    (AVIF from older storage transforms) checked by sharp:
+ *                    served as stored only when it carries nothing,
+ *                    re-encoded (turned as shown) when it does.
+ * A photo that can be neither cleaned nor checked gives null, never the
+ * original unchecked (Codex, PR #161).
  */
-export async function withoutHiddenData(
-  input: Buffer
-): Promise<{ body: Buffer; type: "image/jpeg" | "image/png" | "image/webp" } | null> {
+export async function servableOriginal(input: Buffer, storedType: string): Promise<{ body: Buffer; type: string } | null> {
+  const cleaned = stripImageMetadata(input);
+  if (cleaned) return { body: Buffer.from(cleaned), type: sniffedType(input) ?? storedType };
   try {
     const image = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS });
     const meta = await image.metadata();
-    if (!meta.exif && !meta.xmp && !meta.iptc && !meta.comments?.length) return null;
-    const turned = image.rotate();
-    if (meta.format === "jpeg") return { body: await turned.jpeg({ quality: 90 }).toBuffer(), type: "image/jpeg" };
-    if (meta.format === "png") return { body: await turned.png().toBuffer(), type: "image/png" };
-    if (meta.format === "webp") return { body: await turned.webp({ quality: 90 }).toBuffer(), type: "image/webp" };
-    return null;
+    if (!meta.exif && !meta.xmp && !meta.iptc && !meta.comments?.length) return { body: input, type: storedType };
+    return { body: await image.rotate().webp({ quality: 90 }).toBuffer(), type: "image/webp" };
   } catch (err) {
-    console.error("Photo metadata not checked; serving the original", err);
+    console.error("Photo not cleaned; refusing to serve it", err);
     return null;
   }
+}
+
+/** The type the bytes say, for the three formats stripImageMetadata cleans. */
+function sniffedType(b: Buffer): string | null {
+  if (b[0] === 0xff && b[1] === 0xd8) return "image/jpeg";
+  if (b[0] === 0x89 && b.toString("latin1", 1, 4) === "PNG") return "image/png";
+  if (b.toString("latin1", 0, 4) === "RIFF" && b.toString("latin1", 8, 12) === "WEBP") return "image/webp";
+  return null;
 }

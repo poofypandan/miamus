@@ -13,14 +13,20 @@
  *
  * This removes, without decoding the image:
  *   JPEG  every APPn segment except APP0 (JFIF) and APP14 (Adobe colour
- *         transform), and comments. EXIF and XMP live in APP1, ICC colour
- *         profiles in APP2, IPTC in APP13. The one EXIF field that changes
- *         how the photo looks, its orientation, is written back on its own,
- *         so a photo taken sideways still shows the right way up.
- *   PNG   eXIf, tEXt, zTXt, iTXt and tIME chunks.
- *   WebP  EXIF and XMP chunks, and their flags in the VP8X header.
+ *         transform), and comments, wherever they are: before the first
+ *         scan and between the scans of a progressive JPEG. Anything after
+ *         the end marker goes too (phones append depth maps and second
+ *         pictures there, each with its own EXIF). EXIF and XMP live in APP1,
+ *         ICC colour profiles in APP2, IPTC in APP13.
+ *   PNG   eXIf, tEXt, zTXt, iTXt and tIME chunks, and anything after IEND.
+ *   WebP  EXIF and XMP chunks, and the XMP flag in the VP8X header; anything
+ *         past the RIFF size.
+ * The one EXIF field that changes how a photo looks, its orientation, is
+ * written back on its own (JPEG and WebP), so a photo taken sideways still
+ * shows the right way up.
+ *
  * Anything else, or a file that doesn't parse, gives null: the caller then
- * decides (photoForUpload refuses rather than upload it unchecked).
+ * refuses rather than use it unchecked (photoForUpload, /api/photo).
  *
  * Pure (bytes in, bytes out) so it can be unit tested without a browser.
  */
@@ -58,10 +64,11 @@ function concat(parts: Uint8Array[]): Uint8Array {
   return out;
 }
 
-/** EXIF orientation (1-8) from an APP1 segment's payload, or null. */
-function exifOrientation(payload: Uint8Array): number | null {
-  if (payload.length < 14 || ascii(payload, 0, 6) !== "Exif\0\0") return null;
-  const tiff = payload.subarray(6);
+// --- Orientation ----------------------------------------------------------------------
+
+/** EXIF orientation (1-8) from a TIFF block, or null. */
+function tiffOrientation(tiff: Uint8Array): number | null {
+  if (tiff.length < 8) return null;
   const view = new DataView(tiff.buffer, tiff.byteOffset, tiff.byteLength);
   const order = ascii(tiff, 0, 2);
   if (order !== "II" && order !== "MM") return null;
@@ -81,16 +88,49 @@ function exifOrientation(payload: Uint8Array): number | null {
   return null;
 }
 
-/** An APP1 segment holding nothing but an orientation (big-endian TIFF). */
-function orientationSegment(orientation: number): Uint8Array {
+const EXIF_HEADER = "Exif\0\0";
+
+/** A TIFF block holding nothing but an orientation (big-endian), 26 bytes. */
+function orientationTiff(orientation: number): Uint8Array {
   return Uint8Array.from([
-    0xff, 0xe1, 0x00, 0x22, // APP1, length 34
-    0x45, 0x78, 0x69, 0x66, 0x00, 0x00, // "Exif\0\0"
     0x4d, 0x4d, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x08, // "MM", 42, IFD0 at 8
     0x00, 0x01, // one entry
     0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, orientation, 0x00, 0x00, // Orientation, SHORT, 1
     0x00, 0x00, 0x00, 0x00, // no next IFD
   ]);
+}
+
+// --- JPEG -----------------------------------------------------------------------------
+
+/** An APP1 segment holding nothing but an orientation. */
+function jpegOrientationSegment(orientation: number): Uint8Array {
+  const payload = concat([Uint8Array.from(EXIF_HEADER, (c) => c.charCodeAt(0)), orientationTiff(orientation)]);
+  const length = payload.length + 2;
+  return concat([Uint8Array.from([0xff, 0xe1, length >> 8, length & 0xff]), payload]);
+}
+
+/**
+ * The end of the entropy-coded data that starts at `i`: the index of the
+ * next real marker. Inside scan data, 0xFF is followed by 0x00 (a stuffed
+ * byte), a restart marker (D0-D7) or fill bytes; anything else is a marker.
+ */
+function scanEnd(b: Uint8Array, i: number): number {
+  while (i < b.length - 1) {
+    if (b[i] === 0xff) {
+      const next = b[i + 1];
+      if (next === 0x00 || (next >= 0xd0 && next <= 0xd7)) {
+        i += 2;
+        continue;
+      }
+      if (next === 0xff) {
+        i += 1;
+        continue;
+      }
+      return i;
+    }
+    i += 1;
+  }
+  return b.length;
 }
 
 function stripJpeg(b: Uint8Array): Uint8Array | null {
@@ -99,11 +139,18 @@ function stripJpeg(b: Uint8Array): Uint8Array | null {
   // Where the orientation goes back: after APP0 when the file starts with
   // one, as JFIF expects, else straight after the start marker.
   let orientationAt = 1;
+  let sawScan = false;
   let i = 2;
+
+  const finish = () => {
+    if (orientation !== null && orientation !== 1) parts.splice(orientationAt, 0, jpegOrientationSegment(orientation));
+    return concat(parts);
+  };
+
   while (i < b.length) {
     if (b[i] !== 0xff) return null;
     // Fill bytes before a marker.
-    while (i < b.length && b[i] === 0xff && b[i + 1] === 0xff) i++;
+    while (i + 1 < b.length && b[i + 1] === 0xff) i++;
     const marker = b[i + 1];
     if (marker === undefined) return null;
     // Markers with no length (TEM, RSTn): kept as they are.
@@ -113,20 +160,32 @@ function stripJpeg(b: Uint8Array): Uint8Array | null {
       continue;
     }
     if (marker === 0xd9) {
+      // End of image. Whatever follows is not this picture: dropped.
+      if (!sawScan) return null;
       parts.push(b.subarray(i, i + 2));
-      return concat(parts);
+      return finish();
     }
     if (i + 4 > b.length) return null;
     const length = (b[i + 2] << 8) | b[i + 3];
     if (length < 2 || i + 2 + length > b.length) return null;
     const segment = b.subarray(i, i + 2 + length);
+
     if (marker === 0xda) {
-      // Start of scan: the image data and everything after it, verbatim.
-      parts.push(b.subarray(i));
-      if (orientation !== null && orientation !== 1) parts.splice(orientationAt, 0, orientationSegment(orientation));
-      return concat(parts);
+      // Start of scan: its header, then its entropy-coded data up to the next
+      // marker. A progressive JPEG has several; segments between them are
+      // filtered like any other.
+      sawScan = true;
+      const end = scanEnd(b, i + 2 + length);
+      parts.push(b.subarray(i, end));
+      if (end >= b.length) return finish(); // no end marker: the picture is all there is
+      i = end;
+      continue;
     }
-    if (marker === 0xe1 && orientation === null) orientation = exifOrientation(segment.subarray(4));
+
+    if (marker === 0xe1 && orientation === null && !sawScan) {
+      const payload = segment.subarray(4);
+      if (ascii(payload, 0, 6) === EXIF_HEADER) orientation = tiffOrientation(payload.subarray(6));
+    }
     const isApp = marker >= 0xe0 && marker <= 0xef;
     const keepApp = marker === 0xe0 || marker === 0xee;
     if (!(isApp && !keepApp) && marker !== 0xfe) {
@@ -135,8 +194,10 @@ function stripJpeg(b: Uint8Array): Uint8Array | null {
     }
     i += 2 + length;
   }
-  return null;
+  return sawScan ? finish() : null;
 }
+
+// --- PNG ------------------------------------------------------------------------------
 
 const PNG_DROPPED = new Set(["eXIf", "tEXt", "zTXt", "iTXt", "tIME"]);
 
@@ -156,28 +217,50 @@ function stripPng(b: Uint8Array): Uint8Array | null {
   return null;
 }
 
-const WEBP_DROPPED = new Set(["EXIF", "XMP "]);
-const VP8X_EXIF = 0x08;
+// --- WebP -----------------------------------------------------------------------------
+
 const VP8X_XMP = 0x04;
+
+function webpChunk(type: string, data: Uint8Array): Uint8Array {
+  const header = new Uint8Array(8);
+  for (let n = 0; n < 4; n++) header[n] = type.charCodeAt(n);
+  new DataView(header.buffer).setUint32(4, data.length, true);
+  return concat(data.length % 2 ? [header, data, new Uint8Array(1)] : [header, data]);
+}
 
 function stripWebp(b: Uint8Array): Uint8Array | null {
   const view = new DataView(b.buffer, b.byteOffset, b.byteLength);
   const riffEnd = Math.min(b.length, 8 + view.getUint32(4, true));
   const parts: Uint8Array[] = [];
+  let vp8x: Uint8Array | null = null;
+  let orientation: number | null = null;
   let i = 12;
   while (i + 8 <= riffEnd) {
     const type = ascii(b, i, 4);
     const size = view.getUint32(i + 4, true);
     const end = i + 8 + size + (size % 2);
     if (i + 8 + size > riffEnd) return null;
-    if (type === "VP8X" && size >= 1) {
-      const chunk = b.slice(i, Math.min(end, riffEnd));
-      chunk[8] &= ~(VP8X_EXIF | VP8X_XMP);
-      parts.push(chunk);
-    } else if (!WEBP_DROPPED.has(type)) {
+    const data = b.subarray(i + 8, i + 8 + size);
+    if (type === "VP8X") {
+      if (size < 10) return null;
+      vp8x = b.slice(i, i + 8 + size);
+      parts.push(vp8x);
+    } else if (type === "EXIF") {
+      // Usually a bare TIFF block; some writers keep JPEG's "Exif\0\0" prefix.
+      const tiff = ascii(data, 0, 6) === EXIF_HEADER ? data.subarray(6) : data;
+      if (orientation === null) orientation = tiffOrientation(tiff);
+    } else if (type !== "XMP ") {
       parts.push(b.subarray(i, Math.min(end, riffEnd)));
     }
     i = end;
+  }
+  if (vp8x) {
+    // The flags say which optional chunks exist: XMP never does now, EXIF
+    // only when an orientation is written back (bit 0x08).
+    const keepOrientation = orientation !== null && orientation !== 1;
+    vp8x[8] &= ~VP8X_XMP;
+    vp8x[8] = keepOrientation ? vp8x[8] | 0x08 : vp8x[8] & ~0x08;
+    if (keepOrientation) parts.push(webpChunk("EXIF", orientationTiff(orientation!)));
   }
   const body = concat(parts);
   const header = new Uint8Array(12);
