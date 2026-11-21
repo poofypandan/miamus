@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { HOUSEHOLD_ID } from "../fixtures/household";
-import { installStub } from "./stub-backend";
+import { STAFF_ID, installStub } from "./stub-backend";
 import { WHATS_NEW, storageKey } from "../../src/lib/whats-new";
 
 // Phone-size screenshots of Kakak's sheet, in both languages: the first
@@ -45,6 +45,8 @@ const COPY = {
     ask: "how would you describe what miamis is for",
     answer: "Miamus keeps the running of your home in one place: chores, pets, the kitchen and the people who help. You say what should happen once, and your staff see it on their own phone. You only hear about what didn't happen.",
     thanks: "thank you", welcome: "You're welcome. I'm here whenever you need me.",
+    talk: "Talk to Kakak", aloud: "Read replies aloud", cancel: "Cancel", change: "Change", heard: "Ari mops the terrace on",
+    mop: "Have Ari mop the terrace every Monday at 9", mopReply: "Sure. Ari mops the terrace every Monday at 9:00.", looksRight: "Looks right",
   },
   id: {
     open: "Bilang ke Kakak", box: "Mau Kakak atur apa?", more: "Ada lagi?", send: "Kirim",
@@ -53,6 +55,8 @@ const COPY = {
     ask: "Miamus itu untuk apa?",
     answer: "Miamus menyatukan urusan rumah di satu tempat: tugas, hewan, dapur, dan orang-orang yang membantu. Anda cukup bilang sekali, lalu staf melihatnya di HP masing-masing. Anda hanya dikabari soal yang belum dikerjakan.",
     thanks: "terima kasih", welcome: "Sama-sama. Kakak selalu ada kalau Anda perlu.",
+    talk: "Bicara dengan Kakak", aloud: "Bacakan jawaban Kakak", cancel: "Batalkan", change: "Ubah", heard: "Ari pel teras tiap",
+    mop: "Ari pel teras tiap Senin jam 9 ya", mopReply: "Baik. Ari mengepel teras tiap Senin jam 09.00.", looksRight: "Sudah benar",
   },
 } as const;
 
@@ -96,4 +100,173 @@ for (const locale of ["en", "id"] as const) {
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${DIR}/4-both-sides-${locale}.png` });
   });
+
+  // The card every request ends on, and the toast after it (04, PR 5).
+  test(`screens ${locale}: a chore's card, then the toast`, async ({ context, page }) => {
+    await installStub(context, { owner: { locale }, kakak: { allowed: true, enabled: true } });
+    await kakakSays(page, [
+      {
+        kind: "suggestions",
+        text: c.mopReply,
+        items: [{
+          kind: "chore", title: "Pel teras", titleEn: locale === "en" ? "Mop the terrace" : null, category: "cleaning", assignedTo: STAFF_ID,
+          assignToSelf: false, assigneeName: "Ari", dueDate: "2026-11-16", dueTime: "09:00", recurrence: "weekly", recurrenceUntil: null,
+          requiresSupervision: false, locationId: null, roomName: null, newRoomName: null, newRoomFloorId: null, newRoomFloorName: null, notes: null,
+        }],
+      },
+    ]);
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: c.open }).click({ timeout: 20_000 });
+    await page.getByRole("textbox", { name: c.box }).fill(c.mop);
+    await page.getByRole("button", { name: c.send }).click();
+    await expect(page.getByText(c.mopReply)).toBeVisible({ timeout: 20_000 });
+    await page.waitForTimeout(900);
+    await page.screenshot({ path: `${DIR}/5-chore-card-${locale}.png` });
+    await page.getByRole("button", { name: c.looksRight }).click();
+    // One chore closes the sheet on a toast with Undo.
+    await expect(page.getByRole("button", { name: locale === "en" ? "Undo" : "Batalkan" })).toBeVisible();
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${DIR}/6-saved-${locale}.png` });
+  });
+
+  // The states around the card (Fable's gate, PR 5): reading aloud on, the
+  // mic listening, thinking, her question with the practice note, Change open.
+  test(`screens ${locale}: around the card`, async ({ context, page }) => {
+    await context.addInitScript(() => {
+      const w = window as unknown as Record<string, unknown>;
+      if (window.speechSynthesis) window.speechSynthesis.speak = () => {};
+      class FakeRecognition {
+        lang = ""; continuous = true; interimResults = false; maxAlternatives = 1;
+        onresult: ((event: unknown) => void) | null = null;
+        onerror: ((event: { error: string }) => void) | null = null;
+        onend: (() => void) | null = null;
+        start() { w.__recognition = this; }
+        stop() { setTimeout(() => this.onend?.(), 20); }
+        abort() { setTimeout(() => this.onend?.(), 20); }
+      }
+      Object.defineProperty(window, "webkitSpeechRecognition", { value: FakeRecognition, configurable: true });
+      Object.defineProperty(window, "SpeechRecognition", { value: undefined, configurable: true });
+    });
+    await installStub(context, { owner: { locale }, kakak: { allowed: true, enabled: true } });
+    let n = 0;
+    await page.route("**/api/kakak", async (route) => {
+      n += 1;
+      if (n === 1) {
+        await new Promise((r) => setTimeout(r, 2500));
+        return route.fulfill({ json: {
+          kind: "question", practice: true, requestId: "00000000-0000-4000-8000-0000000000d1", history: { messages: [] },
+          question: locale === "en" ? "Which day?" : "Hari apa?", answers: locale === "en" ? ["Monday", "Saturday"] : ["Senin", "Sabtu"], allowTyping: true,
+        } });
+      }
+      return route.fulfill({ json: {
+        kind: "suggestions", practice: true, text: c.mopReply, requestId: "00000000-0000-4000-8000-0000000000d2", history: { messages: [] },
+        items: [{
+          kind: "chore", title: "Pel teras", titleEn: locale === "en" ? "Mop the terrace" : null, category: "cleaning", assignedTo: STAFF_ID,
+          assignToSelf: false, assigneeName: "Ari", dueDate: "2026-11-16", dueTime: "09:00", recurrence: "weekly", recurrenceUntil: null,
+          requiresSupervision: false, locationId: null, roomName: null, newRoomName: null, newRoomFloorId: null, newRoomFloorName: null, notes: null,
+        }],
+      } });
+    });
+    await page.route("**/api/kakak/outcome", (route) => route.fulfill({ json: { ok: true } }));
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: c.open }).click({ timeout: 20_000 });
+    await page.getByRole("button", { name: c.aloud }).click();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${DIR}/7-read-aloud-on-${locale}.png` });
+
+    await page.getByRole("button", { name: c.talk }).last().click();
+    await page.waitForTimeout(300);
+    await page.evaluate((words) => {
+      const r = (window as unknown as { __recognition: { onresult: (e: unknown) => void } }).__recognition;
+      r.onresult({ resultIndex: 0, results: [Object.assign([{ transcript: words }], { isFinal: false })] });
+    }, c.heard);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${DIR}/8-listening-${locale}.png` });
+    await page.getByRole("button", { name: c.cancel, exact: true }).click();
+    await page.waitForTimeout(400);
+
+    await page.getByRole("textbox", { name: c.box }).fill(c.mop);
+    await page.getByRole("button", { name: c.send }).click();
+    await page.waitForTimeout(700);
+    await page.screenshot({ path: `${DIR}/9-thinking-${locale}.png` });
+    await expect(page.getByText(locale === "en" ? "Which day?" : "Hari apa?")).toBeVisible({ timeout: 20_000 });
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${DIR}/10-question-${locale}.png` });
+
+    await page.getByRole("button", { name: locale === "en" ? "Monday" : "Senin" }).click();
+    await expect(page.getByText(c.mopReply)).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: c.change, exact: true }).click();
+    await page.waitForTimeout(700);
+    await page.getByTestId("kakak-scroll").evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${DIR}/11-change-open-${locale}.png` });
+  });
+
+  // The compact foot once a conversation exists (Fable, 21 Nov): at rest,
+  // typing, listening, speaking and her question; at 360 px too in Indonesian.
+  for (const width of locale === "id" ? [390, 360] : [390]) {
+    test(`screens ${locale}: the compact foot at ${width}`, async ({ context, page }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await context.addInitScript(() => {
+        const w = window as unknown as Record<string, unknown>;
+        // Speaking: an utterance that never ends, so the foot stays in its speaking state.
+        w.__speak = false;
+        if (window.speechSynthesis) window.speechSynthesis.speak = () => { w.__speak = true; };
+        class FakeRecognition {
+          lang = ""; continuous = true; interimResults = false; maxAlternatives = 1;
+          onresult: ((event: unknown) => void) | null = null;
+          onerror: ((event: { error: string }) => void) | null = null;
+          onend: (() => void) | null = null;
+          start() { w.__recognition = this; }
+          stop() { setTimeout(() => this.onend?.(), 20); }
+          abort() { setTimeout(() => this.onend?.(), 20); }
+        }
+        Object.defineProperty(window, "webkitSpeechRecognition", { value: FakeRecognition, configurable: true });
+        Object.defineProperty(window, "SpeechRecognition", { value: undefined, configurable: true });
+      });
+      await installStub(context, { owner: { locale }, kakak: { allowed: true, enabled: true } });
+      await kakakSays(page, [
+        { kind: "message", text: c.answer },
+        { kind: "question", question: locale === "en" ? "Which day?" : "Hari apa?", answers: locale === "en" ? ["Monday", "Saturday"] : ["Senin", "Sabtu"], allowTyping: true },
+        { kind: "message", text: c.welcome },
+      ]);
+      const tag = width === 390 ? locale : `${locale}-360`;
+      await page.goto("/dashboard");
+      await page.getByRole("button", { name: c.open }).click({ timeout: 20_000 });
+      await page.getByRole("textbox", { name: c.box }).fill(c.ask);
+      await page.getByRole("button", { name: c.send }).click();
+      await expect(page.getByText(c.answer)).toBeVisible({ timeout: 20_000 });
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${DIR}/12-foot-rest-${tag}.png` });
+      await page.getByRole("textbox", { name: c.more }).fill(locale === "en" ? "And remind Ari about the terrace" : "Dan ingatkan Ari soal teras");
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `${DIR}/13-foot-typing-${tag}.png` });
+      if (width !== 390) return;
+      await page.getByRole("textbox", { name: c.more }).fill("");
+      await page.getByRole("button", { name: c.talk }).click();
+      await page.waitForTimeout(300);
+      await page.evaluate((words) => {
+        const r = (window as unknown as { __recognition: { onresult: (e: unknown) => void } }).__recognition;
+        r.onresult({ resultIndex: 0, results: [Object.assign([{ transcript: words }], { isFinal: false })] });
+      }, c.heard);
+      await page.waitForTimeout(400);
+      await page.screenshot({ path: `${DIR}/14-foot-listening-${tag}.png` });
+      await page.getByRole("button", { name: c.cancel, exact: true }).click();
+      await page.waitForTimeout(400);
+      // Her question, read aloud: the speaking line above the row, the disc as Stop.
+      await page.getByRole("button", { name: c.aloud }).click();
+      // She takes a moment: the row stays, the disc quiet, her dots the one sign.
+      await page.route("**/api/kakak", async (route) => {
+        await new Promise((r) => setTimeout(r, 2500));
+        return route.fallback();
+      }, { times: 1 });
+      await page.getByRole("textbox", { name: c.more }).fill(c.mop);
+      await page.getByRole("button", { name: c.send }).click();
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${DIR}/16-foot-thinking-${tag}.png` });
+      await expect(page.getByText(locale === "en" ? "Which day?" : "Hari apa?")).toBeVisible({ timeout: 20_000 });
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `${DIR}/15-foot-question-speaking-${tag}.png` });
+    });
+  }
 }

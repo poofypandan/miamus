@@ -175,21 +175,22 @@ function Voice({
         aria-label={t("Talk to Kakak", "Bicara dengan Kakak")}
         className={cn(
           "flex flex-col items-center gap-2",
-          // A soft panel around the mic or the tip; just the speaker switch otherwise.
-          (showBig || showTip) && "rounded-2xl border bg-background/70",
-          showBig ? "px-4 pb-3 pt-5" : showTip ? "px-3 py-2" : "py-0"
+          // The mic in the open, with air around it (07, decision 7): the disc
+          // is the screen's one solid shape. The keyboard tip keeps a quiet inset.
+          showTip && "rounded-[22px] bg-background",
+          showBig ? "pb-2 pt-4" : showTip ? "px-3 py-2" : "py-0"
         )}
       >
         {showBig && (
           <>
             <BigButton phase={phase} onListen={start} onStop={stop} />
-            <p role="status" aria-live="polite" className="min-h-5 text-center text-sm font-medium text-gray-900">
+            <p role="status" aria-live="polite" className="min-h-5 text-center text-base font-medium text-foreground">
               {phaseLabel(phase, t)}
             </p>
             {phase === "listening" && !inputShown && state.transcript && (
               // No typing box on this screen (Kakak's question): the live
               // words show here, so nothing heard is hidden.
-              <p className="max-w-full rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900">
+              <p className="max-w-full rounded-[20px] rounded-br-md bg-muted px-4 py-2.5 text-base text-foreground">
                 {state.transcript}
               </p>
             )}
@@ -197,19 +198,19 @@ function Voice({
               <button
                 type="button"
                 onClick={cancel}
-                className="-mt-1 text-xs font-medium text-muted-foreground underline-offset-4 active:underline"
+                className="min-h-11 text-sm font-medium text-muted-foreground underline-offset-4 active:underline"
               >
                 {t("Cancel, don't send", "Batal, jangan kirim")}
               </button>
             )}
             {state.problem && phase === "idle" && state.canListen && (
-              <p className="text-center text-xs text-muted-foreground">{problemText(state.problem, t)}</p>
+              <p className="text-center text-sm text-muted-foreground">{problemText(state.problem, t)}</p>
             )}
           </>
         )}
 
         {showTip && (
-          <p className="flex items-start gap-2 text-xs text-muted-foreground">
+          <p className="flex items-start gap-2 text-sm text-muted-foreground">
             <Keyboard className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>
               {t("Tap the mic on your keyboard and speak.", "Ketuk mic di keyboard, lalu bicara.")}
@@ -226,8 +227,9 @@ function Voice({
             aria-pressed={speaker.on}
             onClick={() => speaker.toggle()}
             className={cn(
-              "flex min-h-9 items-center gap-1.5 self-center rounded-full border px-3 text-xs font-medium active:bg-muted",
-              speaker.on ? "border-primary/30 bg-primary/10 text-gray-900" : "bg-card text-muted-foreground"
+              // One quiet chip with no outline (04, PR 5); on, it takes her blush, since it is her voice.
+              "flex min-h-[38px] items-center gap-1.5 self-center rounded-full px-3.5 text-sm font-medium",
+              speaker.on ? "bg-kakak-tint text-foreground active:bg-kakak-line" : "bg-muted text-muted-foreground active:bg-muted/70"
             )}
           >
             {speaker.on ? <Volume2 className="size-4" aria-hidden="true" /> : <VolumeX className="size-4" aria-hidden="true" />}

@@ -55,18 +55,20 @@ test("Sort rooms into floors: preview, one tap, the right rooms and spots, and U
   await expect(card.getByText(/one room, with parts: Toilet, Wastafel/)).toBeVisible();
   await card.getByRole("button", { name: "Sort rooms" }).click();
 
-  // The rooms view now reads the stored floors.
-  const lt2 = page.getByRole("region", { name: "LT2", exact: true });
-  await expect(lt2.getByText("GB2 Bathroom", { exact: true })).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByRole("region", { name: "LT1", exact: true }).getByText("Service Area")).toBeVisible();
-  await expect(page.getByRole("region", { name: "No floor yet" }).getByText("Teras")).toBeVisible();
+  // The house now reads the stored floors (21 Nov: Rooms is drawn as the house).
+  const house = page.getByRole("region", { name: "The house" });
+  const bathroom = house.getByRole("button", { name: "LT2 · GB2 Bathroom", exact: true });
+  await expect(bathroom).toBeVisible({ timeout: 10_000 });
+  await expect(house.getByRole("button", { name: "LT1 · Service Area", exact: true })).toBeVisible();
+  await expect(house.getByText("No floor yet")).toBeVisible();
+  await expect(house.getByRole("button", { name: "Teras", exact: true })).toBeVisible();
   await expect(card).toHaveCount(0);
   expect(rooms.find((r) => r.id === id(1))).toMatchObject({ kind: "floor" });
   expect(rooms.find((r) => r.id === id(4))).toBeUndefined(); // the sink part, merged
   expect(chores.find((c) => c.title === "Lap keran")).toMatchObject({ location_id: id(3), spot: "Wastafel" });
 
   // A room's sheet shows each chore's spot.
-  await lt2.getByText("GB2 Bathroom", { exact: true }).click();
+  await bathroom.click();
   await expect(page.getByRole("dialog").getByText(/^Wastafel · /)).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
 

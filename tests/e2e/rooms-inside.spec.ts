@@ -90,17 +90,23 @@ test("Rooms view and picker: rooms inside under their room, counted once each, w
   await context.addInitScript((cards) => {
     for (const card of cards) localStorage.setItem(`miamus.whats-new.${card}`, "seen");
   }, SEEN);
-  await page.goto("/dashboard?module=chores&chores=rooms");
-
+  // Which rooms get vacuumed: the list, each room inside counted once.
+  await page.goto("/dashboard?module=chores&chores=rooms&job=vacuum");
   const lt2 = page.getByRole("region", { name: "LT2", exact: true });
-  await expect(lt2.getByText("5 ruangan")).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("button", { name: /^Vakum/ }).first().click();
-  await expect(lt2.getByText("Vakum di 2 dari 5")).toBeVisible();
+  await expect(lt2.getByText("Vakum di 2 dari 5")).toBeVisible({ timeout: 20_000 });
   await expect(lt2.getByRole("button", { name: "Tambah vakum di LT2 · Kamar Utama · Ruang Ganti" })).toBeVisible();
   await page.getByRole("button", { name: /^Semua/ }).click();
 
+  // The house: a room inside is its own tile beside its room (21 Nov).
+  const house = page.getByRole("region", { name: "Rumah", exact: true });
+  await expect(house.getByRole("listitem")).toHaveCount(5);
+  await house.getByRole("button", { name: "LT2: lihat daftarnya" }).click();
+  await expect(page.getByRole("dialog", { name: "LT2" }).getByText("5 ruangan")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
   // A bedroom's sheet lists its rooms inside; each opens its own sheet.
-  await lt2.getByRole("button", { name: /^Kamar Utama/ }).click();
+  await house.getByRole("button", { name: "LT2 · Kamar Utama", exact: true }).click();
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByText("Ruangan di dalamnya")).toBeVisible();
   await sheet.getByRole("button", { name: /Ruang Ganti/ }).click();
@@ -108,12 +114,13 @@ test("Rooms view and picker: rooms inside under their room, counted once each, w
   await sheet.getByRole("button", { name: "Tutup" }).click();
 
   // The Today list names the place in full.
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await expect(page.getByText("LT2 · Kamar Tamu 1 · Kamar Mandi · Toilet").first()).toBeVisible({ timeout: 20_000 });
 
   // The picker: rooms inside indented under their room; search finds them by bedroom.
   await page.getByRole("button", { name: "Tambah Tugas" }).first().click();
   const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Lainnya", exact: true }).click();
   await dialog.getByRole("combobox", { name: "Ruangan" }).click();
   const list = dialog.getByRole("listbox", { name: "Ruangan" });
   await expect(list.getByRole("group", { name: "LT2" }).getByRole("option")).toHaveText([

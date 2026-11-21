@@ -7,8 +7,13 @@ import { freshSession, installStub } from "./stub-backend";
 const OWNER_EN = "New: where ingredients are kept";
 const OWNER_ID = "Baru: tempat simpan bahan masakan";
 
+// The newer shelves card (21 Nov) claims a fresh week first; seen here.
+const shelvesSeen = (context: import("@playwright/test").BrowserContext) =>
+  context.addInitScript(() => localStorage.setItem("miamus.whats-new.kitchen-shelves-2026-11", "seen"));
+
 test("owners see the card on Kitchen → Food once, in their language", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, features: { kitchen: true } });
+  await shelvesSeen(context);
   await page.goto("/dashboard?module=inventory");
   const card = page.getByRole("region", { name: OWNER_EN });
   await expect(card).toBeVisible({ timeout: 20_000 });
@@ -19,12 +24,13 @@ test("owners see the card on Kitchen → Food once, in their language", async ({
   await card.getByRole("button", { name: "Got it" }).click();
   await expect(card).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Ingredients", exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Nothing in the kitchen yet")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("region", { name: OWNER_EN })).toHaveCount(0);
 });
 
 test("in Bahasa Indonesia for an owner who chose it", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" }, features: { kitchen: true } });
+  await shelvesSeen(context);
   await page.goto("/dashboard?module=inventory");
   const card = page.getByRole("region", { name: OWNER_ID });
   await expect(card).toBeVisible({ timeout: 20_000 });

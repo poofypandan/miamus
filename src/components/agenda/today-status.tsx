@@ -83,7 +83,7 @@ export function TodayStatus({
       data-testid="today-status"
       data-state={ok ? "ok" : "waiting"}
       aria-label={`${label}. ${t("Open what's been done", "Buka yang sudah selesai")}`}
-      className={cn(className, "active:opacity-80")}
+      className={cn(className, "press")}
     >
       {body}
     </button>
