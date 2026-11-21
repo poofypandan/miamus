@@ -306,3 +306,48 @@ test("Week from the date pill's sheet leaves no dead Back press (Codex, PR #181)
   await page.goBack();
   await expect(page).toHaveURL(/module=chores/);
 });
+
+function nextChore(title: string, daysFromToday: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + daysFromToday);
+  const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return {
+    id: `00000000-0000-4000-8000-0000001810${daysFromToday < 0 ? "01" : "02"}`,
+    household_id: HOUSEHOLD_ID,
+    title,
+    notes: null,
+    category: "cleaning",
+    assigned_to: STAFF_ID,
+    due_date: day,
+    due_time: null,
+    status: "pending",
+    completed_by: null,
+    completed_at: null,
+    photo_url: null,
+    created_at: "2026-11-01T00:00:00Z",
+    recurrence: "none",
+    recurrence_until: null,
+    parent_task_id: null,
+    requires_supervision: false,
+    before_photo_url: null,
+    after_photo_url: null,
+    location_id: null,
+    spot: null,
+  };
+}
+
+test("Next leads with a carried-over chore (Codex, PR #181)", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, chores: [nextChore("Clean the gutters", -1)] });
+  await page.goto("/dashboard?module=agenda");
+  const next = page.getByTestId("next-list");
+  await expect(next).toContainText("Clean the gutters", { timeout: 20_000 });
+  await expect(next).not.toContainText("Nothing more today");
+});
+
+test("Next ignores the Pets | Chores filter left on after Show less (Codex, PR #181)", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, chores: [nextChore("Mop the kitchen", 0)] });
+  await page.goto("/dashboard?module=agenda&day=all&show=pets");
+  await expect(page.getByTestId("whole-day")).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("whole-day").click();
+  await expect(page.getByTestId("next-list")).toContainText("Mop the kitchen");
+});

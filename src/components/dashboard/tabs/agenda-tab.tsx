@@ -487,15 +487,23 @@ export function AgendaTab() {
     firstRun.view !== "checklist" &&
     progress !== null &&
     (totals.total > 0 || waiting > 0);
-  // Next: open entries from now on (any-time ones first, as the day lists
-  // them); if nothing is left ahead, the open ones that are late.
+  // Next: carried-over chores first, as they lead the day (Phase 113), then
+  // open entries from now on (any-time ones first, as the day lists them);
+  // if nothing is left ahead, the open ones that are late. Without the
+  // carried-over ones here they were out of sight until See all (Codex, PR
+  // #181). From the whole day, never the Pets | Chores filter: that
+  // belongs to the list under See all, and folded away it would leave
+  // Next saying "Nothing more today" with no sign of why (Codex, PR #181).
   const nowHm = (() => {
     const now = new Date(clock);
     return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   })();
-  const openEntries = rest.filter((entry) => !isEntryDone(entry));
-  const ahead = showsToday ? openEntries.filter((entry) => !entry.time || entry.time >= nowHm) : openEntries;
-  const nextEntries = ahead.length > 0 ? ahead : openEntries;
+  const nextEntries = useMemo(() => {
+    const { overdue: carried, rest: dayRest } = splitOverdue(allEntries);
+    const open = dayRest.filter((entry) => !isEntryDone(entry));
+    const ahead = showsToday ? open.filter((entry) => !entry.time || entry.time >= nowHm) : open;
+    return [...carried.filter((entry) => !isEntryDone(entry)), ...(ahead.length > 0 ? ahead : open)];
+  }, [allEntries, showsToday, nowHm]);
   const waitingLines = slip !== null || repairLines.toReview > 0 || repairLines.toCheck > 0 || needsDate > 0;
   const comingLines = comingUp.length > 0 || !!menuLine || eatSoon > 0 || toBuy > 0;
 

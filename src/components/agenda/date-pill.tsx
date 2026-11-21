@@ -92,8 +92,17 @@ export function DatePill({
       setStack(end + 12 > kakak.getBoundingClientRect().left);
     }
     measure();
+    // Again whenever any of the three changes size (the web font arriving,
+    // Kakak's button settling) or the screen does.
+    const sizes = new ResizeObserver(measure);
+    for (const el of [pillRef.current, todayRef.current, document.querySelector('[data-testid="kakak-band"] button')]) {
+      if (el) sizes.observe(el);
+    }
     window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    return () => {
+      sizes.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   }, [mounted, isToday, band, label, locale]);
 
   if (!mounted) return null;
