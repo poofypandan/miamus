@@ -487,8 +487,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Kakak", id: "Kakak" },
     body: {
-      en: "Kakak is Miamus's AI helper. Type or say what you need, or tap one of three examples, and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Settings → Kakak turns her on or off.",
-      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik, ucapkan, atau dari tiga contoh yang bisa diketuk: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Atur di Pengaturan → Kakak.",
+      en: "Kakak is Miamus's AI helper. Type or say what you need, or tap an example, and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Drag her sheet down to close it. Settings → Kakak turns her on or off.",
+      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik, ucapkan, atau contoh yang diketuk: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Tarik ke bawah untuk menutup. Atur di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
     covers: ["kakak-routines-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
