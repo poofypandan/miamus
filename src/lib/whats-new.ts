@@ -28,6 +28,27 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 21 Nov (the owner's wish list, step 1): on Kitchen → Shopping, under
+    // the calm-start rules.
+    id: "menu-needs-2026-11",
+    date: "2026-11-21",
+    audience: "owner",
+    title: { en: "New: what the menu needs", id: "Baru: yang perlu untuk menu" },
+    steps: {
+      en: [
+        "Plan the week's dishes in Kitchen → Menu. Shopping then shows what they still need, under For the menu.",
+        "Something not on your list has a dashed outline and says which dish it's for, such as Needed for Rendang (Sat). Add puts it on To buy; Add all does a whole dish.",
+        "Once bought, it is part of what's at home. It goes when the dish is cooked or its day passes. Staff see the same list.",
+      ],
+      id: [
+        "Rencanakan masakan seminggu di Dapur → Menu. Belanja lalu menunjukkan yang masih perlu, di Untuk menu.",
+        "Yang belum ada di daftar bergaris putus-putus dan menyebut masakannya, misalnya Perlu untuk Rendang (Sab). Tambah memasukkannya ke Perlu dibeli; Tambah semua untuk satu masakan.",
+        "Setelah dibeli, barangnya jadi bagian stok di rumah. Hilang dari daftar setelah masakannya dimasak atau harinya lewat. Staf melihat daftar yang sama.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 21 Nov (Fable's tab redesigns, PR 1): the tabs reordered and Home
     // opening on the house. Shown on Home, under the calm-start rules.
     id: "home-centre-2026-11",

@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { usePurchase } from "@/components/shopping/bought-sheet";
 import { StockItemsPanel } from "@/components/shopping/stock-items-panel";
 import { ToBuyRow } from "@/components/shopping/to-buy-row";
+import { MenuNeedsSection } from "@/components/shopping/menu-needs-section";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -36,6 +37,8 @@ import type { InventoryAlert } from "@/types/database";
  *
  *   To buy      a quick-add line, then everything someone marked running low
  *               or out and every note about anything else. Tick = bought.
+ *   For the menu  what the dishes planned for the coming week still need
+ *               (lib/menu-needs.ts), with Add (21 Nov).
  *   Everything  every item, Pets then Home. Tap to say how much is left, or
  *               to edit it.
  *
@@ -233,6 +236,9 @@ export function ShoppingTab() {
           </>
         )}
       </section>
+
+      {/* The owner's wish list, step 1 (21 Nov): what the coming menu still needs. */}
+      <MenuNeedsSection lang={locale} owner />
 
       <StockItemsPanel
         id="everything-title"

@@ -67,6 +67,12 @@ export function KitchenTab() {
           <WhatsNewCard id="kitchen-places-2026-11" />
         </div>
       )}
+      {/* The wish list, step 1 (21 Nov): For the menu on Shopping. */}
+      {recipesOn() && view !== "menu" && view !== "food" && (
+        <div className="px-4 empty:hidden">
+          <WhatsNewCard id="menu-needs-2026-11" />
+        </div>
+      )}
       {amountsOn(flags) && view !== "menu" && (
         <div className="px-4 empty:hidden">
           <WhatsNewCard id="kitchen-amounts-2026-11" />
