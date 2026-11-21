@@ -264,7 +264,12 @@ export const LEGAL = {
   // the recipe lines are listed ready first, and say "uses soon" with an
   // ingredient's use-by date, which is already sent while Ingredients are
   // on. Nothing new is sent or stored.
-  policyVersion: "2026-11-21.2",
+  // 2026-11-21.3 (E1, Kakak sees ready-to-eat food): while Food at home is
+  // on, each Kakak request also carries the ready-to-eat food at home: its
+  // name, where it is kept and its use-by date. Never its photo, its notes,
+  // who gave it or who added it. Nothing new is stored; no new service or
+  // region. Set effectiveDate to the merge day.
+  policyVersion: "2026-11-21.3",
   effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
