@@ -5,7 +5,7 @@ import Cropper from "react-easy-crop";
 import { toast } from "sonner";
 import { Check, Loader2, X, ZoomIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cropToSquareFile, type CropArea } from "@/lib/image-crop";
+import { cropToSquareFile, toPhotoFrame, type CropArea, type PhotoFrame } from "@/lib/image-crop";
 
 /**
  * Pick the square (Phase 103).
@@ -65,13 +65,19 @@ export function ImageCropper({
    */
   url?: string | null;
   onCancel: () => void;
-  onCropped: (cropped: File) => void;
+  /**
+   * The square, and where it sits in the photo it was cut from, in percent
+   * of that photo (react-easy-crop's own report): the Pets wall cuts its
+   * tiles around the square's centre (21 Nov; Fable's 08, decision 23).
+   */
+  onCropped: (cropped: File, frame: PhotoFrame | null) => void;
 }) {
   const t = COPY[locale];
   const [src, setSrc] = useState<string | null>(null);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState<CropArea | null>(null);
+  const [frame, setFrame] = useState<PhotoFrame | null>(null);
   const [busy, setBusy] = useState(false);
 
   // A new photo starts centred and unzoomed rather than inheriting the last
@@ -83,6 +89,7 @@ export function ImageCropper({
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setArea(null);
+    setFrame(null);
     if (file) {
       const objectUrl = URL.createObjectURL(file);
       setSrc(objectUrl);
@@ -91,15 +98,16 @@ export function ImageCropper({
     setSrc(url ?? null);
   }, [file, url]);
 
-  const handleCropComplete = useCallback((_: unknown, areaPixels: CropArea) => {
+  const handleCropComplete = useCallback((areaPercent: CropArea, areaPixels: CropArea) => {
     setArea(areaPixels);
+    setFrame(toPhotoFrame(areaPercent));
   }, []);
 
   async function confirm() {
     if (!src || !area) return;
     setBusy(true);
     try {
-      onCropped(await cropToSquareFile(src, area, file?.name ?? "avatar.jpg"));
+      onCropped(await cropToSquareFile(src, area, file?.name ?? "avatar.jpg"), frame);
     } catch (err) {
       console.error(err);
       toast.error(t.failed);

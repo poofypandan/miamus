@@ -80,7 +80,10 @@ export function KakakButton() {
           row is never pressed by mistake. */}
       {createPortal(
         <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 mx-auto w-full max-w-md">
-          <div aria-hidden="true" className="h-8 bg-gradient-to-t from-background from-25% to-background/0" />
+          {/* No fade while the Pets wall fills the screen down to the band:
+              nothing scrolls under it there, and the fade would dissolve the
+              last tiles' feet (PetWall marks <body> with data-pets-wall). */}
+          <div aria-hidden="true" className="h-8 bg-gradient-to-t from-background from-25% to-background/0 in-data-[pets-wall]:opacity-0" />
           <div
             data-testid="kakak-band"
             className="pointer-events-auto flex items-center justify-end gap-3 bg-background px-4 pt-1 pb-3"

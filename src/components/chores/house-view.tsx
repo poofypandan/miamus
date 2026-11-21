@@ -94,7 +94,7 @@ function Band({
           }
           className={cn(
             "-mx-1 flex min-h-[36px] w-[calc(100%+0.5rem)] items-center justify-between gap-2 rounded-lg px-1 text-xs font-semibold tracking-[0.06em] uppercase active:bg-muted",
-            band.attention ? "text-amber-800" : "text-muted-foreground"
+            band.attention ? "text-attention" : "text-muted-foreground"
           )}
         >
           <span className="flex min-w-0 items-center gap-1.5">
@@ -125,7 +125,7 @@ function RoomTile({ room, onOpen }: { room: HouseRoom; onOpen: () => void }) {
       className={cn(
         "flex min-h-[44px] w-full min-w-0 items-center justify-center gap-1.5 rounded-xl px-3.5 text-sm active:opacity-70",
         room.attention
-          ? "bg-amber-100 font-semibold text-amber-900"
+          ? "bg-attention-tint font-semibold text-attention"
           : room.inside
             ? "bg-zinc-100 font-medium text-gray-600"
             : "bg-zinc-100 font-semibold text-gray-900"
