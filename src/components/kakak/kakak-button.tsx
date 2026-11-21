@@ -93,7 +93,7 @@ export function KakakButton() {
             <button
               type="button"
               onClick={press}
-              className="flex min-h-12 shrink-0 items-center gap-2 rounded-full border bg-card py-1.5 pl-1.5 pr-4 text-sm font-semibold text-gray-900 shadow-sm active:scale-[0.98]"
+              className="flex min-h-12 shrink-0 items-center gap-2 rounded-full border bg-card py-1.5 pl-1.5 pr-4 text-sm font-semibold text-gray-900 shadow-sm press"
             >
               <KakakAvatar key={saves} className="size-9" beat={settling ? "settle" : null} />
               {t("Tell Kakak", "Bilang ke Kakak")}
