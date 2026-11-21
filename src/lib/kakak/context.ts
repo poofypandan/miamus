@@ -10,11 +10,13 @@
 // References are numbered in a fixed order (creation time, then id) so the
 // same household gives the same references on every call of a conversation.
 
+import { cookCheck } from "@/lib/can-cook";
 import { ROUTINE_KINDS } from "@/lib/pet-routine-kinds";
+import type { RecipeWithLines } from "@/lib/recipes";
 import { isIngredient, isStockUnit } from "@/lib/kitchen-units";
 import { hiddenAreasOf } from "@/lib/staff-areas";
-import type { FoodPlace, InventoryCategory, InventoryUnit, RoutineKind } from "@/types/database";
-import type { KakakHousehold, KakakLocale } from "./household";
+import type { FoodPlace, InventoryCategory, InventoryItem, InventoryUnit, MenuMeal, RoutineKind } from "@/types/database";
+import { addDays, type KakakHousehold, type KakakLocale } from "./household";
 import { FOOD_PLACES } from "./tools";
 
 const ROUTINE_KIND_SET = new Set<string>(ROUTINE_KINDS.map((k) => k.kind));
@@ -66,6 +68,8 @@ export interface ContextRoomRow {
 export interface ContextItemRow {
   id: string;
   name: string;
+  /** "Brown" in "Rice (Brown)": only in what the recipe check names (Codex, PR #156). */
+  variant?: string | null;
   scope: string;
   created_at: string;
   /** Phase 176: which shelf; Fresh Food and Pantry are ingredients. Absent on an older read. */
@@ -80,6 +84,27 @@ export interface ContextItemRow {
   track_amount?: boolean | null;
   unit?: string | null;
   quantity?: number | string | null;
+}
+
+/** A saved recipe with its lines (migrations/151), as the route reads it. */
+export interface ContextRecipeRow {
+  id: string;
+  name: string;
+  name_id: string | null;
+  servings: number;
+  written_in: "en" | "id";
+  created_at: string;
+  ingredients: { id: string; item_id: string | null; name: string; name_id: string | null; amount: number | null; unit: string | null; position: number }[];
+}
+
+/** A planned dish (migrations/153), as the route reads it. */
+export interface ContextDishRow {
+  day: string;
+  meal: string;
+  title: string;
+  recipe_id: string | null;
+  position: number;
+  cooked_at: string | null;
 }
 
 export interface ContextRows {
@@ -99,6 +124,42 @@ export interface ContextRows {
   billsOn?: boolean | null;
   /** The features were read at all: without it Kakak is told nothing about what is off. */
   featuresRead?: boolean;
+  /** Saved recipes (Can we cook it?, 20 Nov); absent on an older read, which reads as none. */
+  recipes?: ContextRecipeRow[];
+  /** The menu from today (Phase 170 PR C); absent or failed reads as none. */
+  menu?: ContextDishRow[];
+}
+
+/**
+ * A recipe as the server knows it for plan_dish's card: its id, and what it
+ * is missing (each item's id, name and the shopping status it goes on the
+ * list with). Never sent to Anthropic.
+ */
+export interface RecipeMissing {
+  itemId: string;
+  name: string;
+  /** The status it goes on the list with. */
+  status: "low" | "out";
+  /** Already on the shopping list (Running low or Out). */
+  listed: boolean;
+}
+
+/** The app's own check of one recipe, as the card shows it (Fable S0). */
+export interface RecipeCheck {
+  state: "ready" | "missing" | "unknown";
+  missing: RecipeMissing[];
+  unchecked: string[];
+}
+
+export interface RecipeRef extends RecipeCheck {
+  id: string;
+  name: string;
+  /**
+   * The same check at another number of servings (Codex, PR #156): with
+   * Kitchen amounts on, 8 servings may need more than the recipe's 4.
+   * Server only; absent on refs built elsewhere (the eval).
+   */
+  checkFor?: (servings: number) => RecipeCheck;
 }
 
 /**
@@ -120,6 +181,8 @@ export interface RefMap {
   items: Record<string, string>;
   /** I1… → how its amount is kept; only for items whose row carried it. */
   stock?: Record<string, ItemStock>;
+  /** D1… → the recipe and what it is missing (Can we cook it?). */
+  recipes?: Record<string, RecipeRef>;
 }
 
 /** Shown on the card next to each reference, in the household's own words. */
@@ -300,6 +363,8 @@ export function buildContext(
     }
   }
 
+  const { recipes, menu } = kitchenFor(rows, refs, today);
+
   return {
     household: {
       today,
@@ -317,10 +382,100 @@ export function buildContext(
       ...(rows.featuresRead && rows.repairsOn === false ? { repairsOff: true } : {}),
       ...(rows.featuresRead && rows.billsOn === false ? { billsOff: true } : {}),
       ...(rows.featuresRead && rows.kitchenOn !== true ? { kitchenOff: true } : {}),
+      ...(recipes.length ? { recipes } : {}),
+      ...(menu.length ? { menu } : {}),
     },
     refs,
     names,
   };
+}
+
+const MEAL_ORDER: Record<string, number> = { breakfast: 0, lunch: 1, dinner: 2 };
+
+/**
+ * Can we cook it? (owner, 20 Nov): each saved recipe checked by the app's
+ * own rule (lib/can-cook.ts) against the items as read, with amounts only
+ * while Kitchen amounts is on, at the recipe's own servings; and the menu
+ * from today for 7 days. Only names go into the block; ids and the
+ * shopping status of what is missing stay in refs.recipes.
+ */
+function kitchenFor(
+  rows: ContextRows,
+  refs: RefMap,
+  today: string,
+): { recipes: NonNullable<KakakHousehold["recipes"]>; menu: NonNullable<KakakHousehold["menu"]> } {
+  const recipes: NonNullable<KakakHousehold["recipes"]> = [];
+  refs.recipes = {};
+  // The rows as lib/can-cook reads them. Only the fields it uses are real.
+  const items = rows.items.map(
+    (item) =>
+      ({
+        id: item.id,
+        name: item.name,
+        // "Rice (Brown)", as the recipe screen names it (Codex, PR #156).
+        variant: typeof item.variant === "string" && item.variant.trim() ? item.variant : null,
+        stock_status: item.stock_status === "low" || item.stock_status === "out" ? item.stock_status : "ok",
+        track_amount: item.track_amount === true,
+        unit: isStockUnit(item.unit) ? item.unit : "pcs",
+        quantity: Number.isFinite(Number(item.quantity)) ? Number(item.quantity) : 0,
+      }) as unknown as InventoryItem,
+  );
+  const amounts = rows.kitchenOn === true;
+  const byId = new Map<string, string>();
+  for (const row of [...(rows.recipes ?? [])].sort((a, b) => byAge({ ...a }, { ...b }))) {
+    const ref = `D${recipes.length + 1}`;
+    const recipe = {
+      ...row,
+      steps: null,
+      steps_id: null,
+      household_id: "",
+      created_by: null,
+      updated_at: "",
+      ingredients: [...row.ingredients].sort((a, b) => a.position - b.position),
+    } as unknown as RecipeWithLines;
+    const checkAt = (servings: number | null) => cookCheck(recipe, servings, items, { amounts, forStaff: false });
+    const check = checkAt(null);
+    const asRef = (found: typeof check): RecipeCheck => ({
+      state: found.state,
+      missing: found.missing.map((m) => {
+        const item = items.find((i) => i.id === m.itemId)!;
+        const status: "low" | "out" =
+          item.stock_status === "low" || item.stock_status === "out" ? item.stock_status : item.quantity > 0 ? "low" : "out";
+        return { itemId: m.itemId, name: cleanName(m.name, 60), status, listed: m.listed };
+      }),
+      unchecked: found.unchecked.map((n) => cleanName(n, 60)),
+    });
+    const name = cleanName(row.name, 60);
+    const nameId = row.name_id && cleanName(row.name_id, 60) !== name ? cleanName(row.name_id, 60) : null;
+    recipes.push({
+      ref,
+      name,
+      ...(nameId ? { nameId } : {}),
+      state: check.state,
+      missing: check.missing.map((m) => cleanName(m.name, 60)),
+      ...(check.missing.some((m) => m.listed) ? { onList: check.missing.filter((m) => m.listed).map((m) => cleanName(m.name, 60)) } : {}),
+      unchecked: check.unchecked.map((n) => cleanName(n, 60)),
+    });
+    refs.recipes[ref] = {
+      id: row.id,
+      // The dish's title on the card: the whole name (recipes allow 80).
+      name: cleanName(row.name, 80),
+      ...asRef(check),
+      checkFor: (servings) => asRef(checkAt(servings)),
+    };
+    byId.set(row.id, ref);
+  }
+  const last = addDays(today, 6);
+  const menu = (rows.menu ?? [])
+    .filter((dish) => dish.day >= today && dish.day <= last && MEAL_ORDER[dish.meal] !== undefined && !dish.cooked_at)
+    .sort((a, b) => a.day.localeCompare(b.day) || MEAL_ORDER[a.meal] - MEAL_ORDER[b.meal] || a.position - b.position)
+    .map((dish) => ({
+      day: dish.day,
+      meal: dish.meal as MenuMeal,
+      title: cleanName(dish.title, 80),
+      recipe: dish.recipe_id ? (byId.get(dish.recipe_id) ?? null) : null,
+    }));
+  return { recipes, menu };
 }
 
 /** Today and now in Asia/Jakarta (UTC+7, no daylight saving). */

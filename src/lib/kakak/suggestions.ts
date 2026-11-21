@@ -13,10 +13,12 @@ import { ownerAlertTimeAllowed, reminderTimeAllowed } from "@/lib/routine-alerts
 import { AREAS, isStaffArea, withAreas, type StaffArea } from "@/lib/staff-areas";
 import type { InventoryUnit, RoutineKind, RoutineProof } from "@/types/database";
 import type { RefMap, RefNames } from "./context";
-import type { KakakHousehold } from "./household";
+import { addDays, type KakakHousehold } from "./household";
 import {
+  DISH_MEALS,
   FOOD_PLACES,
   INGREDIENT_EXPIRY,
+  NONE,
   INGREDIENT_SHELVES,
   PET_ROUTINE_TOOL_KINDS,
   TOOL_WEEKDAYS,
@@ -218,7 +220,44 @@ export interface StaffAreasSuggestion {
   owedAreas: StaffArea[];
 }
 
+/**
+ * A dish on the menu (Can we cook it?, 20 Nov): saved as the owner's dish
+ * form saves it (menu-store addDishes). What the recipe is missing comes as
+ * a second card, an ordinary shopping one, worked out by the server from the
+ * app's own check (context.ts refs.recipes), never by Kakak.
+ */
+export interface MenuDishSuggestion {
+  kind: "menu_dish";
+  /** The saved recipe, or null for a typed dish. */
+  recipeId: string | null;
+  /** The dish's title: the recipe's name, or what the owner said. */
+  title: string;
+  day: string;
+  meal: (typeof DISH_MEALS)[number];
+  /** Null: the recipe's own servings (or none, for a typed dish). */
+  servings: number | null;
+  /** "Today" / "Tomorrow" on the card, by the household's today when Kakak read it (Fable W5). */
+  relative?: "today" | "tomorrow" | null;
+  /**
+   * The app's own check, at the servings planned, always on the card
+   * (Fable S0): her sentence may be dropped by the guard, the card never
+   * loses the answer. Null for a typed dish (no saved recipe).
+   */
+  check?: { state: "ready" | "missing" | "unknown"; missing: { name: string; listed: boolean }[]; unchecked: string[] } | null;
+  /** What is missing and not added: all of it when the owner said not to, or (`overflow`) what didn't fit. */
+  missing: string[];
+  /** `missing` is what is past the ten the card can add (Fable W4). */
+  overflow?: boolean;
+  /**
+   * Fable (a): one ask is one section. The items saving puts on the
+   * shopping list, only those not on it yet (a missing item that is Running
+   * low or Out is already on To buy, so writing it changes nothing).
+   */
+  toBuy?: { itemId: string; name: string; status: "low" | "out" }[];
+}
+
 export type KakakSuggestion =
+  | MenuDishSuggestion
   | ChoreSuggestion
   | ShoppingSuggestion
   | PetRoutineSuggestion
@@ -230,9 +269,11 @@ export type KakakSuggestion =
 /**
  * The oldest page (lib/kakak/client.ts KAKAK_CLIENT_VERSION) that can show
  * and save this suggestion: 2 (2026-11-14) for a new ingredient or an
- * amount, 3 for what a staff member sees (Phase 178 follow-up), else 1.
+ * amount, 3 for what a staff member sees (Phase 178 follow-up), 4 for a
+ * dish on the menu (Can we cook it?), else 1.
  */
 export function clientVersionFor(item: KakakSuggestion): number {
+  if (item.kind === "menu_dish") return 4;
   if (item.kind === "staff_areas") return 3;
   if (item.kind === "new_ingredient" || (item.kind === "ingredient" && Boolean(item.amount || item.amountSkipped))) return 2;
   return 1;
@@ -270,6 +311,56 @@ export function toIsoDays(value: unknown): number[] | null {
 
 function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+/**
+ * One checked tool call → its cards: one each (plan_dish is one section,
+ * with what it adds to the shopping list as rows: Fable (a)). Empty for
+ * ask_question and whatever toSuggestion drops.
+ */
+export function toSuggestions(
+  household: KakakHousehold,
+  refs: RefMap,
+  names: RefNames,
+  name: string,
+  input: Record<string, unknown>,
+): KakakSuggestion[] {
+  if (name !== "plan_dish") {
+    const one = toSuggestion(household, refs, names, name, input);
+    return one ? [one] : [];
+  }
+  const ref = str(input.recipe);
+  const recipe = ref && ref !== NONE ? refs.recipes?.[ref] : undefined;
+  if (ref && ref !== NONE && !recipe) return [];
+  const typed = str(input.dish_name);
+  const title = recipe ? recipe.name : typed && typed !== NONE ? typed.slice(0, 80) : null;
+  if (!title || !isDay(input.day) || !(DISH_MEALS as readonly unknown[]).includes(input.meal)) return [];
+  const servings = Number.isInteger(input.servings) && (input.servings as number) >= 1 && (input.servings as number) <= 50 ? (input.servings as number) : null;
+  // At the servings asked for, when the owner gave a number (Codex, PR #156).
+  const check = recipe ? (servings && recipe.checkFor ? recipe.checkFor(servings) : recipe) : null;
+  const missing = check?.missing ?? [];
+  const add = input.add_missing === true && missing.length > 0;
+  // Only what isn't on the shopping list yet changes anything (Fable S1).
+  const fresh = add ? missing.filter((m) => !m.listed) : [];
+  const day = input.day as string;
+  const dish: MenuDishSuggestion = {
+    kind: "menu_dish",
+    recipeId: recipe?.id ?? null,
+    title,
+    day,
+    meal: input.meal as MenuDishSuggestion["meal"],
+    servings,
+    relative: day === household.today ? "today" : day === addDays(household.today, 1) ? "tomorrow" : null,
+    check: check
+      ? { state: check.state, missing: check.missing.map((m) => ({ name: m.name, listed: m.listed })), unchecked: check.unchecked }
+      : null,
+    // Not added: all of it; added: what the shopping card can't hold (10 at most).
+    // Not added: what isn't on the list yet (the rest says "On the shopping list").
+    missing: (add ? fresh.slice(10) : missing.filter((m) => !m.listed)).map((m) => m.name),
+    overflow: add && fresh.length > 10,
+    toBuy: fresh.slice(0, 10).map((m) => ({ itemId: m.itemId, name: m.name, status: m.status })),
+  };
+  return [dish];
 }
 
 /**
@@ -564,6 +655,24 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
   if (!value || typeof value !== "object") return false;
   const s = value as Record<string, unknown>;
   switch (s.kind) {
+    case "menu_dish":
+      return (
+        okId(s.recipeId, true) &&
+        okText(s.title, 80, false) &&
+        isDay(s.day) &&
+        (DISH_MEALS as readonly unknown[]).includes(s.meal) &&
+        (s.servings === null || (Number.isInteger(s.servings) && (s.servings as number) >= 1 && (s.servings as number) <= 50)) &&
+        Array.isArray(s.missing) &&
+        s.missing.length <= 200 &&
+        s.missing.every((m) => typeof m === "string") &&
+        (s.relative == null || s.relative === "today" || s.relative === "tomorrow") &&
+        (s.overflow == null || typeof s.overflow === "boolean") &&
+        (s.toBuy == null ||
+          (Array.isArray(s.toBuy) &&
+            s.toBuy.length <= 10 &&
+            s.toBuy.every((e: Record<string, unknown>) => okId(e?.itemId, false) && okText(e.name, 80, false) && (e.status === "low" || e.status === "out")))) &&
+        (s.check == null || okCheck(s.check))
+      );
     case "chore":
       return (
         okText(s.title, 80, false) &&
@@ -695,6 +804,21 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
     default:
       return false;
   }
+}
+
+/** A dish card's check, as the route builds it: only names, a state and whether each is listed. */
+function okCheck(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const c = value as Record<string, unknown>;
+  return (
+    (c.state === "ready" || c.state === "missing" || c.state === "unknown") &&
+    Array.isArray(c.missing) &&
+    c.missing.length <= 200 &&
+    c.missing.every((m: Record<string, unknown>) => typeof m?.name === "string" && typeof m.listed === "boolean") &&
+    Array.isArray(c.unchecked) &&
+    c.unchecked.length <= 200 &&
+    c.unchecked.every((n) => typeof n === "string")
+  );
 }
 
 /** An amount Kakak may write: above 0 (none left is the shopping list's Out), at most MAX_AMOUNT. */
