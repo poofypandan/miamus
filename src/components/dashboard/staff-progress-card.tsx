@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, ClipboardList, PawPrint, Users } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
 import { useT } from "@/context/owner-locale-context";
 import { ANYONE_PERSON, useWorkloadParam } from "@/hooks/use-staff-workload";
 import type {
@@ -40,13 +40,13 @@ export function StaffProgressCard({
   return (
     <section className="flex flex-col gap-2" aria-label={t(`${dayLabel}'s progress`, `Progres ${dayLabel}`)}>
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-gray-900">
+        <h2 className="text-sm font-semibold text-muted-foreground">
           {t(`${dayLabel}'s progress`, `Progres ${dayLabel}`)}
         </h2>
         <button
           type="button"
           onClick={() => workload.open()}
-          className="-mr-2 flex min-h-9 items-center gap-0.5 rounded-lg px-2 text-xs font-medium text-muted-foreground active:bg-muted"
+          className="-mr-2 flex min-h-9 items-center gap-0.5 rounded-lg px-2 text-sm font-medium text-muted-foreground active:bg-muted"
         >
           {t("Who did what", "Siapa mengerjakan apa")} <ChevronRight className="size-3.5" />
         </button>
@@ -89,7 +89,11 @@ export function initialsOf(name: string): string {
     .toUpperCase();
 }
 
-/** "Rumah 6/8", with its line icon; nothing for a kind the person doesn't have. */
+/**
+ * "Rumah 6/8 · Hewan 4/4" as one line of text (21 Nov, the visual
+ * direction's PR 4): the icons only repeated the word beside them. Nothing
+ * for a kind the person doesn't have.
+ */
 export function KindCounts({
   house,
   pets,
@@ -104,16 +108,17 @@ export function KindCounts({
   className?: string;
 }) {
   return (
-    <span className={cn("flex shrink-0 items-center gap-3 tabular-nums", className)}>
+    // One line that truncates before it can touch what sits beside it
+    // (Fable's look: "8/8" ran into "Semua selesai" in Indonesian).
+    <span className={cn("block min-w-0 truncate tabular-nums", className)}>
       {house && (
-        <span className="flex items-center gap-1" data-testid="progress-house">
-          <ClipboardList className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        <span data-testid="progress-house">
           {houseLabel} {house.done}/{house.total}
         </span>
       )}
+      {house && pets && <span aria-hidden> · </span>}
       {pets && (
-        <span className="flex items-center gap-1" data-testid="progress-pets">
-          <PawPrint className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+        <span data-testid="progress-pets">
           {petsLabel} {pets.done}/{pets.total}
         </span>
       )}
@@ -147,6 +152,9 @@ function PersonRow({ person, onPress }: { person: PersonProgress; onPress: () =>
   const line = usePersonLine()(person);
   // On leave, the counts step aside for "Libur": what they had was handed on.
   const tone: ProgressTone = person.onLeave || person.busy ? "neutral" : person.tone;
+  /** All done today: said in the done colour. */
+  const done =
+    !person.onLeave && !person.busy && person.tasks.length > 0 && person.tasks.every((task) => task.state !== "open");
 
   return (
     <button
@@ -166,24 +174,30 @@ function PersonRow({ person, onPress }: { person: PersonProgress; onPress: () =>
       >
         {initialsOf(person.name)}
       </span>
+      {/* The name at 16 px, what they have under it in one quiet line, and
+          the state at the end (21 Nov, PR 4). */}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-sm font-medium text-gray-900">{person.name}</span>
-          {!person.onLeave && (
-            <KindCounts
-              house={person.house}
-              pets={person.pets}
-              houseLabel={t("House", "Rumah")}
-              petsLabel={t("Pets", "Hewan")}
-              className="text-sm font-medium text-gray-900"
-            />
-          )}
-        </span>
-        <span className={cn("text-xs", TONE_TEXT[tone])} data-testid="staff-progress-line">
-          {line}
-        </span>
+        <span className="truncate text-base font-semibold text-gray-900">{person.name}</span>
+        {!person.onLeave && (person.house || person.pets) && (
+          <KindCounts
+            house={person.house}
+            pets={person.pets}
+            houseLabel={t("House", "Rumah")}
+            petsLabel={t("Pets", "Hewan")}
+            className="text-sm text-muted-foreground"
+          />
+        )}
       </span>
-      <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <span
+        className={cn(
+          "max-w-[45%] shrink-0 truncate text-right text-sm font-medium",
+          tone === "neutral" && done ? "text-done-foreground" : TONE_TEXT[tone]
+        )}
+        data-testid="staff-progress-line"
+      >
+        {line}
+      </span>
+      <ChevronRight className="size-4 shrink-0 text-subtle-foreground" aria-hidden />
     </button>
   );
 }
@@ -213,7 +227,7 @@ function AnyoneRow({ anyone, onPress }: { anyone: AnyoneProgress; onPress: () =>
     >
       <Users className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-gray-700">{label}</span>
+        <span className="truncate text-base text-gray-700">{label}</span>
         {extra && <span className={cn("text-xs", TONE_TEXT[anyone.tone])}>{extra}</span>}
       </span>
       <span className="font-medium text-gray-900 tabular-nums">{anyone.open}</span>

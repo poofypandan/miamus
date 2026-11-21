@@ -86,6 +86,18 @@ export interface KakakHousehold {
     ingredient?: boolean;
     /** Marked Out: it keeps no date until it is bought again (migrations/154). */
     out?: boolean;
+    /**
+     * E2 (20 Nov): Running low or Out, for every listed item (Enough is
+     * absent), so "what's running low?" and "what do we need to buy?" have
+     * an answer and "I bought it" knows what is on the list.
+     */
+    status?: "low" | "out";
+    /**
+     * E2: counted by amount while Kitchen amounts is on. Never rendered
+     * into the block (only what renderHouseholdBlock writes reaches the
+     * model); validate.ts uses it, since Bought there asks how much.
+     */
+    tracked?: boolean;
     /** Its stored place, only when someone noted one; a default is never sent. */
     keptIn?: FoodPlace | null;
     /** Its stored date, YYYY-MM-DD, only when there is one. */
@@ -131,9 +143,30 @@ export interface KakakHousehold {
    * other block reads exactly as before.
    */
   recipes?: KakakRecipe[];
+  /** E2: the items' statuses were read, so an item without one is Enough. */
+  statusesRead?: boolean;
   /** The menu from today for 7 days (Phase 170 PR C), for "is it on the menu already?". Absent when empty. */
   menu?: { day: string; meal: MenuMeal; title: string; recipe: string | null }[];
+  /**
+   * E1 (20 Nov): the ready-to-eat food still at home, soonest use-by first,
+   * for "what should we eat?". Only while Food at home is on; undefined
+   * when it wasn't read (an older read), [] when there is none. Name, place
+   * and date only.
+   */
+  foods?: KakakFood[];
 }
+
+/** One ready-to-eat food at home (E1). No reference: no tool takes one. */
+export interface KakakFood {
+  /** Null for food saved with a photo only. */
+  name: string | null;
+  keptIn: FoodPlace | null;
+  expiresOn: string | null;
+  expiryUnknown: boolean;
+}
+
+/** Food past this many is counted, not listed. */
+export const MAX_FOODS_IN_BLOCK = 20;
 
 /** One saved recipe in the block (D1, D2, …). */
 export interface KakakRecipe {
@@ -148,6 +181,12 @@ export interface KakakRecipe {
   onList?: string[];
   /** Lines that couldn't be checked, by name. */
   unchecked: string[];
+  /**
+   * PR C1: its linked ingredients that expire within two days (only while
+   * Ingredients are on, when the date is already in the block), soonest
+   * first. Absent when none.
+   */
+  usesSoon?: { name: string; expiresOn: string }[];
 }
 
 /** Recipes past this many are counted, not listed: the block stays small (about 30 tokens a recipe). */
@@ -256,6 +295,9 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   if (household.foodOff) {
     lines.push("");
     lines.push("Food at home: switched off for this household (Settings → Features). No food.");
+  } else if (household.foods) {
+    lines.push("");
+    lines.push(...foodLines(household.foods, household.today));
   }
   // The other switches, only when off (Phase 180): what Kakak says about a
   // screen follows what this household has on.
@@ -273,9 +315,15 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
   for (const room of household.rooms) lines.push(`- ${room.ref}: ${roomLine(room)}`);
   if (household.rooms.length === 0) lines.push("- none");
   lines.push("");
-  lines.push("Shopping items already in the app:");
+  lines.push(
+    household.statusesRead
+      ? "Shopping items already in the app (out or running low means it is on the shopping list; nothing means Enough; never an amount):"
+      : "Shopping items already in the app:",
+  );
   for (const item of household.items) {
-    lines.push(`- ${item.ref}: ${item.name}${item.pet ? " (pet)" : ""}${household.ingredientsOn ? ingredientLine(item) : ""}`);
+    const asIngredient = household.ingredientsOn && item.ingredient;
+    const status = asIngredient ? "" : item.status === "out" ? " · out" : item.status === "low" ? " · running low" : "";
+    lines.push(`- ${item.ref}: ${item.name}${item.pet ? " (pet)" : ""}${status}${household.ingredientsOn ? ingredientLine(item) : ""}`);
   }
   if (household.items.length === 0) lines.push("- none");
   if (household.ingredientsOn) {
@@ -313,7 +361,7 @@ function recipeLines(household: KakakHousehold): string[] {
   const lines = [""];
   if (recipes.length) {
     lines.push(
-      "Saved recipes, checked by the app against what is at home now (ready, or what is missing; not checked: lines that aren't on the lists). Only names, never amounts:",
+      "Saved recipes, checked by the app against what is at home now (ready, or what is missing; not checked: lines that aren't on the lists; uses soon: an ingredient expiring within two days). Listed ready first, then fewest missing. Only names, never amounts:",
     );
     for (const recipe of recipes.slice(0, MAX_RECIPES_IN_BLOCK)) {
       const name = recipe.nameId ? `${recipe.name} (${recipe.nameId})` : recipe.name;
@@ -325,6 +373,9 @@ function recipeLines(household: KakakHousehold): string[] {
       }
       if (recipe.unchecked.length) parts.push(`not checked: ${recipe.unchecked.join(", ")}`);
       if (parts.length === 0) parts.push("no ingredients listed");
+      if (recipe.usesSoon?.length) {
+        parts.push(`uses soon: ${recipe.usesSoon.map((u) => `${u.name} (expires ${u.expiresOn})`).join(", ")}`);
+      }
       lines.push(`- ${recipe.ref}: ${name} — ${parts.join("; ")}`);
     }
     if (recipes.length > MAX_RECIPES_IN_BLOCK) {
@@ -397,8 +448,35 @@ function roomLine(room: KakakHousehold["rooms"][number]): string {
 function ingredientLine(item: KakakHousehold["items"][number]): string {
   if (!item.ingredient) return "";
   const parts = [" (ingredient)"];
-  if (item.out) parts.push("out");
+  if (item.out || item.status === "out") parts.push("out");
+  else if (item.status === "low") parts.push("running low");
   if (item.keptIn) parts.push(item.keptIn);
   if (item.expiresOn) parts.push(`expires ${item.expiresOn}`);
   return parts.join(" · ");
+}
+
+/**
+ * E1: "Ready to eat at home, soonest first:" with one line per food, or
+ * "Ready to eat at home: nothing." Use-by dates as stored; "expires today"
+ * and "past its date" spelled out so she never works it out wrong.
+ */
+function foodLines(foods: KakakFood[], today: string): string[] {
+  if (foods.length === 0) return ["Ready to eat at home (Dapur / Kitchen → Makanan / Food): nothing."];
+  const lines = ["Ready to eat at home (Dapur / Kitchen → Makanan / Food), soonest first, past its date last:"];
+  for (const food of foods.slice(0, MAX_FOODS_IN_BLOCK)) {
+    const parts = [food.name ?? "a dish saved with a photo only, no name"];
+    if (food.keptIn) parts.push(food.keptIn);
+    if (food.expiresOn) {
+      parts.push(
+        food.expiresOn < today ? `past its date (${food.expiresOn})` : food.expiresOn === today ? `expires today (${food.expiresOn})` : `expires ${food.expiresOn}`,
+      );
+    } else parts.push(food.expiryUnknown ? "date not known" : "no date noted");
+    lines.push(`- ${parts.join(" · ")}`);
+  }
+  // Past its date is listed last (context.ts), so what is cut is mostly that.
+  const rest = foods.slice(MAX_FOODS_IN_BLOCK);
+  const restPast = rest.filter((food) => food.expiresOn !== null && food.expiresOn < today).length;
+  if (rest.length - restPast > 0) lines.push(`- and ${rest.length - restPast} more not listed here`);
+  if (restPast > 0) lines.push(`- and ${restPast} more past their date, not listed here`);
+  return lines;
 }

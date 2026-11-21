@@ -37,12 +37,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: ask Kakak if you can cook it", id: "Baru: tanya Kakak, bahannya lengkap?" },
     steps: {
       en: [
-        "Say what you're cooking: \"We're making opor tonight. Do we have everything?\" Kakak checks your saved recipe against what is at home and answers in one line.",
+        "Say what you're cooking: \"We're making opor tonight. Do we have everything?\" Kakak checks your saved recipe against what is at home. Not sure? Ask \"What can we cook tonight?\"",
         "Her card puts the dish on the menu and what is missing on the shopping list. Nothing is saved until you tap Looks right.",
         "No saved recipe for it? She says so. Add it once in Kitchen → Menu and she can check it next time.",
       ],
       id: [
-        "Sebutkan yang mau dimasak: \"Malam ini opor, bahannya lengkap?\" Kakak mengecek resep yang tersimpan dengan stok di rumah, lalu menjawab singkat.",
+        "Sebutkan yang mau dimasak: \"Malam ini opor, bahannya lengkap?\" Kakak mengecek resep yang tersimpan dengan stok di rumah. Belum tahu? Tanya \"Masak apa malam ini?\"",
         "Kartunya memasukkan masakan ke menu dan yang kurang ke daftar belanja. Tidak ada yang tersimpan sebelum Anda ketuk Sudah benar.",
         "Resepnya belum ada? Kakak akan bilang. Tambahkan sekali di Dapur → Menu, nanti Kakak bisa mengeceknya.",
       ],
@@ -494,6 +494,28 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Got it", id: "Mengerti" },
   },
   {
+    // Shown once inside the Kakak sheet, above the mic: the voice flow that
+    // is the default since 20 Nov (kakak-voice-new.tsx).
+    id: "kakak-tap-to-talk-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "Talk to Kakak: tap, talk, tap Done", id: "Bicara dengan Kakak: ketuk, bicara, ketuk Selesai" },
+    steps: {
+      en: [
+        "Tap the mic and talk. Take your time: pauses are fine, Kakak keeps listening.",
+        "Tap Done to send. Misheard a word? Tap Edit words under them to fix it.",
+        "Kakak shows her card; nothing is saved until you confirm.",
+      ],
+      id: [
+        "Ketuk mikrofon lalu bicara. Tidak perlu buru-buru: boleh berhenti sejenak, Kakak tetap mendengarkan.",
+        "Ketuk Selesai untuk mengirim. Ada kata yang salah dengar? Ketuk Ubah kata-kata di bawahnya untuk memperbaikinya.",
+        "Kakak menunjukkan kartunya; tidak ada yang disimpan sebelum Anda konfirmasi.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // Shown once inside the Kakak sheet, above the mic (voice beta).
     id: "kakak-voice-2026-11",
     date: "2026-11-10",
@@ -755,6 +777,18 @@ export interface StaffWhatsNewEntry {
 }
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
+  {
+    // 20 Nov (kitchen sync S1, owner: "the app only works if the maids and
+    // the app syncs"): for anyone who sees Dapur. Two short lines, one tap
+    // each, nothing to read past them.
+    id: "staff-kitchen-sync-2026-11",
+    date: "2026-11-20",
+    title: "Supaya stok selalu benar",
+    lines: [
+      "Ada yang hampir habis atau habis? Di Dapur → Belanja, ketuk barangnya.",
+      "Selesai masak? Tekan Sudah dimasak di Menu hari ini.",
+    ],
+  },
   {
     // 20 Nov (Can we cook it?, D18): once Today has a menu.
     id: "staff-ready-to-cook-2026-11",

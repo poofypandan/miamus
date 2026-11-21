@@ -337,6 +337,23 @@ export function undoPurchasePatch(
 }
 
 /**
+ * What Undo puts back after Kakak's card set a listed item's status (E2):
+ * the status as it was, and, when the card had marked it bought (Enough),
+ * the menu's shortfall that this cleared (migrations/153 clears
+ * to_buy_amount on Enough). An item whose amount tracking was switched off
+ * keeps its shortfall, so a Bought card can meet one (Codex, PR #168).
+ * null for the shortfall = nothing to put back.
+ */
+export function undoStatusShortfall(
+  before: Partial<Pick<InventoryItem, "to_buy_amount">> | undefined,
+  statusBefore: StockStatus,
+  set: StockStatus
+): number | null {
+  if (set !== "ok" || statusBefore === "ok") return null;
+  return before?.to_buy_amount ?? null;
+}
+
+/**
  * The "How much did you buy?" pre-fill when an owner changes a tracked
  * item's unit (Codex, PR #93): converted exactly (5 kg → 5000 g), or
  * dropped when the units don't convert or the result falls outside what a

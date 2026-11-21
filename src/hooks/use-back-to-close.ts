@@ -16,6 +16,8 @@ const overlayStack: OverlayEntry[] = [];
 let pendingBacks = 0;
 let settleTimer: number | undefined;
 let listening = false;
+// Navigations waiting for those pops (afterBackSettles).
+const afterSettle: Array<() => void> = [];
 
 // How long a self-caused pop may take before it's given up on. Chrome lands
 // one within a frame or two; this only matters if one never comes.
@@ -83,6 +85,21 @@ function settle() {
     entry.pushed = true;
     window.history.pushState({ overlay: entry.id }, "");
   }
+  for (const run of afterSettle.splice(0)) run();
+}
+
+/**
+ * Runs `navigate` once no overlay's history entry is still being removed:
+ * straight away when none is, otherwise when its pop lands. For a control
+ * inside an overlay that both closes it and pushes a view of its own (Day or
+ * Week in the date pill's sheet): pushed first, the view would sit on top of
+ * the sheet's entry, which then can't be removed and leaves a Back press
+ * that does nothing (Codex, PR #181). Close the overlay synchronously first
+ * (flushSync), so its cleanup has queued the pop by the time this is called.
+ */
+export function afterBackSettles(navigate: () => void) {
+  if (pendingBacks === 0) navigate();
+  else afterSettle.push(navigate);
 }
 
 function backOut() {
