@@ -260,7 +260,7 @@ export const LEGAL = {
   // photo's own location data is removed on the phone (the English already
   // did; PR #161 makes that true when compression fails, too). Nothing
   // stored, collected or shared changes. Set effectiveDate to the merge day.
-  // 2026-11-21.5: photo backups (security audit S5, migrations/179). Amazon
+  // 2026-11-21.7: photo backups (security audit S5, migrations/179). Amazon
   // Web Services (Singapore, ap-southeast-1) becomes a processor: every
   // photo in the three photo buckets is copied each night to a private,
   // versioned, encrypted (SSE-S3) bucket there, which only Poofy Labs can
@@ -277,7 +277,7 @@ export const LEGAL = {
   // provider: a restore, run from Poofy Labs' own computer. Go live the day
   // the backup is switched on (docs/photo-backups.md). Set effectiveDate to
   // the merge day.
-  policyVersion: "2026-11-21.5",
+  policyVersion: "2026-11-21.7",
   effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
