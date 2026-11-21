@@ -28,15 +28,17 @@ export function FilterPill({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium",
+        // Lifted paper when chosen, the warm track colour when not (21 Nov,
+        // the visual direction's PR 2): black is for the action only.
+        "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold",
         active
-          ? "border-zinc-900 bg-zinc-900 text-white"
-          : "border-zinc-200 bg-zinc-100 text-zinc-600 active:bg-zinc-200"
+          ? "bg-card text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)]"
+          : "bg-muted text-muted-foreground active:bg-muted/70"
       )}
     >
       {Icon && <Icon className="size-3.5 shrink-0" />}
       {label}
-      <span className={cn("text-xs tabular-nums", active ? "text-white/70" : "text-zinc-400")}>
+      <span className={cn("text-xs tabular-nums", active ? "text-muted-foreground" : "text-subtle-foreground")}>
         {count}
       </span>
     </button>

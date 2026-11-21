@@ -13,7 +13,7 @@ import { validateToolCall } from "@/lib/kakak/validate";
 import { dishAnswerFromBlock } from "@/lib/kakak/dish-answer";
 import { budgetFetch, type Budget } from "./budget";
 import { scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
-import type { KakakCase } from "./types";
+import { householdForCase, type KakakCase } from "./types";
 
 export type Effort = "low" | "medium" | "high";
 export type Thinking = "adaptive" | "between_tools";
@@ -176,7 +176,7 @@ export async function playConversation(
   firstMessage: Anthropic.MessageParam["content"],
 ): Promise<ConversationResult> {
   checkVariant(variant);
-  const caseHousehold: KakakHousehold = { ...household, ownerLocale: kakakCase.ownerLocale };
+  const caseHousehold: KakakHousehold = householdForCase(household, kakakCase);
   // The route's own blocks (engine.ts): her instructions, the guide to
   // Miamus in the owner's language, then this household, each cached.
   const system = kakakSystem(caseHousehold);

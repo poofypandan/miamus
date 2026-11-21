@@ -13,6 +13,7 @@ import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { reloadStaffProfiles } from "@/hooks/use-staff-profiles";
 import { dataProvider } from "@/lib/data";
 import { stockStatus } from "@/lib/inventory";
+import { undoStatusShortfall } from "@/lib/kitchen-units";
 import { MENU_LIMITS, nextPosition, weekStart } from "@/lib/menu";
 import { addDishes, deleteDishes, getMenuSnapshot, loadMenuWeek } from "@/lib/menu-store";
 import { formatDateLocal } from "@/lib/scheduleEngine";
@@ -101,8 +102,13 @@ export function useKakakSave() {
                 if (entry.type === "item") {
                   const current = household.inventoryItems.find((i) => i.id === entry.itemId);
                   const before: StockStatus = current ? stockStatus(current) : "ok";
+                  // Bought (Enough) clears the menu's shortfall; Undo puts it back.
+                  const shortfall = undoStatusShortfall(current, before, entry.status);
                   await household.setInventoryStatus(entry.itemId, entry.status);
-                  undos.push(() => household.setInventoryStatus(entry.itemId, before));
+                  undos.push(async () => {
+                    await household.setInventoryStatus(entry.itemId, before);
+                    if (shortfall !== null) await household.updateInventoryItem(entry.itemId, { to_buy_amount: shortfall });
+                  });
                 } else {
                   const alert = await household.flagLowStock({ pet_id: entry.petId, item_type: "other", note: entry.note });
                   undos.push(() => household.undoInventoryAlert(alert.id));

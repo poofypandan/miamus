@@ -179,6 +179,8 @@ export interface StubOptions {
    * and would hold the one slot. Seen unless a test asks for them.
    */
   readyToCookTip?: boolean;
+  /** The staff tip "Supaya stok selalu benar" (kitchen sync S1): seen unless a test asks for it, as above. */
+  kitchenSyncTip?: boolean;
   /**
    * Notifications on a staff phone (Phase 166, migrations/141): what
    * my_phone_push_people answers the phone; with pushKey, the phone also
@@ -383,6 +385,13 @@ export async function installStub(context: BrowserContext, options: StubOptions 
       sessionStorage.setItem("stub-seeded-cook", "1");
       localStorage.setItem("miamus.whats-new.ready-to-cook-2026-11", "seen");
       localStorage.setItem("miamus.whats-new.staff-ready-to-cook-2026-11", "seen");
+    });
+  }
+  if (!options.kitchenSyncTip) {
+    await context.addInitScript(() => {
+      if (sessionStorage.getItem("stub-seeded-sync")) return;
+      sessionStorage.setItem("stub-seeded-sync", "1");
+      localStorage.setItem("miamus.whats-new.staff-kitchen-sync-2026-11", "seen");
     });
   }
   if (options.staffPhone) {

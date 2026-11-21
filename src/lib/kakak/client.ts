@@ -31,7 +31,7 @@ export type KakakFailure = "invalid" | "api" | "too_long" | "refusal" | "offline
  *   3 (Phase 178 follow-up): what a staff member sees.
  *   4 (Can we cook it?, 20 Nov): a dish on the menu.
  */
-export const KAKAK_CLIENT_VERSION = 4;
+export const KAKAK_CLIENT_VERSION = 5;
 
 /**
  * A long chat rolls over (2026-11-14). A conversation may hold only so many

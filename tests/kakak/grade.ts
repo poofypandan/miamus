@@ -6,7 +6,7 @@ import { householdRefs, type KakakHousehold, type KakakLocale } from "@/lib/kaka
 import { KITCHEN_AMOUNT, looksLikeWrongLanguage, noteTells, type NoteTell } from "@/lib/kakak/reply-guard";
 import { toIsoDays } from "@/lib/kakak/suggestions";
 import { newPetTimes, routineTitle } from "@/lib/kakak/validate";
-import type { ExpectedCall, ExpectedShoppingItem, ExpectedTurn, FieldMatcher, KakakCase } from "./types";
+import { householdForCase, type ExpectedCall, type ExpectedShoppingItem, type ExpectedTurn, type FieldMatcher, type KakakCase } from "./types";
 
 export interface ToolCall {
   name: string;
@@ -440,6 +440,7 @@ export function gradeCase(
   actual: ActualTurn[],
   rejected: RejectedAttempt[] = [],
 ): GradeResult {
+  household = householdForCase(household, kakakCase);
   const mustNever = mustNeverViolations(household, kakakCase, actual, rejected);
   let best = { index: 0, failures: ["no turns"], matched: -1 };
   kakakCase.paths.forEach((path, index) => {

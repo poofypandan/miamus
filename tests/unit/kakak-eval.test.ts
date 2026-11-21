@@ -403,9 +403,10 @@ describe("the test set", () => {
     // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
     // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K161–K174
     // and K175–K176 (the film's sentence) and K177–K187 (Fable's A1–A10) on 2026-11-20, plus
-    // K301–K303 on 2026-11-20 (staff onboarding step 1: how to add, explain to, and remove a
-    // staff member, answered from the guide). All for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(186);
+    // the cases up to K206 (Can we cook it?), plus K301–K303 on 2026-11-20 (staff onboarding
+    // step 1: how to add, explain to, and remove a staff member, answered from the guide). All
+    // for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(204);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 
