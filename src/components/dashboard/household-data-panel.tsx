@@ -98,7 +98,7 @@ export function HouseholdDataPanel({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+      <div className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-card">
         <div>
           <p className="text-sm font-medium text-foreground">{t("Download a copy", "Unduh salinan")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -126,7 +126,7 @@ export function HouseholdDataPanel({
             <button
               type="button"
               onClick={() => setConfirming(true)}
-              className="flex min-h-[52px] items-center gap-3 rounded-xl border bg-card px-4 text-left text-sm active:bg-muted"
+              className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-card px-4 text-left text-sm shadow-card active:bg-muted"
             >
               <Trash2 className="size-4 shrink-0 text-destructive" />
               <span className="font-medium text-destructive">{t("Delete this home", "Hapus rumah tangga ini")}</span>

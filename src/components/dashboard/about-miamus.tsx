@@ -100,7 +100,7 @@ export function AboutMiamus() {
           event.preventDefault();
           pushInPlace(guideHref);
         }}
-        className="flex min-h-16 w-full items-center gap-3 rounded-xl border bg-card px-4 text-left active:bg-muted"
+        className="flex min-h-16 w-full items-center gap-3 rounded-2xl bg-card px-4 text-left shadow-card active:bg-muted"
       >
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
           <BookOpen className="size-5" strokeWidth={1.75} />
@@ -115,7 +115,7 @@ export function AboutMiamus() {
       <button
         type="button"
         onClick={() => setFeedbackOpen(true)}
-        className="flex min-h-16 w-full items-center gap-3 rounded-xl border bg-card px-4 text-left active:bg-muted"
+        className="flex min-h-16 w-full items-center gap-3 rounded-2xl bg-card px-4 text-left shadow-card active:bg-muted"
       >
         <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted">
           <MessageSquareText className="size-5" strokeWidth={1.75} />

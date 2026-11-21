@@ -162,7 +162,7 @@ export function FeaturesPanel() {
           <h3 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             {group.title(t)}
           </h3>
-          <div className="overflow-hidden rounded-xl border bg-card">
+          <div className="overflow-hidden rounded-2xl bg-card shadow-card">
             {group.rows.map((row, index) => {
               const on = isOn(row.key);
               const blocked = row.key === "pets" && petsBlocked;
@@ -179,7 +179,7 @@ export function FeaturesPanel() {
                     disabled={busy !== null}
                     className="flex min-h-16 w-full items-center gap-3 px-3 py-2 text-left active:bg-muted"
                   >
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card text-foreground">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-background text-foreground">
                       <Icon className="size-5" aria-hidden />
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
