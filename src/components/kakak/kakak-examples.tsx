@@ -78,7 +78,7 @@ function ExampleList({ onPick, staffNames }: { onPick: (text: string) => void; s
                 className="flex min-h-[52px] w-full items-center gap-3 px-4 py-3 text-left text-base text-foreground transition-colors active:bg-muted"
               >
                 <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="min-w-0">{example.text}</span>
+                <span className="min-w-0 text-pretty">{example.text}</span>
               </button>
             </li>
           );

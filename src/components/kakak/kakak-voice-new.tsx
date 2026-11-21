@@ -212,7 +212,9 @@ function Voice({
               // in the typing box yet: that waits for Done.
               <div
                 data-testid="kakak-live-words"
-                className="flex w-full items-start gap-2 rounded-[20px] bg-card px-4 py-2.5 text-base"
+                // A quiet paper inset, full width, starting from the left so the
+                // words don't shift as they grow (Fable, #187).
+                className="flex w-full items-start gap-2 rounded-2xl bg-background px-4 py-3 text-base"
               >
                 <AudioLines className="mt-0.5 size-5 shrink-0 text-foreground motion-safe:animate-pulse" aria-hidden="true" />
                 <p className={cn("min-w-0 flex-1 break-words", state.transcript ? "text-foreground" : "text-muted-foreground")}>
