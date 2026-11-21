@@ -28,6 +28,27 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 21 Nov (Fable's Pets, decisions 19–35): shown on the Pets tab, under
+    // the calm-start rules.
+    id: "pets-wall-2026-11",
+    date: "2026-11-21",
+    audience: "owner",
+    title: { en: "New: all your pets at once", id: "Baru: semua hewan sekaligus" },
+    steps: {
+      en: [
+        "The Pets tab now shows every pet at once, the same size, each on its own photo.",
+        "Under each name: its breed, or, in amber with a warning mark, a routine that is late.",
+        "Tap a pet for its page: its day, its photos and its health record. To frame the photo, open Edit Pet and tap the photo.",
+      ],
+      id: [
+        "Tab Hewan sekarang menampilkan semua hewan sekaligus, sama besar, masing-masing dengan fotonya.",
+        "Di bawah tiap nama: rasnya, atau, berwarna kuning dengan tanda peringatan, rutinitas yang terlambat.",
+        "Ketuk hewan untuk halamannya: hari ini, foto, dan catatan kesehatannya. Untuk mengatur foto, buka Ubah Hewan lalu ketuk fotonya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 21 Nov (Fable's tab redesigns, the owners' kitchen inventory): shown
     // on Kitchen → Food, under the calm-start rules.
     id: "kitchen-shelves-2026-11",

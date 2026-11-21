@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Download, Loader2, Trash2 } from "lucide-react";
+import { Clock, Download, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeleteHouseholdSheet } from "@/components/dashboard/delete-household-sheet";
 import { LEGAL } from "@/config/legal";
@@ -71,14 +71,16 @@ export function HouseholdDataPanel({
 
   return (
     <>
-      <h2 className="text-sm font-semibold text-gray-900">{t("Your data", "Data Anda")}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t("Your data", "Data Anda")}</h2>
 
       {status?.scheduled && (
-        <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-sm font-medium text-amber-900">
+        <div className="flex flex-col gap-3 rounded-xl bg-attention-tint p-4">
+          {/* Attention is never carried by its tint alone: an icon and dark text (04). */}
+          <p className="flex items-start gap-2 text-sm font-medium text-attention">
+            <Clock className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             {t(`This home will be deleted on ${deleteDate}.`, `Rumah tangga ini akan dihapus pada ${deleteDate}.`)}
           </p>
-          <p className="text-sm text-amber-900">
+          <p className="text-sm text-attention">
             {t(
               "Until then everything works as usual, and you can still download a copy. Any admin can cancel.",
               "Sampai saat itu semuanya berjalan seperti biasa, dan Anda masih bisa mengunduh salinan. Admin mana pun bisa membatalkan."
@@ -86,7 +88,7 @@ export function HouseholdDataPanel({
           </p>
           <Button
             variant="outline"
-            className="min-h-11 rounded-xl bg-white"
+            className="min-h-11 rounded-xl bg-card"
             disabled={cancelling}
             onClick={() => void cancelDeletion()}
           >
@@ -96,9 +98,9 @@ export function HouseholdDataPanel({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+      <div className="flex flex-col gap-3 rounded-2xl bg-card p-4 shadow-card">
         <div>
-          <p className="text-sm font-medium text-gray-900">{t("Download a copy", "Unduh salinan")}</p>
+          <p className="text-sm font-medium text-foreground">{t("Download a copy", "Unduh salinan")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {t(
               "Everything recorded in your home — pets, routines, chores, kitchen, staff and logs — in one file you can keep.",
@@ -124,10 +126,10 @@ export function HouseholdDataPanel({
             <button
               type="button"
               onClick={() => setConfirming(true)}
-              className="flex min-h-[52px] items-center gap-3 rounded-xl border bg-card px-4 text-left text-sm active:bg-muted"
+              className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-card px-4 text-left text-sm shadow-card active:bg-muted"
             >
-              <Trash2 className="size-4 shrink-0 text-red-600" />
-              <span className="font-medium text-red-600">{t("Delete this home", "Hapus rumah tangga ini")}</span>
+              <Trash2 className="size-4 shrink-0 text-destructive" />
+              <span className="font-medium text-destructive">{t("Delete this home", "Hapus rumah tangga ini")}</span>
             </button>
           ) : null}
           <p className="px-1 text-xs text-muted-foreground">

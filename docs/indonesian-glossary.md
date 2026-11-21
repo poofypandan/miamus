@@ -215,6 +215,8 @@ people are **staf** and **admin**.
 | Watch · 15 s (video tip) | **Tonton · 15 detik** | Phase 172 PR A1: the optional video beside a one-line instruction. |
 | Automatic (an approval made at sign-up) | **Otomatis** | Phase 172 PR A1, the approvals page. |
 | New household · {name} just joined (push) | **Rumah baru** · **{name} baru bergabung.** | Phase 172 PR A1, to platform admins. |
+| Household requests (platform admins' page) | **Permintaan rumah baru** | Sweep, 21 Nov. Builds on "Rumah baru". Waiting / Decided in the last 30 days: **Menunggu** / **Diputuskan dalam 30 hari terakhir**. |
+| Approve / Reject; Approved / Rejected / Pending (household requests) | **Setujui** / **Tolak**; **Disetujui** / **Ditolak** / **Menunggu** | Sweep, 21 Nov. A request, not a person's leave, so **Ditolak** is fine here (compare Cuti tidak disetujui). Asked / Decided {date}: **Diminta** / **Diputuskan {date}**. |
 | Tap the mic on your keyboard and speak. | **Ketuk mic di keyboard, lalu bicara.** | Phase 172 PR A1, Kakak's keyboard tip. "Mic" is the everyday word on the keyboard. |
 | Listening. Tap Done to send. / Done / Cancel | **Kakak mendengarkan. Ketuk Selesai untuk mengirim.** / **Selesai** / **Batalkan** | Kakak voice, tap to talk and tap Done to send (20 Nov; the default since then, was opt-in with ?newvoice=1). Done sends the words to Kakak; nothing is saved until the card is confirmed. Not "ketuk Berhenti kalau sudah" (the older flow's words). |
 | Say what you need. Pauses are fine. · Edit words (the spoken line) | **Sebutkan yang Anda perlukan. Boleh sambil berpikir.** · **Ubah kata-kata** | Kakak voice: the empty live-words line, and the button under the owner's spoken line that puts the words back in the typing box to fix. Not plain "Ubah": that is the card's Change, often on screen at the same time. |
@@ -241,6 +243,7 @@ people are **staf** and **admin**.
 | Other routines | **Rutinitas lain** | Phase 173: replaces Others / Lainnya in Manage routines. |
 | Usual routines for Coco | **Rutinitas biasa untuk Coco** | Phase 173 PR B (D9): starter list after adding a pet. |
 | Coco is added. Staff see these from today; untick what you don't want. | **Coco sudah ditambahkan. Staf melihatnya mulai hari ini; hapus centang yang tidak perlu.** | Phase 173 PR B: the starter list's one line, in place of the "Pet added" toast ("Hapus centang", as Phase 172's setup review). |
+| The Pets wall: All your pets at once · Late: Makan malam · At the vet · Add a photo | **Semua hewan sekaligus · Makan malam terlambat · Di klinik · Tambah foto** | 21 Nov: the Pets tab as a wall (Fable's 08, section 5). The late line names the routine as the owner named it. Photo help: **Dekat jendela, sejajar mata mereka, memenuhi bingkai.** |
 | Dog · Cat | **Anjing · Kucing** | Phase 173 PR B: the starter list's pill control. |
 | Morning walk · Evening walk · Clean the litter box | **Jalan pagi · Jalan sore · Bersihkan pasir kucing** | Phase 173 PR B: starter routines; also the saved titles staff read. |
 | Add Coco to Lights off / with Mocha, Matcha | **Tambahkan Coco ke Matikan lampu / bersama Mocha, Matcha** | Phase 173 PR B: a household routine the new pet can join. |

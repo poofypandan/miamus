@@ -33,6 +33,30 @@ export interface CropArea {
 }
 
 /**
+ * Where the framed square sits in the photo it was cut from, in percent of
+ * that photo's width and height (0 to 100), rounded to one decimal. Kept
+ * with a pet (21 Nov; Fable's 08, decision 23) so a tile of any shape can be
+ * cut from the full photo around the face the owner chose.
+ */
+export interface PhotoFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const round1 = (n: number) => Math.round(Math.max(0, Math.min(100, n)) * 10) / 10;
+
+/** react-easy-crop's percent area, clamped and rounded; null when it isn't usable. */
+export function toPhotoFrame(area: CropArea | null | undefined): PhotoFrame | null {
+  if (!area) return null;
+  const values = [area.x, area.y, area.width, area.height];
+  if (values.some((v) => typeof v !== "number" || !Number.isFinite(v))) return null;
+  if (area.width <= 0 || area.height <= 0) return null;
+  return { x: round1(area.x), y: round1(area.y), width: round1(area.width), height: round1(area.height) };
+}
+
+/**
  * How large the stored square may be.
  *
  * Avatars render at 48–96 CSS pixels, so 512 is already generous at 3x.

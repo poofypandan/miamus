@@ -19,6 +19,7 @@ import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { getPetMeta } from "@/lib/pets";
+import type { PhotoFrame } from "@/lib/image-crop";
 import { photoSrc } from "@/lib/photos";
 import type { TaskEntity } from "@/types/database";
 
@@ -57,6 +58,8 @@ export function PetFormDialog({
   const [fullImageUrl, setFullImageUrl] = useState<string | null>(
     meta.full_image_url ?? null
   );
+  // Where the framed square sits in the full photo (decision 23).
+  const [frame, setFrame] = useState<PhotoFrame | null>(meta.frame ?? null);
   const [submitting, setSubmitting] = useState(false);
   // A double tap in one tick must not insert the pet twice (demo check F-1).
   // Held after success while the dialog animates out; released on next open.
@@ -77,6 +80,7 @@ export function PetFormDialog({
       setBreed(meta.breed ?? "");
       setAvatarUrl(meta.avatar_url ?? null);
       setFullImageUrl(meta.full_image_url ?? null);
+      setFrame(meta.frame ?? null);
       setPhotoBusy(false);
       setConfirmingDelete(false);
       setSubmitting(false);
@@ -99,6 +103,8 @@ export function PetFormDialog({
         breed: breed.trim() || undefined,
         avatar_url: avatarUrl,
         full_image_url: fullImageUrl,
+        // Only with a photo; a photo framed before this was kept has none.
+        frame: avatarUrl ? frame : null,
       };
       if (pet) {
         await updateEntity(pet.id, { name: name.trim(), metadata });
@@ -190,6 +196,7 @@ export function PetFormDialog({
               value={avatarUrl}
               onChange={setAvatarUrl}
               onMaster={setFullImageUrl}
+              onFrame={setFrame}
               onBusyChange={setPhotoBusy}
               // Falls back to the square so the four avatars uploaded before
               // the cropper existed can be re-framed too — for those, the
@@ -202,6 +209,14 @@ export function PetFormDialog({
               square
               allowGallery
             />
+            {/* One line of help for a photo that shows them well on the Pets
+                wall (21 Nov; Fable's 08, decision 13). */}
+            <p className="text-xs text-muted-foreground">
+              {t(
+                "Near a window, at their eye level, filling the frame.",
+                "Dekat jendela, sejajar mata mereka, memenuhi bingkai."
+              )}
+            </p>
           </div>
         </div>
         <DialogFooter className="flex-col gap-2 sm:flex-col">

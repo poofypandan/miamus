@@ -44,7 +44,7 @@ test("a staff phone logs food from Lapor, marks it eaten, and can undo", async (
 
   // Staff finish food but never delete it.
   await row.click();
-  await expect(page.getByText("Sudah habis?")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Sudah habis?" })).toBeVisible();
   await expect(page.getByText("Hapus — salah tambah")).toHaveCount(0);
   await page.getByRole("button", { name: "Dimakan" }).click();
 
