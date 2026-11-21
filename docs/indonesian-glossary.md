@@ -419,6 +419,9 @@ people are **staf** and **admin**.
 | Anything else? | **Ada lagi?** | 2026-11-14: the typing box after Kakak's answer or thanks; **Mau Kakak atur apa?** stays for the first line. |
 | I've just been updated. Please close Miamus, open it again, and tell me once more. | **Kakak baru saja diperbarui. Tutup Miamus, buka lagi, lalu bilang ke Kakak sekali lagi.** | 2026-11-14: said to a page left open across an update, instead of a card it can't show. |
 | Kakak sets up chores, shopping, pet routines, food, ingredients and what staff see from what you type or say, and answers questions about how Miamus works. | **Kakak mengatur tugas, belanja, rutinitas hewan, makanan, bahan masakan, dan yang dilihat staf dari yang Anda ketik atau ucapkan, dan menjawab pertanyaan tentang cara pakai Miamus.** | 2026-11-14: Settings → Kakak, the first line. |
+| Early access · By invitation | **Akses awal · Dengan undangan** | 2026-11-20, the One day landing page (Direction 3): replaces "beta" and "invite-only" as the idea, not an apology. Never "eksklusif", "VIP" or "terbatas". |
+| A day at home, without the asking. | **Sehari di rumah, tanpa bertanya-tanya.** | 2026-11-20, the One day page's headline; "bertanya-tanya" in Fraunces italic. |
+| Miamus, by Poofy Labs | **Miamus, oleh Poofy Labs** | 2026-11-20, the one endorsement line (landing footer, About Miamus, email sign-off). Replaces "Dibuat dengan sepenuh hati oleh Poofy Labs". |
 
 ## Formatting
 
