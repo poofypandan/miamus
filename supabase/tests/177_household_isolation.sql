@@ -461,8 +461,12 @@ select pg_temp.ok(pg_temp.try_as(:phoneA, 'select public.export_household_data()
 -- Nobody can learn B's ids through Miamus; this is the second wall, for the
 -- day one leaks. A row that names B's staff member would put that name in
 -- A's export and A's pushes.
-create temp table refs (label text, actor uuid, stmt text);
-insert into pg_temp.refs values
+-- expect: the guard that must refuse it (a pattern on the error, always
+-- 42501), or 'stamped' for a statement whose answer counts B's ids that got
+-- stored (must be 0: the guard overwrites the column). A refusal for any
+-- other reason (a unique key, a check) is not a pass (Codex, PR #158).
+create temp table refs (label text, actor uuid, stmt text, expect text default 'other_household_reference');
+insert into pg_temp.refs (label, actor, stmt) values
   ('a log in B''s staff member''s name', :phoneA, format($q$insert into public.task_logs (entity_id, schedule_id, module, staff_id) values (%L, %L, 'pet', %L)$q$, pg_temp.id('a', 5), pg_temp.id('a', 6), pg_temp.id('b', 4))),
   ('a log on B''s routine', :phoneA, format($q$insert into public.task_logs (entity_id, schedule_id, module) values (%L, %L, 'pet')$q$, pg_temp.id('a', 5), pg_temp.id('b', 6))),
   ('a schedule suggestion in B''s staff member''s name', :phoneA, format($q$insert into public.routine_proposals (pet_id, title, category, time, staff_id) values (%L, 'x', 'meal', '09:00', %L)$q$, pg_temp.id('a', 5), pg_temp.id('b', 4))),
@@ -474,11 +478,11 @@ insert into pg_temp.refs values
   ('a chore finished by B''s staff member', :adminA, format($q$update public.household_tasks set completed_by = %L where id = %L$q$, pg_temp.id('b', 4), pg_temp.id('a', 13))),
   ('a chore under B''s chore', :adminA, format($q$insert into public.household_tasks (household_id, title, parent_task_id) values (%L, 'x', %L)$q$, :hA, pg_temp.id('b', 13))),
   ('a routine for B''s staff member', :adminA, format($q$insert into public.master_schedules (entity_id, title, module, frequency_type, staff_id) values (%L, 'x', 'pet', 'fixed_time', %L)$q$, pg_temp.id('a', 5), pg_temp.id('b', 4))),
-  ('couldn''t-do on B''s chore', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, chore_id) values (%L, current_date, 'x', 'other', %L)$q$, :hA, pg_temp.id('b', 13))),
-  ('couldn''t-do in B''s staff member''s name', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, chore_id, staff_id) values (%L, current_date, 'x', 'other', %L, %L)$q$, :hA, pg_temp.id('a', 13), pg_temp.id('b', 4))),
-  ('couldn''t-do on B''s routine', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, schedule_id, entity_id, slot_time) values (%L, current_date, 'x', 'other', %L, %L, '08:00')$q$, :hA, pg_temp.id('b', 6), pg_temp.id('a', 5))),
-  ('couldn''t-do for B''s pet', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, schedule_id, entity_id, slot_time) values (%L, current_date, 'x', 'other', %L, %L, '08:00')$q$, :hA, pg_temp.id('a', 6), pg_temp.id('b', 5))),
-  ('couldn''t-do on B''s shopping item', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, chore_id, inventory_item_id) values (%L, current_date, 'x', 'out_of_stock', %L, %L)$q$, :hA, pg_temp.id('a', 13), pg_temp.id('b', 10))),
+  ('couldn''t-do on B''s chore', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, chore_id) values (%L, current_date, 'Hujan', 'other', %L)$q$, :hA, pg_temp.id('b', 13))),
+  ('couldn''t-do in B''s staff member''s name', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, chore_id, staff_id) values (%L, current_date, 'Hujan', 'other', %L, %L)$q$, :hA, pg_temp.id('a', 13), pg_temp.id('b', 4))),
+  ('couldn''t-do on B''s routine', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, schedule_id, entity_id, slot_time) values (%L, current_date, 'Hujan', 'other', %L, %L, '08:00')$q$, :hA, pg_temp.id('b', 6), pg_temp.id('a', 5))),
+  ('couldn''t-do for B''s pet', :phoneA, format($q$with ins as (insert into public.task_exceptions (household_id, occurs_on, note, reason, schedule_id, entity_id, slot_time) values (%L, current_date, 'Hujan', 'other', %L, %L, '08:00') returning entity_id) select count(*) from ins where entity_id = %L$q$, :hA, pg_temp.id('a', 6), pg_temp.id('b', 5), pg_temp.id('b', 5))),
+  ('couldn''t-do on B''s shopping item', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, chore_id, inventory_item_id) values (%L, current_date, 'Hujan', 'out_of_stock', %L, %L)$q$, :hA, pg_temp.id('a', 13), pg_temp.id('b', 10))),
   ('a repair reported by B''s staff member', :phoneA, format($q$insert into public.repairs (household_id, title, reported_by_staff) values (%L, 'x', %L)$q$, :hA, pg_temp.id('b', 4))),
   ('a repair note by B''s staff member', :phoneA, format($q$insert into public.repair_notes (household_id, repair_id, body, staff_id) values (%L, %L, 'x', %L)$q$, :hA, pg_temp.id('a', 16), pg_temp.id('b', 4))),
   ('a walk-in logged by B''s staff member', :phoneA, format($q$insert into public.repair_visits (household_id, repair_id, before_photo_url, logged_by_staff) values (%L, %L, %L, %L)$q$, :hA, pg_temp.id('a', 16), pg_temp.url(:hA || '/repairs/b.webp'), pg_temp.id('b', 4))),
@@ -488,17 +492,31 @@ insert into pg_temp.refs values
   ('leave for B''s staff member', :phoneA, format($q$insert into public.leave_requests (household_id, staff_id, start_date, end_date) values (%L, %L, current_date, current_date)$q$, :hA, pg_temp.id('b', 4))),
   ('a dish cooked by B''s staff member', :adminA, format($q$update public.menu_dishes set cooked_at = now(), cooked_by = %L where id = %L$q$, pg_temp.id('b', 4), pg_temp.id('a', 22))),
   ('a proof photo from B''s folder', :phoneA, format($q$insert into public.task_logs (entity_id, schedule_id, module, photo_url) values (%L, %L, 'pet', %L)$q$, pg_temp.id('a', 5), pg_temp.id('a', 6), 'https://x.supabase.co/storage/v1/object/public/household-logs/' || :hB || '/pets/proof.webp')),
-  ('a repair photo from B''s folder', :phoneA, format($q$insert into public.repairs (household_id, title, photo_url) values (%L, 'x', %L)$q$, :hA, pg_temp.url(:hB || '/repairs/before.webp'))),
+  ('a repair photo from B''s folder', :adminA, format($q$insert into public.repairs (household_id, title, status, photo_url) values (%L, 'x', 'open', %L)$q$, :hA, pg_temp.url(:hB || '/repairs/before.webp'))),
   ('a repair note photo from B''s folder', :adminA, format($q$insert into public.repair_notes (household_id, repair_id, body, photo_url) values (%L, %L, 'x', %L)$q$, :hA, pg_temp.id('a', 16), pg_temp.url(:hB || '/repairs/before.webp'))),
   ('a vet document from B''s folder', :adminA, format($q$insert into public.medical_records (entity_id, record_type, title, document_photo_url) values (%L, 'vet', 'x', %L)$q$, pg_temp.id('a', 5), pg_temp.url(:hB || '/pets/proof.webp'))),
   ('a food photo from B''s folder', :phoneA, format($q$insert into public.food_items (household_id, name, photo_url) values (%L, 'x', %L)$q$, :hA, pg_temp.url(:hB || '/food/x.webp'))),
   ('a stock photo from B''s folder', :adminA, format($q$update public.inventory_items set photo_url = %L where id = %L$q$, replace(pg_temp.url(:hB || '/stock/shelf.webp'), 'household-logs', 'inventory_audits'), pg_temp.id('a', 10))),
   ('a stock count photo from B''s folder', :phoneA, format($q$insert into public.inventory_audit_logs (item_id, photo_url) values (%L, %L)$q$, pg_temp.id('a', 10), replace(pg_temp.url(:hB || '/stock/shelf.webp'), 'household-logs', 'inventory_audits'))),
-  ('a bill receipt from B''s folder', :adminA, format($q$insert into public.bill_payments (household_id, task_id, receipt_url) values (%L, %L, %L)$q$, :hA, pg_temp.id('a', 14), replace(pg_temp.url(:hB || '/repairs/receipt.webp'), 'household-logs', 'owner-receipts'))),
+  ('a bill receipt from B''s folder', :adminA, format($q$update public.bill_payments set receipt_url = %L where id = %L$q$, replace(pg_temp.url(:hB || '/repairs/receipt.webp'), 'household-logs', 'owner-receipts'), pg_temp.id('a', 15))),
   ('a repair receipt from B''s folder', :adminA, format($q$update public.repair_costs set receipt_url = %L where repair_id = %L$q$, replace(pg_temp.url(:hB || '/repairs/receipt.webp'), 'household-logs', 'owner-receipts'), pg_temp.id('a', 16))),
   ('a pet avatar from B''s folder', :adminA, format($q$update public.task_entities set metadata = jsonb_build_object('avatar', %L::text) where id = %L$q$, pg_temp.url(:hB || '/pets/proof.webp'), pg_temp.id('a', 5))),
   ('a photo outside any household folder', :phoneA, format($q$insert into public.task_logs (entity_id, schedule_id, module, photo_url) values (%L, %L, 'pet', %L)$q$, pg_temp.id('a', 5), pg_temp.id('a', 6), pg_temp.url('loose/proof.webp'))),
   ('a chore photo from B''s folder', :phoneA, format($q$update public.household_tasks set status = 'completed', completed_by = %L, before_photo_url = %L, after_photo_url = %L where id = %L$q$, pg_temp.id('a', 4), 'https://x.supabase.co/storage/v1/object/public/household-logs/' || :hB || '/pets/proof.webp', 'https://x.supabase.co/storage/v1/object/public/household-logs/' || :hB || '/pets/proof.webp', pg_temp.id('a', 13)));
+
+-- Refused by the older guards, under their own names.
+update pg_temp.refs set expect = 'cooked_through_functions_only' where label = 'a dish cooked by B''s staff member';
+update pg_temp.refs set expect = 'staff_not_in_household' where label in ('a repair note by B''s staff member', 'food added by B''s staff member');
+update pg_temp.refs set expect = 'repair_staff_report_only' where label = 'a repair reported by B''s staff member';
+update pg_temp.refs set expect = 'routine_staff' where label = 'a routine for B''s staff member';
+update pg_temp.refs set expect = 'repair_visit_staff' where label = 'a walk-in logged by B''s staff member';
+update pg_temp.refs set expect = 'task_exception_person' where label = 'couldn''t-do in B''s staff member''s name';
+update pg_temp.refs set expect = 'task_exception_task' where label in ('couldn''t-do on B''s chore', 'couldn''t-do on B''s routine');
+update pg_temp.refs set expect = 'task_exception_item' where label = 'couldn''t-do on B''s shopping item';
+update pg_temp.refs set expect = 'feedback_not_this_staff' where label = 'feedback in B''s staff member''s name';
+update pg_temp.refs set expect = 'new row violates row-level security policy%' where label = 'leave for B''s staff member';
+update pg_temp.refs set expect = 'supervision_person' where label = 'supervision by B''s staff member';
+update pg_temp.refs set expect = 'stamped' where label = 'couldn''t-do for B''s pet';
 
 create temp table ref_results (label text, r jsonb, pass boolean);
 do $$
@@ -506,7 +524,9 @@ declare x record; r jsonb;
 begin
   for x in select * from pg_temp.refs loop
     r := pg_temp.try_as(x.actor, x.stmt);
-    insert into pg_temp.ref_results values (x.label, r, pg_temp.errored(r));
+    insert into pg_temp.ref_results values (x.label, r,
+      case when x.expect = 'stamped' then r->>'state' = '' and r->>'v' = '0'
+           else r->>'state' = '42501' and r->>'msg' like x.expect end);
   end loop;
 end $$;
 select label, r from pg_temp.ref_results where not pass order by 1;
@@ -527,6 +547,10 @@ select pg_temp.ok(pg_temp.try_as(:adminA, format($q$insert into public.household
   'control: A''s admin still assigns a chore under another');
 select pg_temp.ok(pg_temp.try_as(:phoneA, format($q$update public.inventory_items set stock_status = 'low', stock_status_by = %L where id = %L$q$, pg_temp.id('a', 4), pg_temp.id('a', 10)))->>'n' = '1',
   'control: A''s phone still marks stock low');
+select pg_temp.ok(pg_temp.try_as(:adminA, format($q$update public.bill_payments set receipt_url = %L where id = %L$q$, replace(pg_temp.url(:hA || '/bills/receipt.webp'), 'household-logs', 'owner-receipts'), pg_temp.id('a', 15)))->>'n' = '1',
+  'control: A''s admin still attaches a receipt from A''s own folder to a bill payment');
+select pg_temp.ok(pg_temp.try_as(:adminA, format($q$insert into public.repairs (household_id, title, status, photo_url) values (%L, 'x', 'open', %L)$q$, :hA, pg_temp.url(:hA || '/repairs/new.webp')))->>'state' = '',
+  'control: A''s admin still reports a repair with a photo from A''s own folder');
 select pg_temp.ok(pg_temp.try_as(:phoneA, format($q$insert into public.task_logs (entity_id, schedule_id, module, photo_url) values (%L, %L, 'pet', %L)$q$, pg_temp.id('a', 5), pg_temp.id('a', 6), pg_temp.url(:hA || '/pets/new.webp')))->>'state' = '',
   'control: A''s phone still saves a photo from A''s own folder');
 select pg_temp.ok(pg_temp.try_as(:adminA, format($q$update public.task_entities set metadata = jsonb_build_object('avatar', %L::text) where id = %L$q$, pg_temp.url(:hA || '/pets/avatar.webp'), pg_temp.id('a', 5)))->>'n' = '1',
