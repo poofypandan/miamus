@@ -45,7 +45,9 @@ function tabHref(module: DashboardModule, param?: [string, string]): string {
   if (!param) return base;
   return `${base}${base.includes("?") ? "&" : "?"}${param[0]}=${param[1]}`;
 }
-const home = (view: Exclude<ChoresView, "today">) => tabHref("chores", ["chores", view]);
+// Home opens on Rooms (21 Nov), so Rooms is the bare tab and the others
+// carry their ?chores= value.
+const home = (view: ChoresView) => (view === "rooms" ? tabHref("chores") : tabHref("chores", ["chores", view]));
 const kitchen = (view: KitchenViewValue) => (view === "food" ? tabHref("inventory") : tabHref("inventory", ["kitchen", view]));
 
 /**
@@ -56,12 +58,12 @@ const kitchen = (view: KitchenViewValue) => (view === "food" ? tabHref("inventor
  */
 export const GUIDE_PLACES = {
   today: { en: "Today", id: "Hari ini", href: tabHref("agenda") },
-  home_chores: { en: "Home → Chores", id: "Rumah → Tugas", href: tabHref("chores") },
+  home_chores: { en: "Home → Chores", id: "Rumah → Tugas", href: home("today") },
   home_rooms: { en: "Home → Rooms", id: "Rumah → Ruangan", href: home("rooms") },
   home_repairs: { en: "Home → Repairs", id: "Rumah → Perbaikan", href: home("repairs") },
   // The checklist is a sheet over Home → Chores, opened by ?bills=open
   // (chores-tab.tsx), the way Today's What's new card opens it.
-  home_bills: { en: "Home → Bills and upkeep", id: "Rumah → Tagihan dan perawatan", href: tabHref("chores", ["bills", "open"]) },
+  home_bills: { en: "Home → Bills and upkeep", id: "Rumah → Tagihan dan perawatan", href: `${home("today")}&bills=open` },
   pets: { en: "Pets", id: "Hewan", href: tabHref("pets") },
   kitchen_food: { en: "Kitchen → Food", id: "Dapur → Makanan", href: kitchen("food") },
   kitchen_menu: { en: "Kitchen → Menu", id: "Dapur → Menu", href: kitchen("menu") },
@@ -116,10 +118,11 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "The five tabs", id: "Lima tab" },
     body: {
-      en: "Today shows the day at a glance and what is waiting for you. Home has chores, rooms and repairs. Pets has each pet's routines and health. Kitchen has food, the menu and shopping. Settings has people, features and notifications.",
-      id: "Hari ini menampilkan ringkasan hari dan yang menunggu Anda. Rumah berisi tugas, ruangan, dan perbaikan. Hewan berisi rutinitas dan kesehatan tiap hewan. Dapur berisi makanan, menu, dan belanja. Pengaturan berisi orang, fitur, dan notifikasi.",
+      en: "Today shows the day at a glance and what is waiting for you. Pets has each pet's routines and health. Home, in the middle, has rooms, chores and repairs. Kitchen has food, the menu and shopping. Settings has people, features and notifications.",
+      id: "Hari ini menampilkan ringkasan hari dan yang menunggu Anda. Hewan berisi rutinitas dan kesehatan tiap hewan. Rumah, di tengah, berisi ruangan, tugas, dan perbaikan. Dapur berisi makanan, menu, dan belanja. Pengaturan berisi orang, fitur, dan notifikasi.",
     },
     where: null,
+    covers: ["home-centre-2026-11"],
   },
   {
     id: "today",
@@ -221,8 +224,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Rooms, floors and spots", id: "Ruangan, lantai, dan bagian" },
     body: {
-      en: "Home → Rooms lists every room by floor and what is set up there. A room can hold rooms inside it, like a bathroom in its bedroom; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
-      id: "Rumah → Ruangan menampilkan semua ruangan per lantai beserta tugasnya. Ruangan bisa punya ruangan di dalamnya, seperti kamar mandi di dalam kamar; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
+      en: "Home opens on Rooms: your house, one band a floor, top floor first. Amber means an open repair or a chore left from an earlier day. A room can hold rooms inside it; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
+      id: "Rumah dibuka di Ruangan: rumah Anda, satu baris per lantai, lantai teratas di atas. Kuning berarti ada perbaikan atau tugas tertinggal. Ruangan bisa punya ruangan di dalamnya; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
     },
     where: "home_rooms",
     covers: ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "rooms-inside-2026-11"],
@@ -487,8 +490,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Kakak", id: "Kakak" },
     body: {
-      en: "Kakak is Miamus's AI helper. Type or say what you need and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Read replies aloud lets you hear her voice. Settings → Kakak turns her on or off.",
-      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik atau ucapkan: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Bacakan jawaban Kakak memperdengarkan suaranya. Atur di Pengaturan → Kakak.",
+      en: "Kakak is Miamus's AI helper. Type or say what you need, or tap an example, and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Drag her sheet down to close it. Settings → Kakak turns her on or off.",
+      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik, ucapkan, atau contoh yang diketuk: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Tarik ke bawah untuk menutup. Atur di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
     covers: ["kakak-routines-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],

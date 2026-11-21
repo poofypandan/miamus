@@ -195,9 +195,10 @@ function Voice({
         aria-label={t("Talk to Kakak", "Bicara dengan Kakak")}
         className={cn(
           "flex flex-col items-center gap-2",
-          // A paper inset around the mic or the tip, as her card is (04, PR 5); just the speaker switch otherwise.
-          (showBig || showTip) && "rounded-[22px] bg-background",
-          showBig ? "px-4 pb-3 pt-5" : showTip ? "px-3 py-2" : "py-0"
+          // The mic in the open, with air around it (07, decision 7): the disc
+          // is the screen's one solid shape. The keyboard tip keeps a quiet inset.
+          showTip && "rounded-[22px] bg-background",
+          showBig ? "pb-2 pt-4" : showTip ? "px-3 py-2" : "py-0"
         )}
       >
         {showBig && (
@@ -211,7 +212,9 @@ function Voice({
               // in the typing box yet: that waits for Done.
               <div
                 data-testid="kakak-live-words"
-                className="flex w-full items-start gap-2 rounded-[20px] bg-card px-4 py-2.5 text-base"
+                // A quiet paper inset, full width, starting from the left so the
+                // words don't shift as they grow (Fable, #187).
+                className="flex w-full items-start gap-2 rounded-2xl bg-background px-4 py-3 text-base"
               >
                 <AudioLines className="mt-0.5 size-5 shrink-0 text-foreground motion-safe:animate-pulse" aria-hidden="true" />
                 <p className={cn("min-w-0 flex-1 break-words", state.transcript ? "text-foreground" : "text-muted-foreground")}>

@@ -51,12 +51,16 @@ export function visibleChores<T extends Pick<HouseholdTask, "category">>(rows: T
 }
 
 /**
- * The Chores pill to show for a ?chores= value: Repairs falls back to
- * Today while it's off, the way moduleFromParam sends a switched-off tab
- * back to Today.
+ * Home's pill for a ?chores= value (21 Nov: Home opens on the house, Fable's
+ * 08-kitchen-inventory.md, decision 17). No value is Rooms, the first pill;
+ * `?chores=today` is Chores; `?chores=rooms` still opens Rooms, for links
+ * from before. Repairs falls back to Rooms while it's off, the way
+ * moduleFromParam sends a switched-off tab back to Today.
  */
-export function choresViewFor<V extends string>(view: V, flags: FeatureFlags): V | "today" {
-  return view === "repairs" && !flags.repairs ? "today" : view;
+export function choresViewFor(raw: string | null, flags: FeatureFlags): "today" | "rooms" | "repairs" {
+  if (raw === "today") return "today";
+  if (raw === "repairs" && flags.repairs) return "repairs";
+  return "rooms";
 }
 
 /**

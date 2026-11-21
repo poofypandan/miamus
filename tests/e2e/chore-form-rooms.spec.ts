@@ -52,7 +52,7 @@ test("Chore form: rooms by floor, several rooms at once, a whole floor, and a sp
       localStorage.setItem(`miamus.whats-new.${card}`, "seen");
     }
   });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
 
   // Several rooms at once: one chore per room, saved together.
   await page.getByRole("button", { name: "Add Chore" }).first().click({ timeout: 20_000 });

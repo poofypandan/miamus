@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, ChevronRight, DoorOpen, Pencil, Plus, Wrench } from "lucide-react";
+import { Check, ChevronRight, DoorOpen, Pencil, Plus, TriangleAlert, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -18,13 +18,17 @@ import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { SortRoomsCard } from "@/components/chores/sort-rooms-card";
 import { WhatsNewCard } from "@/components/shared/whats-new";
 import { RoomRepairs } from "@/components/repairs/room-repairs";
+import { RepairRow } from "@/components/repairs/repairs-view";
+import { RepairSheet, shortDate } from "@/components/repairs/repair-sheet";
+import { HouseView, useOverdueChores } from "@/components/chores/house-view";
 import { useRepairs } from "@/hooks/use-repairs";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useChoresView } from "@/hooks/use-chores-view";
-import { useHouseholdLocations } from "@/hooks/use-household-locations";
+import { useHouseholdLocations, useLocationName } from "@/hooks/use-household-locations";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
 import { useSetUpChores } from "@/hooks/use-set-up-chores";
@@ -38,14 +42,17 @@ import {
   roomsInsideOf,
   scheduleLabel,
   scheduleSummary,
+  type FloorSection,
   type RoomChore,
   type RoomEntry,
 } from "@/lib/rooms-view";
+import { buildHouse, housePlaceIds, showHouse } from "@/lib/house-view";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { pushInPlace } from "@/lib/in-place-navigation";
 import { cn } from "@/lib/utils";
 import type { OwnerLocale } from "@/lib/owner-locale";
-import type { HouseholdTask } from "@/types/database";
+import type { ChoreOccurrence } from "@/lib/chore-recurrence";
+import type { HouseholdTask, Repair } from "@/types/database";
 
 const NO_REPAIRS: ReturnType<typeof useRepairs>["repairs"] = [];
 
@@ -100,6 +107,34 @@ export function RoomsView() {
     setSheet(null);
     setEditor({ task, preset });
   }
+
+  // The house (21 Nov): what turns a room amber is an open repair in it, or
+  // a chore in it left from an earlier day. Nothing else: a room where
+  // today's work simply isn't done yet stays plain (07, "The house view").
+  const repairs = useShownRepairs();
+  const overdue = useOverdueChores();
+  const placeIds = useMemo(() => housePlaceIds(model), [model]);
+  const openHere = useMemo(
+    () =>
+      repairs
+        .filter((r) => (r.status === "reported" || r.status === "open") && r.location_id && placeIds.has(r.location_id))
+        .sort((a, b) => Number(b.urgent) - Number(a.urgent) || a.created_at.localeCompare(b.created_at)),
+    [repairs, placeIds]
+  );
+  const lateHere = useMemo(
+    () => overdue.filter((o) => o.task.location_id && placeIds.has(o.task.location_id)),
+    [overdue, placeIds]
+  );
+  const house = useMemo(
+    () =>
+      buildHouse(
+        model,
+        new Set([...openHere.map((r) => r.location_id!), ...lateHere.map((o) => o.task.location_id!)])
+      ),
+    [model, openHere, lateHere]
+  );
+  // A floor's name opens that floor's list, as Rooms was before the house.
+  const [floorSheet, setFloorSheet] = useState<string | null>(null);
 
   // The room list failed and won't retry on its own: say so, with a way back
   // (Codex, PR #30), rather than placeholders forever.
@@ -172,7 +207,10 @@ export function RoomsView() {
       {canSortIntoFloors(locations) && (
         <SortRoomsCard locations={locations} chores={chores} today={today} />
       )}
-      {model.jobs.length > 0 && (
+      {/* The job pills only for more than six rooms (07): for a small
+          house they filter nothing. One tapped shows the list, which says
+          which rooms have the job; the house can't. */}
+      {model.jobs.length > 0 && (rows.length > 6 || job) && (
         <div
           role="group"
           aria-label={t("Show one job", "Tampilkan satu pekerjaan")}
@@ -207,96 +245,113 @@ export function RoomsView() {
         </p>
       )}
 
-      {model.floors.map((floor) => (
-        <section key={floor.key} className="flex flex-col gap-1.5" aria-label={floor.label}>
-          <SectionHeader
-            title={floor.label}
-            detail={
-              job
-                ? t(`${jobName} in ${withJob(floor.rooms)} of ${floor.rooms.length}`, `${jobName} di ${withJob(floor.rooms)} dari ${floor.rooms.length}`)
-                : t(
-                    `${floor.rooms.length} ${floor.rooms.length === 1 ? "room" : "rooms"}`,
-                    `${floor.rooms.length} ruangan`
-                  )
+      {showHouse(model) && !job ? (
+        <>
+          <HouseView
+            house={house}
+            otherLabel={
+              model.storedFloors ? t("No floor yet", "Belum ada lantai") : t("Other rooms", "Ruangan lain")
             }
+            onOpenRoom={(id) => setSheet(id)}
+            onOpenFloor={(key) => setFloorSheet(key)}
           />
-          <div className="overflow-hidden rounded-xl border bg-card">
-            {floor.whole && (
-              <RoomRow
-                entry={floor.whole}
-                label={t("Whole floor", "Seluruh lantai")}
-                whole
-                job={job}
-                locale={locale}
-                staffName={staffName}
-                onOpen={() => setSheet(floor.whole!.id)}
-                onAdd={(title) => openEditor(null, { title, locationId: floor.whole!.id })}
+          <NeedsAttention repairs={openHere} late={lateHere} />
+        </>
+      ) : (
+        <>
+          {model.floors.map((floor) => (
+            <section key={floor.key} className="flex flex-col gap-1.5" aria-label={floor.label}>
+              <SectionHeader
+                title={floor.label}
+                detail={
+                  job
+                    ? t(`${jobName} in ${withJob(floor.rooms)} of ${floor.rooms.length}`, `${jobName} di ${withJob(floor.rooms)} dari ${floor.rooms.length}`)
+                    : t(
+                        `${floor.rooms.length} ${floor.rooms.length === 1 ? "room" : "rooms"}`,
+                        `${floor.rooms.length} ruangan`
+                      )
+                }
               />
-            )}
-            {floor.rooms.map((entry) => (
-              <RoomRow
-                key={entry.id}
-                entry={entry}
-                label={entry.label}
-                fullLabel={entry.fullName}
-                job={job}
-                locale={locale}
-                staffName={staffName}
-                onOpen={() => setSheet(entry.id)}
-                onAdd={(title) => openEditor(null, { title, locationId: entry.id })}
-              />
-            ))}
-          </div>
-        </section>
-      ))}
+              <div className="overflow-hidden rounded-xl border bg-card">
+                {floor.whole && (
+                  <RoomRow
+                    entry={floor.whole}
+                    label={t("Whole floor", "Seluruh lantai")}
+                    whole
+                    job={job}
+                    locale={locale}
+                    staffName={staffName}
+                    onOpen={() => setSheet(floor.whole!.id)}
+                    onAdd={(title) => openEditor(null, { title, locationId: floor.whole!.id })}
+                  />
+                )}
+                {floor.rooms.map((entry) => (
+                  <RoomRow
+                    key={entry.id}
+                    entry={entry}
+                    label={entry.label}
+                    fullLabel={entry.fullName}
+                    job={job}
+                    locale={locale}
+                    staffName={staffName}
+                    onOpen={() => setSheet(entry.id)}
+                    onAdd={(title) => openEditor(null, { title, locationId: entry.id })}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
 
-      {model.otherRooms.length > 0 && (
-        <section
-          className="flex flex-col gap-1.5"
-          aria-label={
-            model.floors.length === 0
-              ? t("Rooms", "Ruangan")
-              : model.storedFloors
-                ? t("No floor yet", "Belum ada lantai")
-                : t("Other rooms", "Ruangan lain")
-          }
-        >
-          <SectionHeader
-            title={
-              model.floors.length === 0
-                ? t("Rooms", "Ruangan")
-                : model.storedFloors
-                  ? t("No floor yet", "Belum ada lantai")
-                  : t("Other rooms", "Ruangan lain")
-            }
-            detail={
-              job
-                ? t(
-                    `${jobName} in ${withJob(model.otherRooms)} of ${model.otherRooms.length}`,
-                    `${jobName} di ${withJob(model.otherRooms)} dari ${model.otherRooms.length}`
-                  )
-                : t(
-                    `${model.otherRooms.length} ${model.otherRooms.length === 1 ? "room" : "rooms"}`,
-                    `${model.otherRooms.length} ruangan`
-                  )
-            }
-          />
-          <div className="overflow-hidden rounded-xl border bg-card">
-            {model.otherRooms.map((entry) => (
-              <RoomRow
-                key={entry.id}
-                entry={entry}
-                label={entry.label}
-                fullLabel={entry.fullName}
-                job={job}
-                locale={locale}
-                staffName={staffName}
-                onOpen={() => setSheet(entry.id)}
-                onAdd={(title) => openEditor(null, { title, locationId: entry.id })}
+          {model.otherRooms.length > 0 && (
+            <section
+              className="flex flex-col gap-1.5"
+              aria-label={
+                model.floors.length === 0
+                  ? t("Rooms", "Ruangan")
+                  : model.storedFloors
+                    ? t("No floor yet", "Belum ada lantai")
+                    : t("Other rooms", "Ruangan lain")
+              }
+            >
+              <SectionHeader
+                title={
+                  model.floors.length === 0
+                    ? t("Rooms", "Ruangan")
+                    : model.storedFloors
+                      ? t("No floor yet", "Belum ada lantai")
+                      : t("Other rooms", "Ruangan lain")
+                }
+                detail={
+                  job
+                    ? t(
+                        `${jobName} in ${withJob(model.otherRooms)} of ${model.otherRooms.length}`,
+                        `${jobName} di ${withJob(model.otherRooms)} dari ${model.otherRooms.length}`
+                      )
+                    : t(
+                        `${model.otherRooms.length} ${model.otherRooms.length === 1 ? "room" : "rooms"}`,
+                        `${model.otherRooms.length} ruangan`
+                      )
+                }
               />
-            ))}
-          </div>
-        </section>
+              <div className="overflow-hidden rounded-xl border bg-card">
+                {model.otherRooms.map((entry) => (
+                  <RoomRow
+                    key={entry.id}
+                    entry={entry}
+                    label={entry.label}
+                    fullLabel={entry.fullName}
+                    job={job}
+                    locale={locale}
+                    staffName={staffName}
+                    onOpen={() => setSheet(entry.id)}
+                    onAdd={(title) => openEditor(null, { title, locationId: entry.id })}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+        </>
       )}
 
       {model.noRoom.length > 0 && (
@@ -326,8 +381,153 @@ export function RoomsView() {
         onEdit={(task) => openEditor(task, null)}
         onAdd={() => openEditor(null, sheet && sheet !== "none" ? { locationId: sheet } : null)}
       />
+      <FloorSheet
+        floor={model.floors.find((f) => f.key === floorSheet) ?? null}
+        job={job}
+        locale={locale}
+        staffName={staffName}
+        onClose={() => setFloorSheet(null)}
+        onOpenRoom={(id) => {
+          setFloorSheet(null);
+          setSheet(id);
+        }}
+        onAdd={(title, locationId) => {
+          setFloorSheet(null);
+          openEditor(null, { title, locationId });
+        }}
+      />
       <RoomsEditor editor={editor} onClose={() => setEditor(null)} today={today} />
     </div>
+  );
+}
+
+/**
+ * Under the house, the reason for each amber room in words (07): its open
+ * repairs, urgent first, then chores left from earlier days, oldest first.
+ * A repair opens its sheet; a chore opens Home → Chores, where it waits
+ * under "From earlier" with its Done and Edit (a room's sheet lists only
+ * chores still set up, so a past one-off would not be there). Nothing when
+ * nothing needs attention.
+ */
+function NeedsAttention({ repairs, late }: { repairs: Repair[]; late: ChoreOccurrence[] }) {
+  const t = useT();
+  const { setView } = useChoresView();
+  // From earlier shows only on today (expandChores), so the link opens today.
+  const { setSelectedDate } = useHousehold();
+  const todayDate = useToday();
+  const locale = useOwnerLocale();
+  const placeName = useLocationName();
+  const [openId, setOpenId] = useState<string | null>(null);
+  if (repairs.length + late.length === 0) return null;
+  return (
+    <section aria-label={t("Needs attention", "Perlu perhatian")} className="flex flex-col gap-2">
+      <h3 className="flex items-center gap-1.5 px-1 text-sm font-semibold text-amber-800">
+        <TriangleAlert className="size-4 shrink-0" aria-hidden />
+        {t("Needs attention", "Perlu perhatian")}
+      </h3>
+      <div className="flex flex-col overflow-hidden rounded-2xl bg-card shadow-card">
+        {repairs.map((repair, index) => (
+          <RepairRow key={repair.id} repair={repair} onOpen={setOpenId} first={index === 0} />
+        ))}
+        {late.map((occurrence, index) => {
+          const place = placeName(occurrence.task.location_id, occurrence.task.spot);
+          const since = shortDate(occurrence.date, locale);
+          return (
+            <button
+              key={occurrence.key}
+              type="button"
+              onClick={() => {
+                setSelectedDate(todayDate);
+                setView("today");
+              }}
+              className={cn(
+                "flex min-h-[64px] w-full items-center gap-3 px-3 py-2.5 text-left active:bg-muted",
+                (repairs.length > 0 || index > 0) && "border-t"
+              )}
+            >
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate text-sm font-medium text-gray-900">{occurrence.task.title}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {[place, t(`since ${since}`, `sejak ${since}`)].filter(Boolean).join(" · ")}
+                </span>
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </button>
+          );
+        })}
+      </div>
+      <RepairSheet repair={repairs.find((r) => r.id === openId) ?? null} onClose={() => setOpenId(null)} />
+    </section>
+  );
+}
+
+/** A floor's list, from its name on the house: its rooms as Rooms listed them. */
+function FloorSheet({
+  floor,
+  job,
+  locale,
+  staffName,
+  onClose,
+  onOpenRoom,
+  onAdd,
+}: {
+  floor: FloorSection | null;
+  job: ChoreJob | null;
+  locale: OwnerLocale;
+  staffName: (id: string | null | undefined) => string;
+  onClose: () => void;
+  onOpenRoom: (id: string) => void;
+  onAdd: (title: string, locationId: string) => void;
+}) {
+  const t = useT();
+  useBackToClose(floor !== null, onClose);
+  return (
+    <Sheet open={floor !== null} onOpenChange={(next) => !next && onClose()}>
+      <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle>{floor?.label ?? ""}</SheetTitle>
+          <SheetDescription>
+            {floor
+              ? t(
+                  `${floor.rooms.length} ${floor.rooms.length === 1 ? "room" : "rooms"}`,
+                  `${floor.rooms.length} ruangan`
+                )
+              : ""}
+          </SheetDescription>
+        </SheetHeader>
+        {floor && (
+          <div className="px-4 pb-6">
+            <div className="overflow-hidden rounded-xl border bg-card">
+              {floor.whole && (
+                <RoomRow
+                  entry={floor.whole}
+                  label={t("Whole floor", "Seluruh lantai")}
+                  whole
+                  job={job}
+                  locale={locale}
+                  staffName={staffName}
+                  onOpen={() => onOpenRoom(floor.whole!.id)}
+                  onAdd={(title) => onAdd(title, floor.whole!.id)}
+                />
+              )}
+              {floor.rooms.map((entry) => (
+                <RoomRow
+                  key={entry.id}
+                  entry={entry}
+                  label={entry.label}
+                  fullLabel={entry.fullName}
+                  job={job}
+                  locale={locale}
+                  staffName={staffName}
+                  onOpen={() => onOpenRoom(entry.id)}
+                  onAdd={(title) => onAdd(title, entry.id)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
 
