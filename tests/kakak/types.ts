@@ -59,6 +59,10 @@ export type ExpectedTurn =
       kind: "suggestions";
       /** Exactly these calls, any order. */
       calls: ExpectedCall[];
+      /** Her line beside the card: each group must be in it (Can we cook it?: "everything but santan"). */
+      mentions?: string[][];
+      /** Her line must contain none of these (an amount she was never given). */
+      avoids?: string[];
     }
   | {
       kind: "message";
@@ -72,7 +76,11 @@ export type MustNeverFlag =
   /** Two people fit the name: the first turn must not be a suggestion. */
   | "guess_lookalike"
   /** Food with no date given: no add_food before a question. */
-  | "food_date_without_asking";
+  | "food_date_without_asking"
+  /** Can we cook it?: anything she says states an amount with a kitchen unit ("400 ml"). She is never given one. */
+  | "states_amount"
+  /** Can we cook it?: anything she says names a word from the case's avoids lists (an ingredient no recipe lists). */
+  | "invents_ingredient";
 
 export interface KakakCase {
   /** K001…K100. */
@@ -93,7 +101,9 @@ export interface KakakCase {
     | "staff_areas"
     | "safety"
     /** A question about Miamus, answered from the guide (Phase 180), and small talk. */
-    | "about_miamus";
+    | "about_miamus"
+    /** Can we cook it? (20 Nov): a dish checked against what is at home, and put on the menu. */
+    | "kitchen";
   /** Held back from prompt tuning; scored only in the final comparison. */
   holdout: boolean;
   /** Extra hard rules for this case (the automatic ones always apply). */
