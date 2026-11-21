@@ -170,8 +170,11 @@ function FeedbackForm({ locale, asStaff, onDone }: { locale: OwnerLocale; asStaf
                   aria-pressed={on}
                   onClick={() => setCategory(on ? null : kind)}
                   className={cn(
-                    "flex min-h-[40px] items-center gap-1 rounded-full border px-3.5 text-sm",
-                    on ? "border-foreground bg-foreground font-medium text-background" : "bg-card active:bg-muted"
+                    // Lifted paper when chosen, the track when not, as FilterPill: Send is the one solid shape here (Fable, #202).
+                    "flex min-h-[40px] items-center gap-1 rounded-full px-3.5 text-sm",
+                    on
+                      ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)]"
+                      : "bg-muted text-muted-foreground active:bg-muted/70"
                   )}
                 >
                   {on && <Check className="size-3.5" />}
