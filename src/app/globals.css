@@ -690,7 +690,8 @@
  * that moves the mark is overridden. Nothing animates: the home icon and the
  * splash are circles there, so the mark stays one, the loop drawing inside
  * it, until the cover lifts. The circular clip also keeps the loop's ink
- * strips inside the circle.
+ * strips inside the circle. The circle grows past its layout box, so the
+ * promise line under it moves down by the same half.
  *
  * Only where that splash exists: an installed app (display-mode: standalone)
  * that is not an iPhone (-webkit-touch-callout is iOS Safari's alone). iPhones
@@ -706,6 +707,11 @@
     }
     .mark-opening-glyph {
       scale: calc(220 / 240);
+    }
+    /* The promise line keeps its 24px under the circle, not under the
+       144px box the circle grew from: half the growth more (Codex, #182). */
+    .mark-opening ~ .launch-promise {
+      margin-top: calc(1.5rem + (240px - 144px) / 2);
     }
   }
 }

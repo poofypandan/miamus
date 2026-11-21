@@ -15,6 +15,8 @@ describe("the launch mark's size", () => {
     const css = readFileSync(fileURLToPath(new URL("../../src/app/globals.css", import.meta.url)), "utf8");
     expect(css).toContain(`scale: calc(${ANDROID_SPLASH_CIRCLE} / ${LAUNCH_MARK_SIZE});`);
     expect(css).toContain(`scale: calc(${ANDROID_SPLASH_GLYPH} / ${ANDROID_SPLASH_CIRCLE});`);
+    // The promise line stays 24px under the grown circle.
+    expect(css).toContain(`margin-top: calc(1.5rem + (${ANDROID_SPLASH_CIRCLE}px - ${LAUNCH_MARK_SIZE}px) / 2);`);
   });
 });
 
