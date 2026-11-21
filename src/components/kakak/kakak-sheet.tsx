@@ -236,7 +236,7 @@ function Conversation({
    * where it was, and the words go into the typing box to fix and send.
    */
   function editSpoken() {
-    if (!spokenTurn || saving) return;
+    if (!spokenTurn || saving || screen.kind === "saved") return;
     abort.current?.abort();
     if (screen.kind === "card") reportKakakOutcome(screen.requestId, "cancelled");
     setScreen(spokenTurn.screen);
@@ -306,6 +306,10 @@ function Conversation({
     setSaving(true);
     try {
       const { undo } = await save(items);
+      // Saved: the spoken words can't be edited any more. Putting them back
+      // would leave the saved screen (and its Undo) with the routine still
+      // saved, and resending could add it twice (Codex, PR #165).
+      setSpokenTurn(null);
       // Adjusted with the card's chips: Kakak was close, not right (statistics).
       reportKakakOutcome(requestId, refined ? "changed" : "confirmed");
       // A pet routine ends on Kakak's own "Done", saying what it means for

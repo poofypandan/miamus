@@ -323,3 +323,26 @@ test("new voice: on by default, off with ?newvoice=0 for this phone, on again wi
   await expect(page.getByText("Listening. Tap Done to send.")).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("miamus.kakak.newVoice"))).toBe("on");
 });
+
+test("new voice: once a spoken routine is saved, its words can't be edited (Codex, PR #165)", async ({ context, page }) => {
+  await fakeSpeech(context, "works");
+  const stub = await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Talk to Kakak" }).click();
+  await say(page, "Lights off for Mochi and Bento every day at 9:30 pm", true);
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("Routine · Mochi & Bento")).toBeVisible({ timeout: 20_000 });
+  // Before the card is confirmed nothing is saved, and the words can be fixed.
+  await expect(page.getByRole("button", { name: "Edit words" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const done = page.getByTestId("kakak-saved");
+  await expect(done).toBeVisible();
+  await expect.poll(() => stub.schedules.filter((s) => s.kind === "lights").length).toBe(2);
+  // Saved: Edit would leave the saved screen and its Undo with the routine
+  // still saved, and resending could add it twice.
+  await expect(page.getByRole("button", { name: "Edit words" })).toHaveCount(0);
+  await expect(done).toBeVisible();
+});
