@@ -1170,15 +1170,7 @@ export function AgendaTab() {
 
       {/* Latest (Today v3): behind the status card, what has been finished
           today, with its photos, the latest first. */}
-      <LatestSheet
-        open={latestOpen}
-        onClose={() => setLatestOpen(false)}
-        rows={latestRows(finished, staffName)}
-        onOpenChore={(occurrence) => {
-          setLatestOpen(false);
-          openChore(occurrence);
-        }}
-      />
+      <LatestSheet open={latestOpen} onClose={() => setLatestOpen(false)} rows={latestRows(finished, staffName)} />
 
       <EveningSummarySheet
         date={summaryOpen}

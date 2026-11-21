@@ -307,7 +307,7 @@ test("Week from the date pill's sheet leaves no dead Back press (Codex, PR #181)
   await expect(page).toHaveURL(/module=chores/);
 });
 
-function nextChore(title: string, daysFromToday: number) {
+function nextChore(title: string, daysFromToday: number, over: Record<string, unknown> = {}) {
   const d = new Date();
   d.setDate(d.getDate() + daysFromToday);
   const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -333,6 +333,7 @@ function nextChore(title: string, daysFromToday: number) {
     after_photo_url: null,
     location_id: null,
     spot: null,
+    ...over,
   };
 }
 
@@ -350,4 +351,27 @@ test("Next ignores the Pets | Chores filter left on after Show less (Codex, PR #
   await expect(page.getByTestId("whole-day")).toBeVisible({ timeout: 20_000 });
   await page.getByTestId("whole-day").click();
   await expect(page.getByTestId("next-list")).toContainText("Mop the kitchen");
+});
+
+test("a finished chore in Latest opens its photos, never the editor (Codex, PR #181)", async ({ context, page }) => {
+  const at = new Date().toISOString();
+  await installStub(context, {
+    owner: { locale: "en" },
+    chores: [
+      nextChore("Wash the car", 0, {
+        id: "00000000-0000-4000-8000-000000181003",
+        status: "completed",
+        completed_by: STAFF_ID,
+        completed_at: at,
+        before_photo_url: "x/b.jpg",
+        after_photo_url: "x/a.jpg",
+      }),
+    ],
+  });
+  await page.goto("/dashboard?module=agenda");
+  await status(page).click({ timeout: 20_000 });
+  const latest = page.getByRole("dialog", { name: "Latest" });
+  await latest.getByTestId("latest-list").getByRole("button", { name: /Wash the car/ }).click();
+  await expect(page.getByRole("dialog", { name: "Wash the car" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: /Edit/ })).toHaveCount(0);
 });

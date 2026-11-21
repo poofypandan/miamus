@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { ImageOff } from "lucide-react";
+import { toast } from "sonner";
+import { ChoreReviewLightbox, hasChoreProof } from "@/components/chores/chore-proof-photos";
 import { SyncedImg } from "@/components/shared/synced-img";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useT } from "@/context/owner-locale-context";
+import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { UnifiedAgendaEntry } from "@/lib/unified-agenda";
@@ -90,21 +93,38 @@ export function LatestList({ rows, onOpen }: { rows: LatestRow[]; onOpen: (row: 
 /**
  * Latest's sheet, behind Today's status card: what has been finished today,
  * with its photos, the latest first. Back closes it, as it does every sheet
- * (Codex, PR #181). A chore row opens that chore's sheet.
+ * (Codex, PR #181). A finished chore opens its proof, the before and after
+ * full screen with their times, as it does in the day's list: never the
+ * editor (Phase 129; Codex, PR #181). One saved with no photos says so.
  */
 export function LatestSheet({
   open,
   onClose,
   rows,
-  onOpenChore,
 }: {
   open: boolean;
   onClose: () => void;
   rows: LatestRow[];
-  onOpenChore: (occurrence: ChoreOccurrence) => void;
 }) {
   const t = useT();
+  const locale = useOwnerLocale();
+  const [reviewing, setReviewing] = useState<ChoreOccurrence | null>(null);
   useBackToClose(open, onClose);
+
+  function openRow(row: LatestRow) {
+    if (row.entry.kind !== "chore") return;
+    const occurrence = row.entry.occurrence;
+    if (hasChoreProof(occurrence.row)) {
+      setReviewing(occurrence);
+      return;
+    }
+    toast(
+      row.who
+        ? t(`Done by ${row.who}, no photos`, `Diselesaikan ${row.who}, tanpa foto`)
+        : t("No photos were saved for this chore", "Tidak ada foto tersimpan untuk tugas ini")
+    );
+  }
+
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="bottom" className="mx-auto max-h-[92dvh] max-w-md overflow-y-auto rounded-t-3xl">
@@ -113,13 +133,14 @@ export function LatestSheet({
           <SheetDescription>{t("Finished today, the latest first.", "Selesai hari ini, yang terbaru di atas.")}</SheetDescription>
         </SheetHeader>
         <div className="px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
-          <LatestList
-            rows={rows}
-            onOpen={(row) => {
-              if (row.entry.kind === "chore") onOpenChore(row.entry.occurrence);
-            }}
-          />
+          <LatestList rows={rows} onOpen={openRow} />
         </div>
+        <ChoreReviewLightbox
+          row={reviewing?.row ?? null}
+          open={reviewing !== null}
+          onClose={() => setReviewing(null)}
+          locale={locale}
+        />
       </SheetContent>
     </Sheet>
   );
