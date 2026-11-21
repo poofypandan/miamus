@@ -45,7 +45,7 @@ export function ErrorScreen({ reset }: { reset: () => void }) {
       </Button>
       {/* Client-side, so going back to the start never reloads the app
           (Codex review, PR #14). */}
-      <Link href={home} className="flex min-h-11 items-center text-sm font-medium text-gray-700">
+      <Link href={home} className="flex min-h-11 items-center text-sm font-medium text-foreground">
         {id ? "Kembali ke awal" : "Back to the start"}
       </Link>
     </div>

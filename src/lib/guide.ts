@@ -136,6 +136,16 @@ export const GUIDE: readonly GuideEntry[] = [
     covers: ["my-tasks-2026-11", "first-run-2026-11"],
   },
   {
+    id: "add-staff",
+    group: "start",
+    title: { en: "Adding a new staff member", id: "Menambah staf baru" },
+    body: {
+      en: "Settings → Staff: type the name they go by and tap Add Person. Tap the eye beside them to choose what they see, then send the one WhatsApp message. Give them their chores in Home → Chores. Staff under 18 need a parent's or guardian's consent first.",
+      id: "Pengaturan → Staf: ketik nama panggilannya, lalu ketuk Tambah Orang. Ketuk ikon mata di sampingnya untuk memilih yang dia lihat, lalu kirim satu pesan WhatsApp. Beri tugasnya di Rumah → Tugas. Staf di bawah 18 tahun perlu izin orang tua atau wali dulu.",
+    },
+    where: "settings_staff",
+  },
+  {
     id: "link-a-staff-phone",
     group: "start",
     title: { en: "Linking a staff phone", id: "Menghubungkan HP staf" },
@@ -146,12 +156,42 @@ export const GUIDE: readonly GuideEntry[] = [
     where: "settings_staff",
   },
   {
+    id: "staff-first-day",
+    group: "start",
+    title: { en: "A new staff member's first day", id: "Hari pertama staf baru" },
+    body: {
+      en: "They open the link in your WhatsApp message, tap their name and choose a 4-digit PIN. Their tasks for the day are on the first screen. On each one they take a Sebelum photo, take a Sesudah photo, then tap Selesai. Their screens are in Bahasa Indonesia.",
+      id: "Staf membuka link di pesan WhatsApp Anda, mengetuk namanya, dan membuat PIN 4 angka. Tugas hari itu langsung tampil di layar pertama. Di tiap tugas, mereka ambil foto Sebelum, ambil foto Sesudah, lalu ketuk Selesai. Layarnya berbahasa Indonesia.",
+    },
+    where: "settings_staff",
+  },
+  {
     id: "what-staff-see",
     group: "start",
     title: { en: "What staff see", id: "Yang dilihat staf" },
     body: {
       en: "Staff phones are in Bahasa Indonesia and show their own tasks for the day, plus what you leave on for them. In Settings → Staff, tap the eye beside a person to choose what they see: chores for anyone, pet routines, Kitchen, Repairs. Or tell Kakak. Staff never see prices.",
       id: "HP staf berbahasa Indonesia dan menampilkan tugas hari itu, ditambah yang Anda izinkan. Di Pengaturan → Staf, ketuk ikon mata di samping nama untuk memilih: tugas untuk siapa saja, rutinitas hewan, Dapur, Perbaikan. Atau bilang ke Kakak. Staf tidak pernah melihat harga.",
+    },
+    where: "settings_staff",
+  },
+  {
+    id: "staff-leaves",
+    group: "start",
+    title: { en: "When someone leaves", id: "Kalau staf berhenti" },
+    body: {
+      en: "Settings → Staff: tap the remove icon beside their name, then Remove. Their PIN stops working and the phones they last signed in on are signed out. Unfinished chores go to Anyone; finished work keeps their name. Other staff phones stay signed in.",
+      id: "Pengaturan → Staf: ketuk ikon hapus di samping namanya, lalu Hapus. PIN-nya langsung tidak berlaku dan HP yang terakhir dipakainya ikut keluar. Tugas yang belum selesai jadi untuk Siapa saja; yang sudah selesai tetap atas namanya. HP staf lain tetap masuk.",
+    },
+    where: "settings_staff",
+  },
+  {
+    id: "staff-back",
+    group: "start",
+    title: { en: "Bringing someone back", id: "Mengembalikan staf" },
+    body: {
+      en: "Settings → Staff → No longer here → Bring back. They choose a new PIN when they next sign in. The WhatsApp message only works in someone's first 7 days on the list; after that, tap Set PIN beside their name and tell them the PIN.",
+      id: "Pengaturan → Staf → Sudah tidak bekerja → Kembalikan. Mereka membuat PIN baru saat masuk nanti. Pesan WhatsApp hanya berlaku 7 hari pertama setelah orang ditambahkan; setelah itu, ketuk Atur PIN di samping namanya dan beri tahu PIN-nya.",
     },
     where: "settings_staff",
   },
@@ -226,6 +266,16 @@ export const GUIDE: readonly GuideEntry[] = [
     body: {
       en: "A chore can repeat every day, week or month, or less often, up to every year. Remind me sends you a notification at 07:00 on the day, or 1, 3 or 7 days before. Chores given to you show under My tasks on Today.",
       id: "Tugas bisa berulang setiap hari, minggu, atau bulan, atau lebih jarang, sampai setiap tahun. Ingatkan saya mengirim notifikasi pukul 07.00 pada harinya, atau 1, 3, atau 7 hari sebelumnya. Tugas untuk Anda muncul di Tugas saya di Hari ini.",
+    },
+    where: "home_chores",
+  },
+  {
+    id: "kitchen-chores",
+    group: "home",
+    title: { en: "Kitchen chores", id: "Tugas dapur" },
+    body: {
+      en: "Washing up, the stove and the fridge are ordinary chores: add them in Home → Chores and give them to the person by name, so they show even to someone who only sees Kitchen. They sit with the day's other tasks; staff who see Kitchen also get the day's menu.",
+      id: "Cuci piring, kompor, dan kulkas adalah tugas biasa: tambahkan di Rumah → Tugas dan beri langsung ke orangnya, supaya tetap tampil walau dia hanya melihat Dapur. Tugasnya ada bersama tugas lain hari itu; staf yang melihat Dapur juga mendapat menu hari ini.",
     },
     where: "home_chores",
   },
@@ -349,19 +399,20 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Food that is ready to eat", id: "Makanan siap dimakan" },
     body: {
-      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first. Ask Kakak \"What should we eat?\" and she answers from this list.",
-      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas. Tanya Kakak \"Makan apa?\" dan Kakak menjawab dari daftar ini.",
+      en: "Kitchen → Food shows your kitchen as shelves: Use soon first, then Fridge, Freezer, Counter and Cupboard, one tile for each leftover, gift or dish. Miamus never fills in a date by itself. Tap a tile for Eaten, Given away or Thrown out. Ask Kakak \"What should we eat?\"",
+      id: "Dapur → Makanan menampilkan dapur Anda sebagai rak: Segera dipakai di atas, lalu Kulkas, Freezer, Meja, dan Lemari, satu kotak untuk tiap makanan. Miamus tidak pernah mengisi tanggalnya sendiri. Ketuk kotaknya untuk Dimakan, Diberikan, atau Dibuang. Tanya Kakak \"Makan apa?\"",
     },
     where: "kitchen_food",
     needs: "food",
+    covers: ["kitchen-shelves-2026-11"],
   },
   {
     id: "ingredients",
     group: "kitchen",
     title: { en: "Ingredients: places and Use soon", id: "Bahan masakan: tempat dan Segera dipakai" },
     body: {
-      en: "Ingredients sit under Kitchen → Food, grouped by where they are kept: Fridge, Freezer, Counter, Cupboard. Use soon, on top, shows what expires within a week. Tap an ingredient to move it or set its date. Add ingredient adds a new one.",
-      id: "Bahan masakan ada di Dapur → Makanan, dikelompokkan menurut tempatnya: Kulkas, Freezer, Meja, Lemari. Segera dipakai, di paling atas, menunjukkan yang kedaluwarsa dalam seminggu. Ketuk bahan untuk memindahkan atau mengatur tanggalnya. Tambah bahan masakan menambah yang baru.",
+      en: "Ingredients share Kitchen → Food's shelves with the food, by where they are kept. Use soon shows what expires within a week; To buy shows what is running low or out. Tap an ingredient to move it or set its date. Add ingredient adds a new one.",
+      id: "Bahan masakan ada di rak Dapur → Makanan bersama makanan, menurut tempatnya. Segera dipakai: yang kedaluwarsa dalam seminggu; Perlu dibeli: yang hampir habis atau habis. Ketuk bahan untuk memindahkan atau mengatur tanggalnya. Tambah bahan masakan menambah yang baru.",
     },
     where: "kitchen_food",
     needs: "kitchen",
@@ -394,8 +445,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Keeping the kitchen up to date", id: "Menjaga stok tetap benar" },
     body: {
-      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out. After Sudah dimasak, Miamus asks what ran out: one tap each. With Food at home on, they mark food Dimakan, Diberikan or Dibuang.",
-      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis. Setelah Sudah dimasak, Miamus bertanya bahan apa yang habis: sekali ketuk. Dengan Makanan di rumah, makanan ditandai Dimakan, Diberikan, atau Dibuang.",
+      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out. After Sudah dimasak, Miamus asks what ran out: one tap each. With Food at home on, they mark food Dimakan (the big button), Diberikan or Dibuang, and can undo it.",
+      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis. Setelah Sudah dimasak, Miamus bertanya apa yang habis. Dengan Makanan di rumah, makanan ditandai Dimakan (tombol besar), Diberikan, atau Dibuang, dan bisa dibatalkan.",
     },
     where: "kitchen_shopping",
   },

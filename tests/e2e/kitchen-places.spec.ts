@@ -55,34 +55,38 @@ function kitchen() {
   ];
 }
 
+// 21 Nov: the owners' Kitchen → Food is shelves (Fable's 08), food and
+// ingredients together; each ingredient is a tile whose name carries its word.
 async function openOwnerFood(page: Page) {
   await page.goto("/dashboard?module=inventory");
-  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
-  await expect(ingredients.getByRole("heading", { name: "Ingredients", exact: true })).toBeVisible({ timeout: 20_000 });
-  return ingredients;
+  const kitchen = page.getByRole("region", { name: "The kitchen", exact: true });
+  await expect(kitchen.locator("[data-shelf]").first()).toBeVisible({ timeout: 20_000 });
+  return kitchen;
 }
 
-test("Ingredients are grouped by place, Use soon on top, each item once", async ({ context, page }) => {
+test("Ingredients are on their place's shelf, Use soon on top, each item once", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: kitchen() });
   const ingredients = await openOwnerFood(page);
 
-  await expect(ingredients.locator("h3")).toHaveText(["Use soon", "Fridge", "Freezer", "Counter", "Cupboard"]);
-  const soon = ingredients.getByRole("group", { name: "Use soon" });
+  expect(await ingredients.locator("[data-shelf]").evaluateAll((els) => els.map((el) => el.getAttribute("data-shelf")))).toEqual([
+    "soon",
+    "fridge",
+    "freezer",
+    "counter",
+    "pantry",
+  ]);
+  const soon = ingredients.getByRole("region", { name: "Use soon" });
   await expect(soon.getByRole("button")).toHaveCount(1);
-  const santan = soon.getByRole("button", { name: /Santan/ });
-  await expect(santan).toContainText("Fridge · 2 days past date — check first");
-  await expect(santan.getByText("Fridge · 2 days past date — check first")).toHaveClass(/text-red-700/);
+  // Past its date: the amber tile, its mark and the word.
+  await expect(soon.getByRole("button", { name: "Santan, 2 days past" })).toBeVisible();
 
   // Telur has no place stored: its category's default, the Fridge.
-  const fridge = ingredients.getByRole("group", { name: "Fridge" });
-  await expect(fridge.getByRole("button", { name: /Telur/ })).toBeVisible();
+  const fridge = ingredients.getByRole("region", { name: "Fridge" });
+  await expect(fridge.getByRole("button", { name: "Telur", exact: true })).toBeVisible();
   // Out stays in its place with no date, and is never in Use soon.
-  await expect(fridge.getByRole("button", { name: /Tomat/ })).toContainText("Out");
-  await expect(fridge.getByRole("button", { name: /Tomat/ })).not.toContainText("Expires");
-  await expect(ingredients.getByRole("group", { name: "Freezer" }).getByRole("button", { name: /Daging sapi/ })).toContainText(
-    "Expires in 40 days"
-  );
-  await expect(ingredients.getByRole("group", { name: "Cupboard" }).getByRole("button", { name: /Beras/ })).toBeVisible();
+  await expect(fridge.getByRole("button", { name: "Tomat, Out", exact: true })).toBeVisible();
+  await expect(ingredients.getByRole("region", { name: "Freezer" }).getByRole("button", { name: "Daging sapi, 40 days" })).toBeVisible();
+  await expect(ingredients.getByRole("region", { name: "Cupboard" }).getByRole("button", { name: /^Beras/ })).toBeVisible();
 
   for (const name of ["Dada Ayam", "Telur", "Santan", "Daging sapi", "Bawang merah", "Beras", "Tomat"]) {
     await expect(ingredients.getByRole("button", { name: new RegExp(name) })).toHaveCount(1);
@@ -123,10 +127,8 @@ test("Freezer to Fridge: the toast and Undo, then the date question, and Tomorro
   expect(chicken()).toMatchObject({ kept_in: "fridge", quantity: 6, track_amount: true });
 
   await page.keyboard.press("Escape");
-  const soon = ingredients.getByRole("group", { name: "Use soon" });
-  const row = soon.getByRole("button", { name: /Dada Ayam/ });
-  await expect(row).toContainText("Fridge · Expires tomorrow");
-  await expect(row.getByText("Fridge · Expires tomorrow")).toHaveClass(/text-amber-700/);
+  const soon = ingredients.getByRole("region", { name: "Use soon" });
+  await expect(soon.getByRole("button", { name: "Dada Ayam, Tomorrow" })).toBeVisible();
   await expect(ingredients.getByRole("button", { name: /Dada Ayam/ })).toHaveCount(1);
 });
 
@@ -139,7 +141,7 @@ test("nothing stored: a tap on the outlined default place saves it, with no toas
     if (request.method() === "PATCH" && request.url().includes("/inventory_items")) patches.push(request.postDataJSON());
   });
 
-  await ingredients.getByRole("group", { name: "Fridge" }).getByRole("button", { name: /Telur/ }).click();
+  await ingredients.getByRole("region", { name: "Fridge" }).getByRole("button", { name: /^Telur/ }).click();
   const sheet = page.getByRole("dialog", { name: "Telur" });
   await expect(sheet.getByRole("button", { name: "Fridge" })).toHaveAttribute("aria-pressed", "true");
   expect(eggs().kept_in).toBeNull();
