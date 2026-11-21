@@ -240,8 +240,19 @@ export const LEGAL = {
   // the missing items for the shopping list, saved only when the admin
   // confirms. No new kind of personal data stored, no new service or
   // region; Anthropic's retention is unchanged.
-  policyVersion: "2026-11-20.1",
-  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
+  // 2026-11-21.1: two questions when asking for access (owner, 2026-11-20;
+  // migrations/175) — what Miamus can help with at home (required on the
+  // screen, but one tap on a suggestion answers it; up to 300 characters)
+  // and, optionally, who introduced them to Miamus (up to 100; may be
+  // another person's name). Used to understand what people want
+  // and how they hear about Miamus; only Poofy Labs sees them (the approvals
+  // page); never in a notification. Cleared 12 months after the request by
+  // the nightly prune, or deleted sooner with the request (a rejected one
+  // after 30 days, an account that is deleted). Short anonymous summaries
+  // of the answers (no names or contact details) may be kept to decide what
+  // to improve (owner, 2026-11-20). No new service.
+  policyVersion: "2026-11-21.1",
+  effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on
