@@ -524,8 +524,11 @@ test("Shopping: Supplies at home is one row, amber when something runs low, and 
   const row = page.getByRole("button", { name: /^Supplies at home/ });
   await expect(row).toContainText("1 running low", { timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Add item" })).toHaveCount(0);
+  await page.evaluate(() => window.scrollTo(0, 400));
   await row.click();
   await expect(page).toHaveURL(/supplies=open/);
+  // It opens at its heading, not halfway down (Codex, PR #191).
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await expect(page.getByRole("heading", { name: "Supplies at home" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Sabun cuci/ })).toBeVisible();
   await page.goBack();

@@ -16,6 +16,7 @@ import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { amountsOn, ingredientsUnderFood } from "@/lib/features";
 import { amountLine, isIngredient, isTracked, toBuyAmountLabel } from "@/lib/kitchen-units";
 import {
@@ -74,6 +75,9 @@ export function ShoppingTab() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const suppliesOpen = searchParams.get("supplies") === "open";
+  // Opened from below a long list, the supplies start at their heading, and
+  // the list starts at its top again on the way back (Codex, PR #191).
+  useScrollTopOnChange(suppliesOpen ? "supplies" : "list");
   function hrefWithSupplies(open: boolean) {
     const params = new URLSearchParams(searchParams.toString());
     if (open) params.set("supplies", "open");
