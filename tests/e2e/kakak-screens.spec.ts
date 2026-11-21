@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { HOUSEHOLD_ID } from "../fixtures/household";
-import { installStub } from "./stub-backend";
+import { STAFF_ID, installStub } from "./stub-backend";
 import { WHATS_NEW, storageKey } from "../../src/lib/whats-new";
 
 // Phone-size screenshots of Kakak's sheet, in both languages: the first
@@ -45,6 +45,7 @@ const COPY = {
     ask: "how would you describe what miamis is for",
     answer: "Miamus keeps the running of your home in one place: chores, pets, the kitchen and the people who help. You say what should happen once, and your staff see it on their own phone. You only hear about what didn't happen.",
     thanks: "thank you", welcome: "You're welcome. I'm here whenever you need me.",
+    mop: "Have Ari mop the terrace every Monday at 9", mopReply: "Sure. Ari mops the terrace every Monday at 9:00.", looksRight: "Looks right",
   },
   id: {
     open: "Bilang ke Kakak", box: "Mau Kakak atur apa?", more: "Ada lagi?", send: "Kirim",
@@ -53,6 +54,7 @@ const COPY = {
     ask: "Miamus itu untuk apa?",
     answer: "Miamus menyatukan urusan rumah di satu tempat: tugas, hewan, dapur, dan orang-orang yang membantu. Anda cukup bilang sekali, lalu staf melihatnya di HP masing-masing. Anda hanya dikabari soal yang belum dikerjakan.",
     thanks: "terima kasih", welcome: "Sama-sama. Kakak selalu ada kalau Anda perlu.",
+    mop: "Ari pel teras tiap Senin jam 9 ya", mopReply: "Baik. Ari mengepel teras tiap Senin jam 09.00.", looksRight: "Sudah benar",
   },
 } as const;
 
@@ -95,5 +97,33 @@ for (const locale of ["en", "id"] as const) {
     await expect(page.getByText(c.welcome)).toBeVisible();
     await page.waitForTimeout(500);
     await page.screenshot({ path: `${DIR}/4-both-sides-${locale}.png` });
+  });
+
+  // The card every request ends on, and the toast after it (04, PR 5).
+  test(`screens ${locale}: a chore's card, then the toast`, async ({ context, page }) => {
+    await installStub(context, { owner: { locale }, kakak: { allowed: true, enabled: true } });
+    await kakakSays(page, [
+      {
+        kind: "suggestions",
+        text: c.mopReply,
+        items: [{
+          kind: "chore", title: "Pel teras", titleEn: locale === "en" ? "Mop the terrace" : null, category: "cleaning", assignedTo: STAFF_ID,
+          assignToSelf: false, assigneeName: "Ari", dueDate: "2026-11-16", dueTime: "09:00", recurrence: "weekly", recurrenceUntil: null,
+          requiresSupervision: false, locationId: null, roomName: null, newRoomName: null, newRoomFloorId: null, newRoomFloorName: null, notes: null,
+        }],
+      },
+    ]);
+    await page.goto("/dashboard");
+    await page.getByRole("button", { name: c.open }).click({ timeout: 20_000 });
+    await page.getByRole("textbox", { name: c.box }).fill(c.mop);
+    await page.getByRole("button", { name: c.send }).click();
+    await expect(page.getByText(c.mopReply)).toBeVisible({ timeout: 20_000 });
+    await page.waitForTimeout(900);
+    await page.screenshot({ path: `${DIR}/5-chore-card-${locale}.png` });
+    await page.getByRole("button", { name: c.looksRight }).click();
+    // One chore closes the sheet on a toast with Undo.
+    await expect(page.getByRole("button", { name: locale === "en" ? "Undo" : "Batalkan" })).toBeVisible();
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${DIR}/6-saved-${locale}.png` });
   });
 }
