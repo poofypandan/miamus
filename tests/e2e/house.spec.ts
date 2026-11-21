@@ -132,12 +132,33 @@ test("Home opens on the house: top floor first, amber only for a repair or an ea
   await floor.getByRole("button", { name: /^Dapur/ }).click();
   await expect(page.getByRole("dialog", { name: "LT1 · Dapur" })).toBeVisible();
   await page.keyboard.press("Escape");
+  // An empty room says nothing (Fable's look, #186).
+  await expect(floor.getByText("Nothing set up")).toHaveCount(0);
+
+  // A repair is named in words on its room's row, with no count badge.
+  await house.getByRole("button", { name: "LT2: show its list" }).click();
+  const upstairs = page.getByRole("dialog", { name: "LT2" });
+  await expect(upstairs.getByRole("button", { name: /^Kamar mandi/ })).toContainText("Keran wastafel bocor");
+  await page.keyboard.press("Escape");
 
   // A room opens its sheet, with its repair.
   await house.getByRole("button", { name: "LT2 · Kamar mandi, needs attention" }).click();
+  // Its sheet leads with the reason, not with "nothing here" (Fable's look, #196).
   const bath = page.getByRole("dialog", { name: "LT2 · Kamar mandi" });
-  await expect(bath.getByRole("region", { name: "Repairs" }).getByText("Keran wastafel bocor")).toBeVisible();
+  await expect(bath.getByRole("region", { name: "Needs attention" }).getByText("Keran wastafel bocor")).toBeVisible();
+  await expect(bath.getByText("Nothing set up here yet.")).toHaveCount(0);
   await page.keyboard.press("Escape");
+
+  // An amber room for a chore left from earlier says so, and its row opens Chores.
+  await house.getByRole("button", { name: "LT1 · Teras, needs attention" }).click();
+  const terrace = page.getByRole("dialog", { name: "LT1 · Teras" });
+  const reason = terrace.getByRole("region", { name: "Needs attention" });
+  await expect(reason.getByRole("button", { name: /^Pel teras/ })).toContainText("since");
+  await expect(terrace.getByText("Nothing set up here yet.")).toHaveCount(0);
+  await reason.getByRole("button", { name: /^Pel teras/ }).click();
+  await expect(page).toHaveURL(/chores=today/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.goBack();
 
   // A late chore opens Chores, where it waits under From earlier.
   await attention.getByRole("button", { name: /^Pel teras/ }).click();

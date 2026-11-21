@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { ChevronRight, Sparkles, X } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { Button } from "@/components/ui/button";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { useToday } from "@/hooks/use-today";
@@ -71,7 +73,20 @@ function markSeen(id: string) {
  * storage, and a card that flashed in and out would be worse than one that
  * appears a moment late.
  */
-export function WhatsNewCard({ id, onTry }: { id: string; onTry?: () => void }) {
+export function WhatsNewCard({
+  id,
+  onTry,
+  line = false,
+}: {
+  id: string;
+  onTry?: () => void;
+  /**
+   * One quiet line that opens the points in a sheet, for a screen whose
+   * whole space is the feature (the Pets wall): the card would squeeze it
+   * on the very visit that matters (Fable's look, #197).
+   */
+  line?: boolean;
+}) {
   const entry = whatsNewEntry(id);
   const locale = useOwnerLocale();
   const t = useT();
@@ -92,11 +107,60 @@ export function WhatsNewCard({ id, onTry }: { id: string; onTry?: () => void }) 
     setShow(true);
   }, [entry, id, ready, createdOn, stage, today]);
 
+  const [sheetOpen, setSheetOpen] = useState(false);
+  useBackToClose(sheetOpen, () => setSheetOpen(false));
+
   if (!entry || !show) return null;
 
   function close() {
     markSeen(id);
     setShow(false);
+  }
+
+  if (line) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          className="flex min-h-11 w-full items-center gap-2 rounded-xl bg-card px-3 text-left text-sm font-medium text-gray-900 shadow-card active:bg-muted"
+        >
+          <Sparkles className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          <span className="min-w-0 flex-1 truncate">{entry.title[locale]}</span>
+          <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+        </button>
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetContent
+            side="bottom"
+            className="rounded-t-[30px] border-t-0 shadow-[0_-12px_44px_rgb(31_26_23/0.2)]"
+          >
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-1.5">
+                <Sparkles className="size-4 shrink-0" aria-hidden />
+                {entry.title[locale]}
+              </SheetTitle>
+              <SheetDescription className="sr-only">{t("What is new", "Yang baru")}</SheetDescription>
+            </SheetHeader>
+            <ol className="flex list-decimal flex-col gap-1.5 px-4 pl-9 text-sm leading-snug text-gray-700">
+              {entry.steps[locale].map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            <SheetFooter>
+              <Button
+                className="min-h-12 w-full rounded-xl"
+                onClick={() => {
+                  setSheetOpen(false);
+                  close();
+                }}
+              >
+                {t("Got it", "Mengerti")}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
+      </>
+    );
   }
 
   return (

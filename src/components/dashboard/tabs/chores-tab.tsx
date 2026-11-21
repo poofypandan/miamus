@@ -2,12 +2,11 @@
 
 import { useEffect, useMemo, useState, type ComponentProps } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ClipboardList, ListChecks, Plus, ReceiptText } from "lucide-react";
+import { ClipboardList, ListChecks, Plus, ReceiptText, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/empty-state";
-import { OverdueSection } from "@/components/agenda/overdue-section";
 import { DateRibbon } from "@/components/date-ribbon";
-import { ChoreCard } from "@/components/chores/chore-card";
+import { ChoreRow } from "@/components/chores/chore-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { BillsUpkeepSheet } from "@/components/chores/bills-upkeep-sheet";
 import { StarterListSheet } from "@/components/setup/starter-list-sheet";
@@ -26,8 +25,8 @@ import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles
 import { useLocationName } from "@/hooks/use-household-locations";
 import { useToday } from "@/hooks/use-today";
 import { formatDateLocal } from "@/lib/scheduleEngine";
+import { dayKeyLabel } from "@/lib/date-label";
 import { replaceInPlace } from "@/lib/in-place-navigation";
-import { useFormatTime } from "@/components/ui/ui-labels";
 import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { HouseholdTask } from "@/types/database";
 
@@ -121,8 +120,9 @@ function TodayChores() {
     replaceInPlace(query ? `${pathname}?${query}` : pathname);
   }, [searchParams, pathname]);
 
-  // Rolled-over chores lead the open list under their own header (Phase 113),
-  // oldest first; only ever non-empty when browsing today.
+  // Rolled-over chores lead under their own label (Phase 113), oldest first;
+  // only ever non-empty when browsing today. The day's own chores, open and
+  // done together, by time: a finished chore stays in its place (07).
   const { overdue, open, done } = useMemo(
     () => ({
       overdue: occurrences
@@ -133,6 +133,15 @@ function TodayChores() {
     }),
     [occurrences]
   );
+
+  const day = useMemo(
+    () =>
+      [...open, ...done].sort(
+        (a, b) => (a.task.due_time ?? "99").localeCompare(b.task.due_time ?? "99") || a.task.title.localeCompare(b.task.title)
+      ),
+    [open, done]
+  );
+  const dayHeading = dateStr === formatDateLocal(today) ? t("Today", "Hari ini") : dayKeyLabel(dateStr, today, locale);
 
   function edit(occurrence: ChoreOccurrence) {
     // A repeat is edited through its template from whichever day you tapped;
@@ -154,8 +163,9 @@ function TodayChores() {
       {billsOn && <WhatsNewCard id="bills-2026-11" onTry={() => setBillsOpen(true)} />}
       <WhatsNewCard id="starter-list-2026-11" onTry={() => setStarterOpen(true)} />
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-muted-foreground">{t("Chores", "Tugas")}</h2>
+      {/* No "Chores" heading: the chosen pill says it (07). The ways to add
+          by hand stay here until the one "+" at the top right. */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
             variant="outline"
@@ -222,75 +232,59 @@ function TodayChores() {
         </EmptyState>
       ) : (
         <>
+          {/* Plain rows (21 Nov; Fable's 07, section 2): what is left from
+              earlier days under an amber label, not in a box; then the day's
+              chores in time order, done ones quiet with a tick, in place. */}
           {overdue.length > 0 && (
-            <OverdueSection count={overdue.length} locale={locale}>
-              {overdue.map((occurrence) => (
-                <ChoreCard
-                  key={occurrence.key}
-                  occurrence={occurrence}
-                  locationName={roomName(occurrence.task.location_id, occurrence.task.spot)}
-                  locale={locale}
-                  today={today}
-                  assigneeName={
-                    occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
-                  }
-                  onPress={() => edit(occurrence)}
-                  editable
-                />
-              ))}
-            </OverdueSection>
+            <section aria-label={t("From earlier", "Dari hari sebelumnya")} className="flex flex-col gap-1.5">
+              <h3 className="flex items-center gap-1.5 px-1 text-sm font-semibold text-attention">
+                <TriangleAlert className="size-4 shrink-0" aria-hidden />
+                {t("From earlier", "Dari hari sebelumnya")}
+              </h3>
+              <div className="inset-rows flex flex-col overflow-hidden rounded-2xl bg-card shadow-card [--row-inset:0.75rem]">
+                {overdue.map((occurrence) => (
+                  <ChoreRow
+                    key={occurrence.key}
+                    occurrence={occurrence}
+                    locale={locale}
+                    today={today}
+                    assigneeName={occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null}
+                    locationName={roomName(occurrence.task.location_id, occurrence.task.spot)}
+                    onEdit={() => edit(occurrence)}
+                  />
+                ))}
+              </div>
+            </section>
           )}
 
-          <div className="flex flex-col gap-2">
-            {open.map((occurrence) => (
-              <ChoreCard
-                key={occurrence.key}
-                occurrence={occurrence}
-                locationName={roomName(occurrence.task.location_id, occurrence.task.spot)}
-                locale={locale}
-                today={today}
-                assigneeName={
-                  occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
-                }
-                onPress={() => edit(occurrence)}
-                editable
-              />
-            ))}
-            {open.length === 0 && overdue.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                {t("Everything on this day is done.", "Semua tugas hari ini sudah selesai.")}
-              </p>
-            )}
-          </div>
-
-          {done.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-muted-foreground">{t("Completed", "Selesai")}</h3>
-              {done.map((occurrence) => (
-                // No onPress on a completed chore: its footer holds the proof
-                // photos, which are themselves buttons, and a button inside a
-                // button is invalid HTML that browsers resolve however they
-                // like. The explicit Edit control in the footer is the way in.
-                <ChoreCard
-                  key={occurrence.key}
-                  occurrence={occurrence}
-                  locationName={roomName(occurrence.task.location_id, occurrence.task.spot)}
-                  locale={locale}
-                  today={today}
-                  assigneeName={
-                    occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null
-                  }
-                  footer={
-                    <ChoreProof
-                      occurrence={occurrence}
-                      staffName={staffName}
-                      onEdit={() => edit(occurrence)}
-                      onPayment={occurrence.task.category === "bill" ? () => setPaymentFor(occurrence) : undefined}
-                    />
-                  }
-                />
-              ))}
-            </div>
+          {day.length > 0 && (
+            <section aria-label={dayHeading} className="flex flex-col gap-1.5">
+              <h3 className="px-1 text-sm font-semibold text-muted-foreground">{dayHeading}</h3>
+              <div className="inset-rows flex flex-col overflow-hidden rounded-2xl bg-card shadow-card [--row-inset:0.75rem]">
+                {day.map((occurrence) => (
+                  <ChoreRow
+                    key={occurrence.key}
+                    occurrence={occurrence}
+                    locale={locale}
+                    today={today}
+                    assigneeName={occurrence.task.assigned_to ? staffName(occurrence.task.assigned_to) : null}
+                    locationName={roomName(occurrence.task.location_id, occurrence.task.spot)}
+                    doneByName={occurrence.row?.completed_by ? staffName(occurrence.row.completed_by) : null}
+                    onEdit={() => edit(occurrence)}
+                    onPayment={
+                      occurrence.status === "completed" && occurrence.task.category === "bill"
+                        ? () => setPaymentFor(occurrence)
+                        : undefined
+                    }
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+          {open.length === 0 && overdue.length === 0 && (
+            <p className="px-1 text-sm text-muted-foreground">
+              {t("Everything on this day is done.", "Semua tugas hari ini sudah selesai.")}
+            </p>
           )}
         </>
       )}
@@ -332,62 +326,6 @@ function TodayChores() {
           setEditorOpen(true);
         }}
       />
-    </div>
-  );
-}
-
-/**
- * Who finished a chore and when, plus the owner's way into editing it.
- *
- * The before/after photos used to live here as two small thumbnails; they are
- * part of the card itself now (ChoreProofPhotos, Phase 113).
- */
-function ChoreProof({
-  occurrence,
-  staffName,
-  onEdit,
-  onPayment,
-}: {
-  occurrence: ChoreOccurrence;
-  staffName: (id: string) => string;
-  onEdit: () => void;
-  /** A bill (Phase 164 PR B): its amount and receipt, owners only. */
-  onPayment?: () => void;
-}) {
-  const formatTime = useFormatTime();
-  const t = useT();
-  const row = occurrence.row;
-  // A completed occurrence always has a row — it is what records the
-  // completion — so this is a type guard rather than a real case.
-  if (!row) return null;
-
-  return (
-    <div className="flex flex-col gap-2 border-t pt-2">
-      {row.completed_by && (
-        <p className="text-[11px] text-muted-foreground">
-          {t("Done by", "Diselesaikan oleh")} {staffName(row.completed_by)}
-          {row.completed_at && ` · ${formatTime(new Date(row.completed_at))}`}
-        </p>
-      )}
-
-      <div className="flex flex-wrap gap-3">
-        {onPayment && (
-          <button
-            type="button"
-            onClick={onPayment}
-            className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-gray-800 underline underline-offset-2 active:bg-muted"
-          >
-            {t("Payment", "Pembayaran")}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={onEdit}
-          className="self-start rounded-lg px-1 py-1 text-[11px] font-medium text-muted-foreground underline underline-offset-2 active:bg-muted"
-        >
-          {t("Edit chore", "Ubah tugas")}
-        </button>
-      </div>
     </div>
   );
 }
