@@ -39,7 +39,7 @@ test("food saved on a weak signal waits on the phone, then is sent once", async 
   // Its detail says it is waiting, and offers nothing that needs the server.
   await row.click();
   await expect(page.getByText(/Tersimpan di HP, menunggu dikirim/)).toBeVisible();
-  await expect(page.getByText("Sudah habis?")).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Sudah habis?" })).toHaveCount(0);
   await page.keyboard.press("Escape");
 
   // Retried by itself — no "online" event ever fires here.
