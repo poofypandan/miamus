@@ -239,7 +239,7 @@ export function AgendaTab() {
 
   // Food to eat soon (Phase 156): the same kind of quiet line, above it.
   // Food at home and Repairs switched off (Phase 171): their lines go.
-  const { food: foodOn, repairs: repairsOn, kitchen: kitchenOn } = useHouseholdFeatures();
+  const { food: foodOn, repairs: repairsOn } = useHouseholdFeatures();
   const eatSoon = useMemo(
     () => (foodOn ? countEatSoon(foodItems, formatDateLocal(today)) : 0),
     [foodItems, today, foodOn]
@@ -391,10 +391,11 @@ export function AgendaTab() {
     );
   }, [showsToday, clock, summaryHour, todayKey, allChores, groups, exceptions, leaveRequests, pets, logs]);
 
-  // Today's menu (Phase 170 PR C, D9): one quiet line while the Kitchen
-  // switch is on and today has a plan.
-  const { dishes: menuDishes } = useMenuWeek(todayKey, { enabled: kitchenOn });
-  const menuLine = kitchenOn && showsToday ? todayMenuLine(menuDishes, todayKey, locale) : null;
+  // Today's menu (Phase 170 PR C, D9): one quiet line when today has a
+  // plan. Every home since 20 Nov (recipes and the menu left the Kitchen
+  // switch).
+  const { dishes: menuDishes } = useMenuWeek(todayKey);
+  const menuLine = showsToday ? todayMenuLine(menuDishes, todayKey, locale) : null;
   const menuHref = `${moduleHref("inventory")}&kitchen=menu`;
   function switchToMenu(event: React.MouseEvent) {
     if (!isPlainClick(event)) return;
@@ -830,7 +831,7 @@ export function AgendaTab() {
             lines, in one calm group. Nothing here waits on a decision. */}
         {comingLines && (
           <section aria-label={t("Coming up", "Segera")} data-testid="coming-up" className="flex flex-col gap-1">
-            <h2 className="text-sm font-semibold text-gray-900">{t("Coming up", "Segera")}</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground">{t("Coming up", "Segera")}</h2>
             <div className="-my-1 flex flex-col">
               {/* Bills and upkeep inside their reminder window (Phase 164).
                   Named in full for screen readers; the heading is the lead
@@ -896,7 +897,7 @@ export function AgendaTab() {
         {range === "day" ? (
           <>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-gray-900">{label}</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
               {rangePill("sm")}
             </div>
             {/* Under the heading, as the Pets tab's photo filters sit under

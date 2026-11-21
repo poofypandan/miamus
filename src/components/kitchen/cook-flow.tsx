@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, CookingPot, Loader2, Minus, Plus, Refrigerator, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { readActiveStaffId } from "@/components/auth/staff-login-gate";
 import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
+import { amountsOn, countedItems } from "@/lib/features";
 import { useRecipes } from "@/hooks/use-recipes";
 import { useToday } from "@/hooks/use-today";
 import { CookingRuleError } from "@/lib/cooked-uses";
@@ -103,15 +104,21 @@ export function useCookFlow(
   const tr = (en: string, ind: string) => (id ? ind : en);
   const { inventoryItems, applyInventoryRows, listsFresh, syncFailed, refresh } = useHousehold();
   const { recipes, fresh: recipesFresh, errored: recipesErrored } = useRecipes();
-  const { flags } = useHouseholdFeatures();
+  const { flags, ready: featuresReady } = useHouseholdFeatures();
+  // With Kitchen amounts off nothing is counted off stock (features countedItems).
+  const stockItems = useMemo(() => countedItems(inventoryItems, amountsOn(flags)), [inventoryItems, flags]);
   const today = formatDateLocal(useToday());
   const [pending, setPending] = useState<Pending | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [leftover, setLeftover] = useState<string | null>(null);
   const [foodName, setFoodName] = useState<string | null>(null);
 
+  // Whether amounts are counted depends on the Kitchen switch: until it is
+  // known, a dish with a recipe waits, or cooking could take nothing off
+  // where amounts are on (Codex, PR #155).
   function readiness(dish: MenuDish): CookReadiness {
-    return cookReadiness(dish, { recipes, recipesFresh, recipesErrored, listsFresh, listsFailed: syncFailed });
+    const ready = cookReadiness(dish, { recipes, recipesFresh, recipesErrored, listsFresh, listsFailed: syncFailed });
+    return ready === "ready" && dish.recipe_id && !featuresReady ? "loading" : ready;
   }
 
   function changeState(dish: MenuDish): CookReadiness | "hidden" {
@@ -121,7 +128,7 @@ export function useCookFlow(
       recipesErrored,
       listsFresh,
       listsFailed: syncFailed,
-      items: inventoryItems,
+      items: [...stockItems],
     });
   }
 
@@ -134,7 +141,7 @@ export function useCookFlow(
       return;
     }
     const recipe = recipeOf(dish, recipes);
-    const { lines, uncounted } = changeLines(dish, recipe, inventoryItems, forStaff);
+    const { lines, uncounted } = changeLines(dish, recipe, stockItems, forStaff);
     setPending({ mode: "change", dish, title: dishTitle(dish, recipe, forStaff), lines, uncounted, initial: lines });
   }
 
@@ -249,7 +256,7 @@ export function useCookFlow(
     }
     const recipe = recipeOf(dish, recipes);
     const title = dishTitle(dish, recipe, forStaff);
-    const { counted, uncounted } = cookLines(recipe, servings ?? dishServings(dish, recipe), inventoryItems, forStaff);
+    const { counted, uncounted } = cookLines(recipe, servings ?? dishServings(dish, recipe), stockItems, forStaff);
     if (counted.length === 0) {
       void finish(dish, title, []);
       return;

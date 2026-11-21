@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect, useRef, type CSSProperties, type ReactNode, type RefObject } from "react";
 import {
   BRAND_INK,
   M_POINTS,
@@ -8,6 +9,8 @@ import {
   TILE_RADIUS,
 } from "@/components/brand/brand-mark";
 import { hasLaunched } from "@/lib/launch-state";
+import { alignToLaunchClock } from "@/lib/launch-clock";
+import { LAUNCH_MARK_SIZE } from "@/components/brand/launch-mark-size";
 import { RUMAH } from "@/components/staff/staff-splash";
 import { cn } from "@/lib/utils";
 import { useUiLabels } from "@/components/ui/ui-labels";
@@ -23,8 +26,8 @@ import { useUiLabels } from "@/components/ui/ui-labels";
  * an owner opening the staff view — resolves within a frame, and a logo
  * there would be a flash of the splash in the middle of using the app.
  *
- * Animations are transform (the roof's reveal) and opacity (the roof's fade,
- * the fade-in, the pulse) only, so they run on the compositor and cannot drop
+ * Animations are transform (the strokes' reveal, the opening settle) and
+ * opacity (the strokes' fade, the fade-in, the pulse) only, so they run on the compositor and cannot drop
  * frames while the page underneath is busy rendering — which, during a load,
  * it is.
  */
@@ -43,55 +46,153 @@ export const PROMISE = {
  * The line under the owner's mark while something loads. It waits 1.5s
  * before fading in (animate-promise-in): a quick load shows the logo alone,
  * and words that flash for a moment read as a glitch.
+ *
+ * Hung below the mark rather than stacked after it, so it takes no room in
+ * the layout: the mark sits on the screen's exact centre, where the phone's
+ * own splash drew the icon a moment before, with or without the line.
  */
 export function MiamusPromise({ text }: { text: string }) {
   return (
-    <p className="mt-6 animate-promise-in text-center text-sm text-gray-500 motion-reduce:animate-none">
+    <p className="launch-promise absolute top-full left-1/2 mt-6 w-72 -translate-x-1/2 animate-promise-in text-center text-sm text-gray-500 motion-reduce:animate-none">
       {text}
     </p>
   );
 }
 
 /**
- * The Miamus mark as the app icon's rounded square, with the roof drawing
- * itself while something loads (2026-11-09; it was a circle in a spinning
- * ring from Phase 123).
+ * The Miamus mark as the app icon's rounded square, the roof and then the M
+ * drawing themselves while something loads, as the mark draws itself at the
+ * end of the film (20 Nov; the roof alone from 2026-11-09).
  *
- * The M stays put; the roof is its own layer. A strip of the tile's own ink
- * covers the roof and slides off to the right, so the roof appears left to
- * right over the house; it holds, fades, and the strip slides back under the
- * faded roof, ready to draw again. The cycle starts with the house whole
- * (see globals.css), so a quick load shows the plain logo. Sliding a cover (a transform) rather than
- * animating the stroke itself keeps this on the compositor (see the top of
- * this file). Its keyframes are `roof-reveal` and `roof-fade` in globals.css,
- * one 2.4s cycle shared by both.
+ * The house is whole first and stays still for 2.2s, so a quick load shows the
+ * plain logo, and a slow one shows it with the promise line before anything
+ * moves. Then the strokes fade, the roof writes itself left to right, and the
+ * M follows as the roof lands, in pen order: up the left wall, along the V,
+ * down the right wall. It rests whole, and goes again. The film draws along
+ * each line (a stroke dash); here strips of the tile's own ink slide off the
+ * lines instead, inside fixed windows, because a slide is a transform and runs
+ * on the compositor, which keeps it smooth while the page underneath is busy
+ * loading (dashes repaint on the main thread, and would stutter just then).
+ * Timings are the film's; curves and keyframes are the mark-* ones in
+ * globals.css (Fable's look, 20 Nov).
  *
- * 88px, the same as the start screen's mark, so the picture stays put when
- * the splash hands over to it. `still` is that start-screen mark: the whole
- * house, nothing moving. Reduced motion gets the still mark everywhere.
+ * `opening` is the launch mark. On an installed Android app it is the phone's
+ * splash itself, held: a black circle, the glyph at the splash's scale, and it
+ * never changes shape (the home icon and the splash are circles there too).
+ * iPhones and browser tabs show the rounded square, as their home icon and
+ * launch screen do. globals.css decides, so the first server-rendered frame is
+ * already right. Every opening mark keeps one clock (lib/launch-clock), so the
+ * marks a cold start draws one after another read as one.
+ *
+ * `still` is the start screen's mark: the whole house, nothing moving.
+ * Reduced motion gets the still mark everywhere.
  */
-export function MiamusMark({ still = false }: { still?: boolean }) {
-  const size = 88;
+export function MiamusMark({
+  size = LAUNCH_MARK_SIZE,
+  still = false,
+  opening = false,
+}: {
+  size?: number;
+  still?: boolean;
+  opening?: boolean;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLaunchClock(ref, opening);
+
+  const radius = size * TILE_RADIUS;
+  return (
+    <div
+      ref={ref}
+      aria-hidden
+      className={cn("relative shrink-0 overflow-hidden", opening && "mark-opening")}
+      style={{ width: size, height: size, borderRadius: radius, background: BRAND_INK }}
+    >
+      <div className={cn("absolute inset-0", opening && "mark-opening-glyph")}>
+        <div className={cn("absolute inset-0", !still && "animate-mark-strokes motion-reduce:animate-none")}>
+          <div className="absolute inset-0">
+            <MarkStroke points={M_POINTS} size={size} />
+          </div>
+          <div className="absolute inset-0">
+            <MarkStroke points={ROOF_POINTS} size={size} />
+          </div>
+        </div>
+        {!still && (
+          <div className="absolute inset-0 motion-reduce:hidden">
+            {/* The roof's band is the top 46.5% (its stroke ends at 234 of 512,
+                the M's starts at 242), the M's the rest, so no strip ever
+                touches the other line. The roof's strip slides off it to the
+                right, its soft edge leading. */}
+            <span
+              className="absolute top-0 left-0 h-[46.5%] w-full animate-mark-roof will-change-transform"
+              style={{ background: inkStrip("90deg", 3.9) }}
+            />
+            {/* The M's three windows, split where the walls meet the V (176
+                and 336 of 512). Each strip is 18% longer than its window, the
+                soft edge in the part that starts outside it. The V's window
+                laps 1px over each wall's, on top: two clips meeting on a
+                fraction of a pixel let a hairline of the stroke through. */}
+            <div className="absolute top-[46.5%] left-0 h-[53.5%] w-[34.4%] overflow-hidden">
+              <span
+                className="absolute inset-x-0 top-0 h-[118%] animate-mark-m-left will-change-transform"
+                style={{ background: inkStrip("0deg", 13) }}
+              />
+            </div>
+            <div className="absolute top-[46.5%] left-[calc(34.4%_-_1px)] h-[53.5%] w-[calc(31.2%_+_2px)] overflow-hidden">
+              <span
+                className="absolute inset-y-0 left-[-18%] w-[118%] animate-mark-m-v will-change-transform"
+                style={{ background: inkStrip("90deg", 13) }}
+              />
+            </div>
+            <div className="absolute top-[46.5%] left-[65.6%] h-[53.5%] w-[34.4%] overflow-hidden">
+              <span
+                className="absolute inset-x-0 top-[-18%] h-[118%] animate-mark-m-right will-change-transform"
+                style={{ background: inkStrip("180deg", 13) }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A strip of the tile's ink with a soft leading edge, so a line is uncovered
+ * the way a pen lays it down, not cut by a hard edge.
+ */
+function inkStrip(direction: string, softPercent: number): string {
+  return `linear-gradient(${direction}, ${BRAND_INK}00 0%, ${BRAND_INK} ${softPercent}%)`;
+}
+
+/** Hangs every animation inside `ref` from the launch clock, before paint. */
+export function useLaunchClock(ref: RefObject<HTMLElement | null>, enabled: boolean) {
+  useLayoutEffect(() => {
+    if (enabled && ref.current) alignToLaunchClock(ref.current);
+  }, [enabled, ref]);
+}
+
+/**
+ * The full-screen stage every launch picture stands on: the "/" splash and the
+ * launch and navigation covers (brand-cover.tsx). One element, so they are the
+ * same pixels: fixed to the app column, warm paper like the phone's splash
+ * (manifest.ts background_color), the picture on the screen's exact centre.
+ */
+export function LaunchStage({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div
       aria-hidden
-      className="relative size-[88px] shrink-0 overflow-hidden"
-      style={{ borderRadius: size * TILE_RADIUS, background: BRAND_INK }}
-    >
-      <div className="absolute inset-0">
-        <MarkStroke points={M_POINTS} size={size} />
-      </div>
-      <div className={cn("absolute inset-0", !still && "animate-roof-fade motion-reduce:animate-none")}>
-        <MarkStroke points={ROOF_POINTS} size={size} />
-      </div>
-      {!still && (
-        // The roof's band is the top 41px (its stroke ends at 40.2px; the
-        // M's starts at 41.6px), so the strip never touches the M.
-        <span
-          className="absolute top-0 left-0 h-[41px] w-full animate-roof-reveal will-change-transform motion-reduce:hidden"
-          style={{ background: BRAND_INK }}
-        />
+      className={cn(
+        "launch-stage fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-background px-6",
+        className
       )}
+    >
+      {children}
     </div>
   );
 }
@@ -104,9 +205,9 @@ export function MiamusMark({ still = false }: { still?: boolean }) {
  * up ("Miamus", then the real name). Static now: the same pixels every time,
  * from the first server-rendered frame.
  */
-export function RumahRules({ className }: { className?: string }) {
+export function RumahRules({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
-    <div className={cn("flex flex-col items-center text-center select-none", className)}>
+    <div className={cn("flex flex-col items-center text-center select-none", className)} style={style}>
       {/* Opened up for a screen of its own (Phase 132): larger, wider-set and
           more air between the lines, so the five rules read as a calm list
           rather than a block squeezed into the middle of the page. */}
@@ -122,7 +223,7 @@ export function RumahRules({ className }: { className?: string }) {
   );
 }
 
-/** Owner-facing: the Miamus mark, its roof drawing itself. */
+/** Owner-facing: the Miamus mark, its roof and M drawing themselves. */
 export function OwnerLoadingScreen() {
   // In the owner's language: the dashboard's OwnerLocaleProvider sets it.
   const labels = useUiLabels();
@@ -133,8 +234,10 @@ export function OwnerLoadingScreen() {
       aria-label={labels.loading}
       className="flex min-h-[60vh] flex-1 animate-loader-in flex-col items-center justify-center motion-reduce:animate-none"
     >
-      <MiamusMark />
-      <MiamusPromise text={labels.promise} />
+      <div className="relative">
+        <MiamusMark opening />
+        <MiamusPromise text={labels.promise} />
+      </div>
     </div>
   );
 }

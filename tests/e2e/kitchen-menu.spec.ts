@@ -454,11 +454,10 @@ test("a staff phone can't plan: no week, no editing, and Dapur → Menu shows to
   await expect(page.getByText(/Minggu ini|This week|Salin minggu lalu|Tambah masakan/)).toHaveCount(0);
 });
 
-test("Kitchen switched off: no menu on staff Today", async ({ context, page }) => {
+test("Kitchen amounts switched off: the menu still shows on staff Today (20 Nov)", async ({ context, page }) => {
   await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: false }, menu: week() });
   await page.goto("/staff");
-  await expect(page.getByText("Tugas Hari Ini").first()).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole("region", { name: "Menu hari ini", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Menu hari ini", exact: true })).toBeVisible({ timeout: 20_000 });
 });
 
 test("cooking takes off what the stepper shows, not the dish's servings (Codex, PR #101)", async ({ context, page }) => {

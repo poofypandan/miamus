@@ -36,6 +36,7 @@ export const KAKAK_TOOL_NAMES = [
   "add_food",
   "put_away_ingredient",
   "set_staff_areas",
+  "plan_dish",
   "ask_question",
 ] as const;
 
@@ -71,6 +72,12 @@ export const INGREDIENT_UNITS = [
 
 /** What an amount means: more of it came in, or what is there in all. */
 export const INGREDIENT_AMOUNT_IS = ["bought", "now"] as const;
+
+/** plan_dish's meals (menu_dishes.meal, migrations/153). */
+export const DISH_MEALS = ["breakfast", "lunch", "dinner"] as const;
+
+/** plan_dish's "no recipe" and "no typed name": a value, never null, so the tool uses no union (tools header). */
+export const NONE = "none";
 
 /** Weekdays as the tool writes them; ISO order (1 = Monday ... 7 = Sunday). */
 export const TOOL_WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -360,6 +367,44 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
           type: "array",
           items: { type: "string", enum: [...AREAS] },
           description: "Areas to switch off for them; empty for none.",
+        },
+      },
+    },
+  },
+  {
+    // Can we cook it? (owner, 20 Nov; docs/private/trailer-reset/27-kakak-magic.md).
+    // Not strict, and no field is nullable: "none" and 0 stand for nothing,
+    // so the strict union count stays 15 (tools header) and the last slot
+    // stays free. validate.ts checks the whole shape. What is missing is
+    // never in the call: the server takes it from the app's own check.
+    name: "plan_dish",
+    description:
+      "Suggest one dish for the menu: a saved recipe (or a typed name) on a day and meal, and whether to put what that recipe is missing on the shopping list. Never saves anything.",
+    input_schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["recipe", "dish_name", "day", "meal", "servings", "add_missing", "put_on_menu"],
+      properties: {
+        recipe: { type: "string", description: "A saved recipe reference (D1, …), or \"none\" when there is no saved recipe for it." },
+        dish_name: {
+          type: "string",
+          description: "\"none\" when recipe is set. Otherwise the dish as the owner said it ('Ayam bakar madu'). Max 80 characters.",
+        },
+        day: { type: "string", format: "date", description: "YYYY-MM-DD, Asia/Jakarta." },
+        meal: { type: "string", enum: [...DISH_MEALS], description: "'Tonight' / 'malam ini' is dinner." },
+        servings: {
+          type: "integer",
+          description: "How many it is for, only when the owner said (1 to 50). 0 for the recipe's own servings.",
+        },
+        add_missing: {
+          type: "boolean",
+          description:
+            "True when the recipe is missing something and the owner asked whether they have everything, or asked to add what's missing. False when nothing is missing, there is no recipe, or the owner said not to.",
+        },
+        put_on_menu: {
+          type: "boolean",
+          description:
+            "True when the owner said to cook or plan this dish, or to put it on the menu ('Kamis siang masak ayam bakar madu', 'put opor on Saturday'). False when they only asked whether the ingredients are there ('Gulai kambing malam ini, bahannya ada?'). A dish with no saved recipe needs true.",
         },
       },
     },

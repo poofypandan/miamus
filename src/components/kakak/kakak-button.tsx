@@ -80,10 +80,10 @@ export function KakakButton() {
           row is never pressed by mistake. */}
       {createPortal(
         <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 mx-auto w-full max-w-md">
-          <div aria-hidden="true" className="h-3 bg-gradient-to-t from-slate-50 to-slate-50/0" />
+          <div aria-hidden="true" className="h-8 bg-gradient-to-t from-background from-25% to-background/0" />
           <div
             data-testid="kakak-band"
-            className="pointer-events-auto flex items-center justify-end gap-3 bg-slate-50 px-4 pt-1 pb-3"
+            className="pointer-events-auto flex items-center justify-end gap-3 bg-background px-4 pt-1 pb-3"
           >
             {showHint && (
               <p className="min-w-0 flex-1 text-right text-xs leading-snug text-gray-600">
@@ -93,7 +93,7 @@ export function KakakButton() {
             <button
               type="button"
               onClick={press}
-              className="flex min-h-12 shrink-0 items-center gap-2 rounded-full border bg-background py-1.5 pl-1.5 pr-4 text-sm font-semibold text-gray-900 shadow-sm active:scale-[0.98]"
+              className="flex min-h-12 shrink-0 items-center gap-2 rounded-full border bg-card py-1.5 pl-1.5 pr-4 text-sm font-semibold text-gray-900 shadow-sm active:scale-[0.98]"
             >
               <KakakAvatar key={saves} className="size-9" beat={settling ? "settle" : null} />
               {t("Tell Kakak", "Bilang ke Kakak")}

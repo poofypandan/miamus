@@ -169,7 +169,7 @@ function FeedbackForm({ locale, asStaff, onDone }: { locale: OwnerLocale; asStaf
                   onClick={() => setCategory(on ? null : kind)}
                   className={cn(
                     "flex min-h-[40px] items-center gap-1 rounded-full border px-3.5 text-sm",
-                    on ? "border-gray-900 bg-gray-900 font-medium text-white" : "bg-background active:bg-muted"
+                    on ? "border-gray-900 bg-gray-900 font-medium text-white" : "bg-card active:bg-muted"
                   )}
                 >
                   {on && <Check className="size-3.5" />}

@@ -187,7 +187,7 @@ export function ChoreCard({
             {task.title}
           </span>
           {headline && (
-            <span className="mt-1 flex items-center gap-1.5 text-[15px] text-muted-foreground">
+            <span className="mt-1 flex items-center gap-1.5 text-base text-muted-foreground">
               <Clock className="size-4 shrink-0" aria-hidden />
               {time}
             </span>
@@ -198,7 +198,7 @@ export function ChoreCard({
               wrapped, never cut off; the note at 14px in normal ink under a
               small label. The note was the smallest, lightest text on the
               card, and it is the instruction. */}
-          {locationName && <LocationTag name={locationName} muted={done} wrap className="mt-0.5 text-[13px]" />}
+          {locationName && <LocationTag name={locationName} muted={done} wrap className="mt-0.5 text-sm" />}
           {task.notes && !(compact && done) && (
             <span className="mt-1.5 flex flex-col gap-0.5 rounded-lg bg-muted/60 px-2.5 py-1.5">
               <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
@@ -220,7 +220,7 @@ export function ChoreCard({
         {done && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
         {/* A span, not a button: the card is already the button. */}
         {editable && !done && (
-          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-background/80 px-2.5 text-xs font-medium text-gray-700 ring-1 ring-border">
+          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-card/80 px-2.5 text-xs font-medium text-gray-700 ring-1 ring-border">
             <Pencil className="size-3" />
             {locale === "en" ? "Edit" : "Ubah"}
           </span>
@@ -230,7 +230,7 @@ export function ChoreCard({
       {badges && (
       <div className="flex flex-wrap items-center gap-1.5">
         {!staff && (
-          <Badge className={cn("h-5 gap-1 px-1.5 text-[10px]", categoryClass())}>
+          <Badge className={cn("h-5 gap-1 px-1.5 text-xs", categoryClass())}>
             <CategoryIcon className="size-3" />
             {categoryLabel(task.category, locale)}
           </Badge>
@@ -238,7 +238,7 @@ export function ChoreCard({
 
         {/* A finished staff card keeps its time small here; an open one has it under the name. */}
         {!headline && (
-          <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-[10px]">
+          <Badge variant="secondary" className="h-5 gap-1 px-1.5 text-xs">
             <Clock className="size-3" />
             {time}
           </Badge>
@@ -246,7 +246,7 @@ export function ChoreCard({
 
         {/* On a person's own list every task is theirs: no "Untuk Anda". Anyone, or someone else's name, still shows. */}
         {(!staff || !task.assigned_to || assigneeName) && (
-          <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px] font-normal">
+          <Badge variant="outline" className="h-5 gap-1 px-1.5 text-xs font-normal">
             {task.assigned_to ? (
               <>
                 <UserRound className="size-3" /> {assigneeName ?? t.forYou}
@@ -260,7 +260,7 @@ export function ChoreCard({
         )}
 
         {!staff && recurrence !== "none" && (
-          <Badge variant="outline" className="h-5 gap-1 px-1.5 text-[10px] font-normal">
+          <Badge variant="outline" className="h-5 gap-1 px-1.5 text-xs font-normal">
             <Repeat className="size-3" />
             {taskRepeatLabel(occurrence.template, locale)}
           </Badge>
@@ -270,7 +270,7 @@ export function ChoreCard({
             waiting): it changes what a staff member should do — wait, rather
             than start. */}
         {supervised && (
-          <Badge className="h-5 gap-1 bg-amber-700 px-1.5 text-[10px] text-white">
+          <Badge className="h-5 gap-1 bg-amber-700 px-1.5 text-xs text-white">
             <Eye className="size-3" />
             {t.supervision}
           </Badge>
@@ -279,14 +279,14 @@ export function ChoreCard({
         {action && !done && <span className="ml-auto">{action}</span>}
         {/* Amber means waiting (Phase 153 colour rule). */}
         {done && waitingToSend && (
-          <Badge className="h-5 gap-1 bg-amber-100 px-1.5 text-[10px] text-amber-900">
+          <Badge className="h-5 gap-1 bg-amber-100 px-1.5 text-xs text-amber-900">
             <CloudUpload className="size-3" />
             {t.waiting}
           </Badge>
         )}
 
         {compact && done && occurrence.row && hasChoreProof(occurrence.row) && (
-          <span className="ml-auto flex items-center gap-0.5 text-[10px] font-medium text-emerald-700">
+          <span className="ml-auto flex items-center gap-0.5 text-xs font-medium text-emerald-700">
             Lihat foto <ChevronRight className="size-3.5" />
           </span>
         )}
@@ -294,14 +294,14 @@ export function ChoreCard({
       )}
 
       {couldnt && !done && (
-        <p className="flex items-center gap-1 text-[13px] font-medium text-amber-800" data-testid="couldnt-line">
+        <p className="flex items-center gap-1 text-sm font-medium text-amber-800" data-testid="couldnt-line">
           <CircleSlash className="size-3.5 shrink-0" aria-hidden />
           {couldnt}
         </p>
       )}
 
       {supervising && !couldnt && !done && (
-        <p className="flex items-center gap-1 text-[13px] font-medium text-gray-600" data-testid="supervising-line">
+        <p className="flex items-center gap-1 text-sm font-medium text-gray-600" data-testid="supervising-line">
           <Wrench className="size-3.5 shrink-0" aria-hidden />
           {supervising}
         </p>
@@ -310,7 +310,7 @@ export function ChoreCard({
       {/* Only ever shown on today's list, where it is the explanation for a
           chore whose own date has passed (see expandChores). */}
       {overdue && !done && (
-        <p className="flex items-center gap-1 text-[13px] font-medium text-muted-foreground">
+        <p className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
           <AlertTriangle className="size-3.5 shrink-0" />
           {t.overdue(dayKeyLabel(occurrence.date, today, locale))}
         </p>
@@ -327,7 +327,7 @@ export function ChoreCard({
   );
 
   const className = cn(
-    "flex w-full flex-col gap-2 rounded-xl border p-3 text-left",
+    "flex w-full flex-col gap-2 rounded-2xl border p-3 text-left",
     // A plain card for an open chore (Phase 153; amber since Phase 112), white
     // even inside the red "Belum selesai" frame. Done turns green, like a
     // finished routine (Phase 114).
@@ -336,13 +336,13 @@ export function ChoreCard({
       : couldnt
         ? // Amber with an edge (Phase 165): explained, not forgotten.
           "border-amber-300 border-l-[3px] border-l-amber-500 bg-amber-50"
-        : cn("bg-card", AGENDA_TONES.chore.tint)
+        : cn("border-transparent bg-card shadow-card", AGENDA_TONES.chore.tint)
   );
 
   if (proof || menu) {
     // The card's tappable part and its own buttons side by side, never nested.
     return (
-      <div className={className}>
+      <div className={className} data-chore-card="">
         <div className="flex items-start gap-1">
           {onPress ? (
             <button
@@ -362,10 +362,10 @@ export function ChoreCard({
     );
   }
 
-  if (!onPress) return <div className={className}>{body}</div>;
+  if (!onPress) return <div className={className} data-chore-card="">{body}</div>;
 
   return (
-    <button type="button" onClick={onPress} className={cn(className, "active:bg-muted/60")}>
+    <button type="button" onClick={onPress} className={cn(className, "active:bg-muted/60")} data-chore-card="">
       {body}
     </button>
   );

@@ -1,7 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { MiamusMark, MiamusPromise, PROMISE, RumahRules } from "@/components/brand/loading-screens";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  LaunchStage,
+  MiamusMark,
+  MiamusPromise,
+  PROMISE,
+  RumahRules,
+  useLaunchClock,
+} from "@/components/brand/loading-screens";
+import { LAUNCH_MARK_SIZE } from "@/components/brand/launch-mark-size";
+import { startHandOver } from "@/lib/launch-clock";
 import { readCachedOwnerLocale } from "@/lib/owner-locale";
 import {
   endNavigation,
@@ -15,7 +24,7 @@ import { waitForStableLayout } from "@/lib/stable-layout";
 import { cn } from "@/lib/utils";
 
 /**
- * The branded covers: the circular Miamus mark for owners, the RUMAH rules
+ * The branded covers: the Miamus mark for owners, the RUMAH rules
  * for staff. Two of them:
  *
  *   LaunchCover      Over a cold start, at once, until the page is ready
@@ -41,8 +50,8 @@ import { cn } from "@/lib/utils";
  *   z-50  sheets, dialogs, toasts         opened deliberately, always on top
  */
 
-/** Matches the cover's duration-200. */
-const COVER_FADE_MS = 200;
+/** Matches the cover's duration-[220ms]. */
+const COVER_FADE_MS = 220;
 
 /**
  * Generous on purpose: past this, the household data has not arrived and
@@ -132,43 +141,104 @@ export function LaunchCover({ variant, ready }: { variant: CoverVariant; ready: 
   }, [phase]);
 
   if (phase === "done") return null;
-  return <CoverFace variant={variant} revealing={phase === "revealing"} />;
+  return <CoverFace variant={variant} revealing={phase === "revealing"} opening />;
 }
 
 /**
- * The cover itself: fixed to the app column above everything but sheets and
- * dialogs. Fades out over 200ms, opacity only, letting taps through while it
- * does. `fadeIn` for a cover that appears over a screen already in use, where
- * popping in at full opacity would itself be the jolt.
+ * When the staff launch cover trades the mark for the RUMAH rules, in ms on
+ * the launch clock (20 Nov). 1500: only on a slow load, like the owner's
+ * promise line, so a quick launch shows the mark alone instead of five rules
+ * that are gone before they can be read (the manager's recommendation; the
+ * owner's choice is pending). 0: the rules as soon as the staff cover takes
+ * over, as before.
+ */
+export const STAFF_RULES_AFTER_MS = 1500;
+
+const STAFF_HAND_OVER = ["staff-mark-out", "staff-rules-in"];
+
+/**
+ * The cover itself: the launch stage (loading-screens.tsx), above everything
+ * but sheets and dialogs. Fades out over 200ms, opacity only, letting taps
+ * through while it does. `fadeIn` for a cover that appears over a screen
+ * already in use, where popping in at full opacity would itself be the jolt.
+ *
+ * `opening` for the launch cover: the big mark, on the launch clock, so it
+ * carries on from the "/" splash it replaces without a jump (the promise line
+ * keeps that clock too). Without it, a navigation cover: the mark at 88px.
+ * Big only where the phone has just shown the icon (Fable's look, 20 Nov).
  */
 function CoverFace({
   variant,
   revealing,
   fadeIn = false,
+  opening = false,
 }: {
   variant: CoverVariant;
   revealing: boolean;
   fadeIn?: boolean;
+  opening?: boolean;
 }) {
   return (
-    <div
-      aria-hidden
+    <LaunchStage
       className={cn(
-        "fixed inset-y-0 left-1/2 z-[45] flex w-full max-w-md -translate-x-1/2 items-center justify-center bg-slate-50 px-6",
+        // The exit (Fable, 21 Nov): the picture fades over 220ms, easing
+        // down to 0.96 as it goes, while the page shows through. It never
+        // travels anywhere. Reduced motion: the fade alone.
         revealing
-          ? "pointer-events-none opacity-0 transition-opacity duration-200 ease-out motion-reduce:transition-none"
+          ? "pointer-events-none opacity-0 transition-opacity duration-[220ms] ease-travel *:scale-96 *:transition-transform *:duration-[220ms] *:ease-travel motion-reduce:*:scale-100"
           : "opacity-100",
         fadeIn && !revealing && "animate-view-fade motion-reduce:animate-none"
       )}
     >
       {variant === "owner" ? (
-        <div className="flex flex-col items-center">
-          <MiamusMark />
-          <OwnerPromise />
-        </div>
+        <OwnerFace opening={opening} />
+      ) : opening ? (
+        <StaffLaunchFace />
       ) : (
         <RumahRules />
       )}
+    </LaunchStage>
+  );
+}
+
+/** The owner's cover: the mark, and the promise line under it. */
+function OwnerFace({ opening }: { opening: boolean }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLaunchClock(ref, opening);
+  return (
+    <div ref={ref} className="relative">
+      <MiamusMark opening={opening} size={opening ? LAUNCH_MARK_SIZE : 88} />
+      <OwnerPromise />
+    </div>
+  );
+}
+
+/**
+ * The staff launch cover (20 Nov, Fable's look). It opens on the launch mark,
+ * the same one the "/" splash was showing and on the same clock, so the
+ * hand-over from the splash is unseen. At STAFF_RULES_AFTER_MS the mark fades
+ * out over 200ms and the RUMAH rules fade in from 120ms later: nothing leaves
+ * in one frame. Both in one grid cell, so each stays on the screen's centre.
+ * Fades stay under reduced motion: they are opacity, and without them the two
+ * would sit on top of each other.
+ */
+function StaffLaunchFace() {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (ref.current) startHandOver(ref.current, STAFF_HAND_OVER, STAFF_RULES_AFTER_MS);
+  }, []);
+  return (
+    <div ref={ref} className="grid place-items-center">
+      <div
+        className="col-start-1 row-start-1 animate-staff-mark-out"
+        style={{ animationDelay: `${STAFF_RULES_AFTER_MS}ms` }}
+      >
+        <MiamusMark opening />
+      </div>
+      <RumahRules
+        className="col-start-1 row-start-1 animate-staff-rules-in"
+        style={{ animationDelay: `${STAFF_RULES_AFTER_MS + 120}ms` }}
+      />
     </div>
   );
 }

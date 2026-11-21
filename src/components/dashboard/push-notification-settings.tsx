@@ -359,7 +359,7 @@ function NotificationChoices() {
               disabled={!loaded || failed || saving}
               onChange={(e) => void change({ ...prefs, evening_summary_hour: Number(e.target.value) })}
               aria-label={t("Evening summary time", "Jam ringkasan malam")}
-              className="min-h-9 rounded-lg border bg-background px-2 text-sm"
+              className="min-h-9 rounded-lg border bg-card px-2 text-sm"
             >
               {SUMMARY_HOURS.map((hour) => (
                 <option key={hour} value={hour}>

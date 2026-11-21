@@ -5,6 +5,7 @@ import { BookOpen, CheckCircle2, ChevronRight, CookingPot, NotebookPen } from "l
 import { useCookFlow } from "@/components/kitchen/cook-flow";
 import { DishSheet } from "@/components/kitchen/dish-sheet";
 import { RecipesView } from "@/components/kitchen/recipes-view";
+import { CookStatus, useCookCheck } from "@/components/kitchen/cook-status";
 import { useMenuWeek } from "@/hooks/use-menu";
 import { useRecipes } from "@/hooks/use-recipes";
 import { useToday } from "@/hooks/use-today";
@@ -28,6 +29,7 @@ export function MenuTodayCard({ day, enabled = true }: { day: string; enabled?: 
   const { dishes: week, notes } = useMenuWeek(day, { enabled });
   const { recipes } = useRecipes({ enabled });
   const cook = useCookFlow("id", true);
+  const checkOf = useCookCheck(true);
   const [openId, setOpenId] = useState<string | null>(null);
   const dishes = useMemo(() => dishesOn(week, day), [week, day]);
   const open = useMemo(() => week.find((d) => d.id === openId) ?? null, [week, openId]);
@@ -61,11 +63,17 @@ export function MenuTodayCard({ day, enabled = true }: { day: string; enabled?: 
                 className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left active:bg-muted"
               >
                 <span className="w-12 shrink-0 text-sm text-muted-foreground">{STAFF_MEAL_LABELS[dish.meal]}</span>
-                <span className="flex min-w-0 flex-1 items-center gap-1.5">
-                  <span className={cn("truncate text-base font-medium", dish.cooked_at ? "text-gray-500" : "text-gray-900")}>
-                    {dishTitle(dish, recipe, true)}
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span className={cn("truncate text-base font-medium", dish.cooked_at ? "text-gray-500" : "text-gray-900")}>
+                      {dishTitle(dish, recipe, true)}
+                    </span>
+                    {recipe && <BookOpen className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-label="Ada resep" />}
                   </span>
-                  {recipe && <BookOpen className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-label="Ada resep" />}
+                  {/* Can we cook it? (D18): "Kurang 1: Serai" before the cook starts. */}
+                  {recipe && !dish.cooked_at && day >= today && (
+                    <CookStatus check={checkOf(recipe, servings)} lang="id" later={day > today} size="sm" max={2} />
+                  )}
                 </span>
                 {servings !== null && <span className="shrink-0 text-sm text-muted-foreground">{servingsLabel(servings, "id")}</span>}
                 {dish.cooked_at ? (

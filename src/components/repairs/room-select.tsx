@@ -43,7 +43,7 @@ export function RoomSelect({
         id={id}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value || null)}
-        className="min-h-[48px] w-full appearance-none rounded-lg border bg-background pr-3 pl-9 text-sm"
+        className="min-h-[48px] w-full appearance-none rounded-lg border bg-card pr-3 pl-9 text-sm"
       >
         <option value="">{ind ? "Pilih ruangan" : "Choose a room"}</option>
         {groups.map((group) =>
