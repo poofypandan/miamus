@@ -463,8 +463,9 @@ function Conversation({
               </div>
             ) : (
               // Her earlier lines: the same bubble, a little quieter than her latest.
-              <div key={index} className="opacity-80" data-testid="kakak-earlier">
-                <KakakBubble>{line.text}</KakakBubble>
+              // Only the words dim: her light disc keeps its edge (mark D).
+              <div key={index} data-testid="kakak-earlier">
+                <KakakBubble quiet>{line.text}</KakakBubble>
               </div>
             )
           )}
@@ -676,11 +677,11 @@ function kakakLine(screen: Screen, cardIntro: string): string | null {
  */
 const KAKAK_BUBBLE = "max-w-[85%] rounded-[20px] rounded-bl-md bg-kakak-tint px-4 py-2.5 text-base text-foreground";
 
-function KakakBubble({ children }: { children: React.ReactNode }) {
+function KakakBubble({ children, quiet = false }: { children: React.ReactNode; quiet?: boolean }) {
   return (
     <div className="flex items-start gap-2.5">
       <KakakAvatar className="mt-2 size-7 shrink-0" />
-      <p className={KAKAK_BUBBLE}>{children}</p>
+      <p className={cn(KAKAK_BUBBLE, quiet && "opacity-80")}>{children}</p>
     </div>
   );
 }

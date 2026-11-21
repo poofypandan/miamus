@@ -259,6 +259,8 @@
   --kakak: #e5a196;
   --kakak-tint: #2b201e;
   --kakak-line: #4a3431;
+  /* Mark D on dark: the same warm white, with no shadow needed (README). */
+  --kakak-disc: #fffdf8;
 }
 
 @layer base {

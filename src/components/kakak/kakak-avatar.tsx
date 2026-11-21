@@ -50,7 +50,8 @@ export function KakakAvatar({
         className
       )}
     >
-      <svg viewBox={KAKAK_VIEWBOX} className="size-[66%]" fill="none">
+      {/* 66 % wide, its height from the 336 × 340 box, so the drawing is exactly 66 % of the disc. */}
+      <svg viewBox={KAKAK_VIEWBOX} className="aspect-[336/340] w-[66%]" fill="none">
         <polyline
           points={ROOF_POINTS}
           stroke="currentColor"
