@@ -181,7 +181,7 @@ describe("an answer on its own may be longer than a card's sentence", () => {
     expect(all).toContain("not in Bahasa Indonesia");
     expect(all).toContain("a reference such as S1");
     expect(correctionFor(["too_long"], "en")).toBe(
-      "(From Miamus, not the owner: your last reply was not shown. It was longer than 480 characters. Reply to the owner again now, in English: at most three short sentences, in plain words.)",
+      "(From Miamus, not the owner: your last reply was not shown. It was longer than 480 characters (720 with ideas). Reply to the owner again now, in English: at most three short sentences (or your idea lines), in plain words.)",
     );
   });
 });

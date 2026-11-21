@@ -1,3 +1,4 @@
+import { normalizeFoodRules } from "@/lib/food-preferences";
 import { ChoreAlreadySettledError, ChoreChangedError } from "@/lib/chore-settled";
 import { applyAmountRules } from "@/lib/kitchen-units";
 import { applyCook, applyUncook, applyUsesChange } from "@/lib/cooked-uses";
@@ -746,17 +747,28 @@ export const mockProvider: DataProvider = {
     return delay(row);
   },
   async getKitchenNotes() {
-    return delay(loadDB().kitchenNotes ?? { text: null, confirmedAt: null });
+    const notes = loadDB().kitchenNotes ?? { text: null, confirmedAt: null };
+    return delay({ ...notes, foodRules: notes.foodRules ?? null });
   },
   async setKitchenNotes(notes, confirm) {
     const db = loadDB();
     const before = db.kitchenNotes ?? { text: null, confirmedAt: null };
     db.kitchenNotes = {
+      ...before,
       text: notes?.trim() || null,
       confirmedAt: before.confirmedAt ?? (confirm ? new Date().toISOString() : null),
     };
     saveDB(db);
-    return delay(db.kitchenNotes);
+    return delay({ text: db.kitchenNotes.text, confirmedAt: db.kitchenNotes.confirmedAt });
+  },
+  async setFoodPreferences(rules) {
+    const db = loadDB();
+    const notes = db.kitchenNotes ?? { text: null, confirmedAt: null };
+    const before = notes.foodRules ?? null;
+    const after = rules === null ? null : normalizeFoodRules(rules);
+    db.kitchenNotes = { ...notes, foodRules: after };
+    saveDB(db);
+    return delay({ before, after });
   },
   async listRoutineProposals() {
     return delay(loadDB().routineProposals);

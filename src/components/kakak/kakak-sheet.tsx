@@ -13,6 +13,7 @@ import {
   Eye,
   Gauge,
   Hourglass,
+  Lightbulb,
   ListChecks,
   Loader2,
   MessageSquare,
@@ -50,6 +51,9 @@ import type { RoutineKind } from "@/types/database";
 import { MAX_TYPED, type KakakHistory, type RefusalReason } from "@/lib/kakak/engine";
 import { staffAreasNobody, type KakakSuggestion } from "@/lib/kakak/suggestions";
 import { useKakakSave } from "@/lib/kakak/use-kakak-save";
+import { FoodRulesChips } from "@/components/kitchen/food-rules-chips";
+import { FOOD_RULES_PRESETS, foodRulesReply, type FoodRule } from "@/lib/food-preferences";
+import { saveFoodPreferences } from "@/lib/menu-store";
 import { firstName } from "@/lib/kakak/context";
 import {
   REPEAT_CHOICES,
@@ -70,7 +74,8 @@ import { cn } from "@/lib/utils";
 type Screen =
   | { kind: "typing" }
   | { kind: "waiting" }
-  | { kind: "question"; question: string; answers: string[]; allowTyping: boolean }
+  /** `foodRules`: the app's own food-rules card (PR C2, D2), with Remember for next time. */
+  | { kind: "question"; question: string; answers: string[]; allowTyping: boolean; foodRules?: boolean }
   /** `refined`: the owner adjusted the card with its chips before saving. */
   | { kind: "card"; text: string; items: KakakSuggestion[]; requestId: string; refined?: boolean }
   | { kind: "message"; text: string; problem?: Problem }
@@ -280,7 +285,13 @@ function Conversation({
     switch (reply.kind) {
       case "question":
         setHistory(reply.history);
-        setScreen({ kind: "question", question: reply.question, answers: reply.answers, allowTyping: reply.allowTyping });
+        setScreen({
+          kind: "question",
+          question: reply.question,
+          answers: reply.answers,
+          allowTyping: reply.allowTyping,
+          ...(reply.foodRules ? { foodRules: true } : {}),
+        });
         return;
       case "suggestions":
         setHistory(reply.history);
@@ -426,7 +437,16 @@ function Conversation({
 
       {screen.kind === "waiting" && <KakakThinking />}
 
-      {screen.kind === "question" && (
+      {screen.kind === "question" && screen.foodRules && (
+        <FoodRulesQuestion
+          question={screen.question}
+          allowTyping={screen.allowTyping && !typingAnswer}
+          onType={() => setTypingAnswer(true)}
+          onAnswer={(reply) => void send(reply)}
+        />
+      )}
+
+      {screen.kind === "question" && !screen.foodRules && (
         <div className="flex flex-col gap-3">
           <KakakBubble>{screen.question}</KakakBubble>
           <div className="grid grid-cols-2 gap-2">
@@ -513,6 +533,7 @@ function Conversation({
       )}
 
       {/* Can we cook it? (20 Nov): the newest card first, under the one-a-week rule. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-ideas-2026-11" />}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-cook-2026-11" />}
       {/* Kakak's card, short by default (19 Nov), under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-short-card-2026-11" />}
@@ -633,6 +654,123 @@ function KakakBubble({ children }: { children: React.ReactNode }) {
     <div className="flex items-start gap-2">
       <KakakAvatar className="size-7" />
       <p className={KAKAK_BUBBLE}>{children}</p>
+    </div>
+  );
+}
+
+/**
+ * The household's food rules (PR C2, D2): the app's own question, the same
+ * for every household. Halal · Halal, no alcohol · No rules · More (the four
+ * chips, any number, then Save). Remember for next time is on by default:
+ * the tap is the consent and saves it (migrations/176), with Undo; off,
+ * nothing is saved and Kakak follows the answer for this conversation only.
+ * Either way the answer then goes to Kakak as the owner's reply.
+ */
+function FoodRulesQuestion({
+  question,
+  allowTyping,
+  onType,
+  onAnswer,
+}: {
+  question: string;
+  allowTyping: boolean;
+  onType: () => void;
+  onAnswer: (reply: string) => void;
+}) {
+  const t = useT();
+  const locale = useOwnerLocale();
+  const [remember, setRemember] = useState(true);
+  const [more, setMore] = useState(false);
+  const [picked, setPicked] = useState<FoodRule[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  async function answer(rules: FoodRule[]) {
+    if (busy) return;
+    setBusy(true);
+    let saved = false;
+    if (remember) {
+      try {
+        const before = await saveFoodPreferences(rules);
+        saved = true;
+        toast.success(t("Saved. Change it in Kitchen notes.", "Tersimpan. Ubah di Catatan dapur."), {
+          duration: UNDO_TOAST_MS,
+          action: {
+            label: t("Undo", "Batalkan"),
+            onClick: () => {
+              void saveFoodPreferences(before).then(
+                () => toast(t("Undone.", "Dibatalkan.")),
+                () => toast.error(t("Couldn't undo. Change it in Kitchen notes.", "Belum bisa dibatalkan. Ubah di Catatan dapur."))
+              );
+            },
+          },
+        });
+      } catch (err) {
+        console.error("Food preferences", err);
+        toast.error(
+          t(
+            "Couldn't save the food rules. Kakak will follow them in this conversation.",
+            "Aturan makanan belum tersimpan. Kakak tetap mengikutinya di percakapan ini."
+          )
+        );
+      }
+    }
+    onAnswer(foodRulesReply(rules, saved, locale));
+  }
+
+  return (
+    <div className="flex flex-col gap-3" data-testid="kakak-food-rules">
+      <KakakBubble>{question}</KakakBubble>
+      {more ? (
+        <div className="flex flex-col gap-3 rounded-2xl border bg-card p-3">
+          <FoodRulesChips
+            value={picked}
+            locale={locale}
+            disabled={busy}
+            onChange={setPicked}
+            label={t("Food preferences", "Preferensi makanan")}
+          />
+          <Button type="button" className="min-h-12 rounded-xl text-base" disabled={busy} onClick={() => void answer(picked)}>
+            {busy && <Loader2 className="animate-spin" aria-hidden="true" />}
+            {t("Save", "Simpan")}
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {FOOD_RULES_PRESETS.map((preset) => (
+            <Button
+              key={preset.key}
+              type="button"
+              variant="outline"
+              className="min-h-12 rounded-xl text-sm"
+              disabled={busy}
+              onClick={() => void answer(preset.rules)}
+            >
+              {preset[locale]}
+            </Button>
+          ))}
+          <Button type="button" variant="outline" className="min-h-12 rounded-xl text-sm" disabled={busy} onClick={() => setMore(true)}>
+            {t("More", "Lainnya")}
+          </Button>
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-3 py-2">
+        <span className="text-sm text-gray-900">{t("Remember for next time", "Ingat untuk berikutnya")}</span>
+        <Switch
+          on={remember}
+          label={t("Remember for next time", "Ingat untuk berikutnya")}
+          disabled={busy}
+          onToggle={() => setRemember((on) => !on)}
+        />
+      </div>
+      {allowTyping && (
+        <button
+          type="button"
+          className="self-start text-sm font-medium text-muted-foreground underline-offset-4 active:underline"
+          onClick={onType}
+        >
+          {t("Or type an answer", "Atau ketik jawaban")}
+        </button>
+      )}
     </div>
   );
 }
@@ -1143,6 +1281,7 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   new_ingredient: Carrot,
   staff_areas: Eye,
   menu_dish: CookingPot,
+  recipe_idea: Lightbulb,
 };
 
 type T = (en: string, id: string) => string;

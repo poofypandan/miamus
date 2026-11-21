@@ -165,6 +165,20 @@ const SOURCES: Record<string, [string, string]> = {
 export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody?: StaffArea[]): CardItem {
   const t = translator(locale);
   switch (item.kind) {
+    case "recipe_idea": {
+      // PR C2: Name · For · Ingredients, and a quiet line that the amounts
+      // and steps are the owner's to add (Kakak never gives them).
+      const name = locale === "en" && item.nameEn ? `${item.nameEn} (${item.name})` : item.name;
+      return {
+        heading: t("Recipe idea", "Ide resep"),
+        rows: [
+          { label: t("Name", "Nama"), value: name },
+          { label: t("For", "Untuk"), value: t(`${item.servings} servings`, `${item.servings} porsi`) },
+          { label: t("Ingredients", "Bahan"), value: item.ingredients.map((line) => line.name).join(", ") },
+        ],
+        note: t("Kakak's idea. Add the amounts and steps yourself.", "Ide Kakak. Tambahkan jumlah dan cara membuatnya sendiri."),
+      };
+    }
     case "menu_dish": {
       // Can we cook it? (20 Nov): What · When · For, then the app's own
       // check (Fable S0). What the recipe is missing is its own Shopping
@@ -467,7 +481,9 @@ export function savedSummary(items: KakakSuggestion[], locale: Locale): string {
               ? t(`What ${first.staffName} sees`, `Yang dilihat ${first.staffName}`)
               : first.kind === "menu_dish"
                 ? dishSummary(first, locale)
-                : first.name;
+                : first.kind === "recipe_idea" && locale === "en" && first.nameEn
+                  ? first.nameEn
+                  : first.name;
   const more = items.length > 1 ? t(` and ${items.length - 1} more`, ` dan ${items.length - 1} lainnya`) : "";
   return t(`Saved — ${name}${more}`, `Tersimpan — ${name}${more}`);
 }

@@ -10,7 +10,8 @@ import type { KakakSuggestion } from "./suggestions";
 
 /** `practice`: the server is in practice mode (scripted answers, no AI). */
 export type KakakReply =
-  | { kind: "question"; question: string; answers: string[]; allowTyping: boolean; requestId: string; history: KakakHistory; practice?: boolean }
+  /** `foodRules`: the app's own food-rules card (PR C2, D2). */
+  | { kind: "question"; question: string; answers: string[]; allowTyping: boolean; requestId: string; history: KakakHistory; practice?: boolean; foodRules?: true }
   | { kind: "suggestions"; text: string; items: KakakSuggestion[]; requestId: string; history: KakakHistory; practice?: boolean }
   | { kind: "message"; text: string; requestId: string; history: KakakHistory; practice?: boolean }
   | { kind: "refused"; reason: RefusalReason | "unavailable" }
@@ -30,8 +31,10 @@ export type KakakFailure = "invalid" | "api" | "too_long" | "refusal" | "offline
  *   2 (2026-11-14): a new ingredient's card, and amounts on an ingredient.
  *   3 (Phase 178 follow-up): what a staff member sees.
  *   4 (Can we cook it?, 20 Nov): a dish on the menu.
+ *   5 (E2): Bought on a shopping card.
+ *   6 (PR C2): a recipe idea, and the food-rules card with Remember for next time.
  */
-export const KAKAK_CLIENT_VERSION = 5;
+export const KAKAK_CLIENT_VERSION = 6;
 
 /**
  * A long chat rolls over (2026-11-14). A conversation may hold only so many

@@ -117,6 +117,8 @@ export interface StubOptions {
    */
   menu?: Record<string, unknown>[];
   kitchenNotes?: string | null;
+  /** households.food_preferences (PR C2, migrations/176): null or absent is not asked yet. */
+  foodRules?: string[] | null;
   /** Hold the recipes read until `releaseRecipes()` (cooking must wait for it; Codex, PR #101). */
   holdRecipes?: boolean;
   /** Hold the kitchen notes read until `releaseKitchenNotes()` (the editor must wait for it). */
@@ -269,7 +271,8 @@ export interface Stub {
   recipes: Record<string, unknown>[];
   /** menu_dishes as the stub holds them, and the household's kitchen note (Phase 170 PR C). */
   menu: Record<string, unknown>[];
-  kitchen: { notes: string | null; confirmedAt: string | null };
+  /** `foodRules`: households.food_preferences (PR C2, migrations/176); null is not asked yet. */
+  kitchen: { notes: string | null; confirmedAt: string | null; foodRules: string[] | null };
   /** Answer the recipes reads held by `holdRecipes`. */
   releaseRecipes(): void;
   /** Answer the kitchen notes reads held by `holdKitchenNotes`. */
@@ -321,7 +324,11 @@ export async function installStub(context: BrowserContext, options: StubOptions 
   let releaseNotes: () => void = () => undefined;
   const notesHeld = { on: !!options.holdKitchenNotes, wait: new Promise<void>((r) => (releaseNotes = r)) };
   const menu: Record<string, unknown>[] = options.menu ? options.menu.map((row) => ({ ...row })) : [];
-  const kitchen = { notes: options.kitchenNotes ?? null, confirmedAt: options.kitchenNotes ? "2026-11-10T00:00:00Z" : null };
+  const kitchen = {
+    notes: options.kitchenNotes ?? null,
+    confirmedAt: options.kitchenNotes ? "2026-11-10T00:00:00Z" : null,
+    foodRules: options.foodRules ?? null,
+  };
   const repairs: Record<string, unknown>[] = options.repairs ?? [];
   const repairCosts: Record<string, unknown>[] = [];
   const billPayments: Record<string, unknown>[] = options.billPayments ? [...options.billPayments] : [];
@@ -550,6 +557,7 @@ export async function installStub(context: BrowserContext, options: StubOptions 
           created_at: household.createdAt,
           kitchen_notes: kitchen.notes,
           kitchen_notes_confirmed_at: kitchen.confirmedAt,
+          food_preferences: kitchen.foodRules,
         };
         const one = (request.headers()["accept"] ?? "").includes("pgrst.object");
         return route.fulfill({ json: one ? row : [row] });
@@ -812,6 +820,16 @@ export async function installStub(context: BrowserContext, options: StubOptions 
           const code = err.code === "item_not_tracked" ? "42501" : err.code.startsWith("bad_") || err.code === "unit_mismatch" ? "22023" : "55000";
           return route.fulfill({ status: code === "42501" ? 403 : 400, json: { code, message: err.code, details: null, hint: null } });
         }
+      }
+      // PR C2 (migrations/176): admins only; returns what they were, for Undo.
+      if (table === "rpc/set_food_preferences") {
+        if (who !== OWNER) return route.fulfill({ status: 403, json: { code: "42501", message: "admins_only", details: null, hint: null } });
+        const body = request.postDataJSON() as { p_rules: string[] | null };
+        const order = ["halal", "no_alcohol", "no_beef", "vegetarian"];
+        const before = kitchen.foodRules;
+        kitchen.foodRules = body.p_rules === null ? null : order.filter((rule) => body.p_rules!.includes(rule));
+        writes.push([request.method(), table]);
+        return route.fulfill({ json: { before, after: kitchen.foodRules } });
       }
       if (table === "rpc/set_kitchen_notes") {
         if (who !== OWNER) return route.fulfill({ status: 403, json: { code: "42501", message: "admins_only", details: null, hint: null } });

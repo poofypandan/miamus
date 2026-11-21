@@ -28,6 +28,28 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // PR C2 (owner, 20 Nov): recipe ideas and the food rules, in the Kakak
+    // sheet for households with Kakak only, under the calm-start rules.
+    id: "kakak-ideas-2026-11",
+    date: "2026-11-21",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: recipe ideas from Kakak", id: "Baru: ide masak dari Kakak" },
+    steps: {
+      en: [
+        "Ask \"Any recipe ideas?\" Kakak suggests two or three dishes from her own knowledge, using what is at home, each marked Idea.",
+        "The first time, she asks your food rules once, such as Halal or No alcohol. Change them any time in Kitchen → Menu → Kitchen notes.",
+        "Like one? Say \"Save the second one\". It's saved as a recipe once you confirm; add the amounts and steps yourself.",
+      ],
+      id: [
+        "Tanya \"Ada ide masak?\" Kakak menyarankan dua atau tiga masakan dari pengetahuannya sendiri, memakai yang ada di rumah, masing-masing ditandai Ide.",
+        "Pertama kali, Kakak menanyakan aturan makanan sekali saja, misalnya Halal atau Tanpa alkohol. Ubah kapan saja di Dapur → Menu → Catatan dapur.",
+        "Suka salah satunya? Bilang \"Simpan yang kedua\". Resepnya tersimpan setelah Anda konfirmasi; tambahkan jumlah dan cara membuatnya sendiri.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 20 Nov (Can we cook it?, Kakak on top): in the Kakak sheet, for
     // households with Kakak only, under the calm-start rules.
     id: "kakak-cook-2026-11",

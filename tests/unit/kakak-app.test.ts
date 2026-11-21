@@ -351,7 +351,7 @@ describe("runKakakTurn gives a plain reply one second try (2026-11-14)", () => {
     // The second request carries her first reply and the app's note, in order.
     const second = (bodies[1] as { messages: { role: string; content: unknown }[] }).messages;
     expect(second.map((m) => m.role)).toEqual(["user", "assistant", "user"]);
-    expect(second[2].content).toMatch(/^\(From Miamus, not the owner: your last reply was not shown\. It was longer than 480 characters\./);
+    expect(second[2].content).toMatch(/^\(From Miamus, not the owner: your last reply was not shown\. It was longer than 480 characters/);
     expect(second[2].content).toContain("in English");
     // Both calls are counted and recorded, and the history she gets back is whole.
     expect(records.map((r) => r.outcome)).toEqual(["message", "message"]);

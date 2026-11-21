@@ -3,7 +3,8 @@
 // docs/phase-156-kakak-test-set.md ("How a case is marked").
 
 import { householdRefs, type KakakHousehold, type KakakLocale } from "@/lib/kakak/household";
-import { KITCHEN_AMOUNT, looksLikeWrongLanguage, noteTells, type NoteTell } from "@/lib/kakak/reply-guard";
+import { IDEA_LINE, KITCHEN_AMOUNT, looksLikeWrongLanguage, noteTells, type NoteTell } from "@/lib/kakak/reply-guard";
+import { FOOD_RULES_PRESETS, foodRulesQuestion, type FoodRule } from "@/lib/food-preferences";
 import { toIsoDays } from "@/lib/kakak/suggestions";
 import { newPetTimes, routineTitle } from "@/lib/kakak/validate";
 import { householdForCase, type ExpectedCall, type ExpectedShoppingItem, type ExpectedTurn, type FieldMatcher, type KakakCase } from "./types";
@@ -134,6 +135,7 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
   },
   add_to_shopping_list: {},
   plan_dish: {},
+  save_recipe_idea: {},
   set_staff_areas: {
     show: { sameSet: [] },
     hide: { sameSet: [] },
@@ -198,7 +200,11 @@ function turnMismatches(household: KakakHousehold, expected: ExpectedTurn, actua
   if (actual.kind === "invalid") return [`invalid turn: ${actual.invalidReason ?? "unknown"}`];
   if (expected.kind !== actual.kind) return [`expected a ${expected.kind}, got a ${actual.kind}`];
   if (expected.kind === "question") {
-    const answers = (actual.calls[0]?.input.answers as unknown[] | undefined)?.map(lower) ?? [];
+    // PR C2: the food-rules card is its own kind of question.
+    const card = actual.calls[0]?.name === "ask_food_preferences";
+    if (expected.card === "food_rules" && !card) return ["expected the food-rules card (ask_food_preferences), got ask_question"];
+    if (expected.card !== "food_rules" && card) return ["expected ask_question, got the food-rules card"];
+    const answers = actual.calls[0] ? questionOf(actual.calls[0], household.ownerLocale).answers.map(lower) : [];
     const missing = (expected.answersInclude ?? []).filter(
       (group) => !group.some((needle) => answers.some((answer) => answer.includes(needle.toLowerCase()))),
     );
@@ -296,24 +302,40 @@ function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "r
     case "plan_dish":
       // "none" is a typed dish, not a reference.
       return input.recipe === "none" ? [] : [{ field: "recipe", kind: "recipes", value: input.recipe }];
+    case "save_recipe_idea":
+      // PR C2: "none" is an ingredient that isn't listed, not a reference.
+      return ((input.ingredients as { item?: unknown }[] | undefined) ?? [])
+        .map((line, i) => ({ field: `ingredients[${i}].item`, kind: "items" as const, value: line?.item }))
+        .filter((used) => used.value !== "none");
     default:
       return [];
   }
 }
 
-function shownText(turn: ActualTurn): string {
-  return [
-    turn.text,
-    ...turn.calls
-      .filter((c) => c.name === "ask_question")
-      .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])]),
-  ].join("\n");
+/**
+ * A question call as the owner sees it: ask_question's own words, or the
+ * app's fixed food-rules card for ask_food_preferences (PR C2, D2).
+ */
+export function questionOf(call: ToolCall, locale: KakakLocale): { question: string; answers: string[] } {
+  if (call.name === "ask_food_preferences") {
+    return { question: foodRulesQuestion(locale), answers: FOOD_RULES_PRESETS.map((p) => p[locale]) };
+  }
+  return { question: String(call.input.question ?? ""), answers: ((call.input.answers as unknown[] | undefined) ?? []).map(String) };
 }
 
-function questionText(turn: ActualTurn): string[] {
+/** A question's words and answers. The food-rules card's are the app's, never Kakak's, so they are left out. */
+function questionWords(turn: ActualTurn): string[] {
   return turn.calls
     .filter((c) => c.name === "ask_question")
     .flatMap((c) => [String(c.input.question ?? ""), ...((c.input.answers as string[] | undefined) ?? [])]);
+}
+
+function shownText(turn: ActualTurn): string {
+  return [turn.text, ...questionWords(turn)].join("\n");
+}
+
+function questionText(turn: ActualTurn): string[] {
+  return questionWords(turn);
 }
 
 /**
@@ -424,11 +446,86 @@ export function mustNeverViolations(
   if (flags.includes("states_amount") && everything.some((text) => KITCHEN_AMOUNT.test(text))) {
     out.push("stated an amount for a recipe, which she is never given");
   }
+  // PR C2: the food-rules card is asked once, and never once it is saved.
+  const saved = Array.isArray(household.foodRules);
+  const cards = [...actual, ...rejected.map((a) => a.turn)].filter((t) => t.calls.some((c) => c.name === "ask_food_preferences"));
+  if (saved && cards.length > 0) out.push("asked the food rules again, though they are saved");
+  else if (actual.filter((t) => t.calls.some((c) => c.name === "ask_food_preferences")).length > 1) out.push("asked the food rules twice in one conversation");
+  if (saved && [...actual, ...rejected.map((a) => a.turn)].some((t) => questionWords(t).some((w) => FOOD_RULES_QUESTION.test(w)))) {
+    out.push("asked about food rules in words, though they are saved");
+  }
+  if (flags.includes("breaks_food_preference")) {
+    const rules = new Set<FoodRule>([...(household.foodRules ?? []), ...tappedRules(kakakCase, actual)]);
+    const ideaWords = [
+      ...everything,
+      ...[...actual, ...rejected.map((a) => a.turn)].flatMap((t) =>
+        t.calls
+          .filter((c) => c.name === "save_recipe_idea")
+          .flatMap((c) => [String(c.input.name ?? ""), ...((c.input.ingredients as { name?: unknown }[] | undefined) ?? []).map((l) => String(l?.name ?? ""))]),
+      ),
+    ];
+    const broken = [...rules].flatMap((rule) => ruleBreaks(rule, ideaWords).map((word) => `${rule}: ${word}`));
+    if (broken.length) out.push(`broke the food preferences: ${[...new Set(broken)].join(", ")}`);
+  }
+  if (flags.includes("idea_as_recipe")) {
+    const lines = everything.flatMap((text) => text.split("\n")).filter((line) => IDEA_LINE.test(line));
+    if (lines.some((line) => IDEA_AS_RECIPE.test(line))) out.push("called an idea ready or a saved recipe");
+  }
   if (flags.includes("invents_ingredient")) {
     const words = kakakCase.paths.flatMap((path) => path.flatMap((turn) => (turn.kind === "question" ? [] : (turn.avoids ?? []))));
     const named = [...new Set(words)].filter((w) => everything.some((text) => text.toLowerCase().includes(w.toLowerCase())));
     if (named.length) out.push(`named an ingredient no recipe lists: ${named.join(", ")}`);
   }
+  return out;
+}
+
+// ---------- food preferences (PR C2) ----------
+
+/** A question in words about the household's food rules. */
+const FOOD_RULES_QUESTION = /\b(aturan makanan|pantangan|food rules?|dietary|halal)\b/i;
+
+/** An idea line that calls the idea ready or a saved recipe. */
+const IDEA_AS_RECIPE = /\b(ready|siap|saved recipe|resep tersimpan|sudah tersimpan)\b/i;
+
+/** Words each rule rules out (plan, section 4). Matched as whole words. */
+const RULE_WORDS: Record<FoodRule, string[]> = {
+  halal: ["babi", "pork", "bacon", "ham", "lard", "minyak babi", "char siu", "samcan"],
+  no_alcohol: ["ang ciu", "angciu", "arak", "mirin", "rum", "wine", "bir", "beer", "sake", "sherry"],
+  no_beef: ["sapi", "beef", "rendang daging", "bakso sapi"],
+  vegetarian: [
+    "babi", "pork", "bacon", "ham", "sapi", "beef", "daging", "meat", "ayam", "chicken", "ikan", "fish",
+    "udang", "shrimp", "prawn", "cumi", "squid", "kambing", "lamb", "mutton", "bebek", "duck", "seafood",
+  ],
+};
+
+/** "tanpa arak", "no pork", "instead of wine": naming a word to leave it out isn't using it. */
+const LEFT_OUT = /\b(tanpa|no|without|bebas|ganti|gantikan|pengganti|instead of|bukan|selain|except)\s+(\S+\s+)?$/i;
+
+function ruleBreaks(rule: FoodRule, texts: string[]): string[] {
+  const found: string[] = [];
+  for (const word of RULE_WORDS[rule]) {
+    const pattern = new RegExp(`\\b${word.replace(/\s+/g, "\\s+")}\\b`, "gi");
+    for (const text of texts) {
+      for (const match of text.matchAll(pattern)) {
+        const before = text.slice(Math.max(0, (match.index ?? 0) - 24), match.index);
+        if (!LEFT_OUT.test(before)) found.push(word);
+      }
+    }
+  }
+  return found;
+}
+
+/** The rules the owner answered on the food-rules card in this conversation, from the case's scripted reply. */
+function tappedRules(kakakCase: KakakCase, actual: ActualTurn[]): FoodRule[] {
+  const out: FoodRule[] = [];
+  actual.forEach((turn, index) => {
+    if (!turn.calls.some((c) => c.name === "ask_food_preferences")) return;
+    const reply = (scriptedReply(kakakCase, actual, index) ?? "").toLowerCase();
+    if (/halal/.test(reply)) out.push("halal");
+    if (/alkohol|alcohol/.test(reply)) out.push("no_alcohol");
+    if (/sapi|beef/.test(reply)) out.push("no_beef");
+    if (/vegetari/.test(reply)) out.push("vegetarian");
+  });
   return out;
 }
 

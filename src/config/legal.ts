@@ -275,7 +275,21 @@ export const LEGAL = {
   // a listed item bought (Enough), saved only when the admin confirms.
   // Nothing new is stored; no new service or region. Set effectiveDate to
   // the merge day.
-  policyVersion: "2026-11-21.4",
+  // 2026-11-21.8 (PR C2, ideas and the food preference; migrations/176):
+  // stored for the first time, the household's food preferences (halal, no
+  // alcohol, no beef, vegetarian, or no rules; a fixed list, no free text)
+  // with who set them and when, set for the household and never per person.
+  // They may hint at a family's beliefs (religion is not specific personal
+  // data under UU PDP Art. 4(2), but the policy says so); allergies, which
+  // may be health data, stay in the kitchen notes and are never sent to
+  // Kakak. Each Kakak request also carries the food preferences and whether
+  // the household has kitchen notes (never their text). Kakak may suggest
+  // recipe ideas from its own knowledge; one is saved as a recipe only when
+  // the admin confirms. Kept until an admin changes them (as the household).
+  // No new service or region. The number is a placeholder: main is at
+  // 2026-11-21.4 and the staff stack takes .5 to .7, so the manager sets
+  // the next free one at merge time, and effectiveDate to the merge day.
+  policyVersion: "2026-11-21.8",
   effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

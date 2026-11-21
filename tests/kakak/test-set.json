@@ -8648,6 +8648,815 @@
         ]
       ],
       "note": "E2: everything marked out or running low (Santan out; Bihun, Galon air low), and where the list is. No card."
+    },
+    {
+      "id": "K207",
+      "sentence": "Ada ide masak apa?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "the household's food rules, the app's own card",
+            "card": "food_rules",
+            "reply": "Halal, tanpa alkohol"
+          },
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "ide:",
+                "ide "
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 P-a/P-b: food preferences not asked yet, so the app's own card comes first and no ideas yet; after 'Halal, tanpa alkohol' (saved), two or three 'Ide:' lines with nothing from pigs and no alcohol, no amounts."
+    },
+    {
+      "id": "K208",
+      "sentence": "What new recipes should we try?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "the household's food rules, the app's own card",
+            "card": "food_rules",
+            "reply": "No rules"
+          },
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "idea:",
+                "idea "
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 P-c: not asked yet; the card, 'No rules', then English 'Idea:' lines. No amounts, never called ready or saved."
+    },
+    {
+      "id": "K209",
+      "sentence": "Ada ide masak?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "ide:",
+                "ide "
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 P-d: Halal is saved, so no card and no question: ideas straight away, with nothing from pigs. Asking again is a must-never (automatic).",
+      "household": {
+        "foodRules": [
+          "halal"
+        ]
+      }
+    },
+    {
+      "id": "K210",
+      "sentence": "Ide masak babi kecap?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "halal",
+                "preferensi",
+                "aturan"
+              ],
+              [
+                "babi"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 P-e: Halal is saved, but the owner asked for babi kecap: one short note of the saved preference, then she helps with what was asked (their home). No breaks_food_preference flag on this case.",
+      "household": {
+        "foodRules": [
+          "halal"
+        ]
+      }
+    },
+    {
+      "id": "K211",
+      "sentence": "Ada ide masak dari bahan di rumah?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "ide:",
+                "ide "
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes",
+              "pakai santan",
+              "pakai bihun",
+              "pakai galon"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 C2-a: no rules saved. Each idea starts 'Ide:'; only items with nothing beside them (Enough) count as at home, so Santan (out) and Bihun (running low) are never 'pakai'. No card.",
+      "household": {
+        "foodRules": []
+      }
+    },
+    {
+      "id": "K212",
+      "sentence": "Tolong simpan ide sayur lodeh jadi resep ya: pakai tomat, telur, santan dan labu siam.",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "save_recipe_idea",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "lodeh"
+                      ]
+                    ]
+                  },
+                  "name_en": "none",
+                  "servings": 0,
+                  "ingredients": {
+                    "any": true
+                  }
+                }
+              }
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 C2-b: saving an idea is save_recipe_idea, names only, listed items by reference (Tomat I11, Telur I1, Santan I12; Labu siam isn't listed). Invented references are a must-never (automatic).",
+      "household": {
+        "foodRules": []
+      }
+    },
+    {
+      "id": "K213",
+      "sentence": "Simpan ide opor ayam jadi resep ya.",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "opor"
+              ],
+              [
+                "sudah",
+                "tersimpan",
+                "resep"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 C2-c: Opor ayam is already a saved recipe (D1): she says so and points to it, with no save card (validate.ts refuses one).",
+      "household": {
+        "foodRules": []
+      }
+    },
+    {
+      "id": "K214",
+      "sentence": "Kasih resep sayur lodeh lengkap dengan takarannya.",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "simpan",
+                "dapur"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 C2-d: no amounts or steps for an idea: she offers to save it so the owner adds them in Dapur → Menu. Any amount is a must-never.",
+      "household": {
+        "foodRules": []
+      }
+    },
+    {
+      "id": "K215",
+      "sentence": "Save a recipe idea for me: tomato and egg stir-fry, with tomatoes and eggs.",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "save_recipe_idea",
+                "fields": {
+                  "name": {
+                    "textHas": [
+                      [
+                        "tomat"
+                      ],
+                      [
+                        "telur"
+                      ]
+                    ]
+                  },
+                  "name_en": {
+                    "textHas": [
+                      [
+                        "tomato"
+                      ]
+                    ]
+                  },
+                  "servings": 0,
+                  "ingredients": {
+                    "any": true
+                  }
+                }
+              }
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 C2-e: an English-speaking owner: the saved name is in Bahasa Indonesia (Tumis tomat telur) with name_en in English; Tomat (I11) and Telur (I1) by reference.",
+      "household": {
+        "foodRules": []
+      }
+    },
+    {
+      "id": "K216",
+      "sentence": "Ada ide masak hari ini?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "ide:",
+                "ide "
+              ],
+              [
+                "catatan dapur"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 C2-f: the household has kitchen notes (never their text): the idea reply says to check the kitchen notes before cooking.",
+      "household": {
+        "foodRules": [],
+        "kitchenNotes": true
+      }
+    },
+    {
+      "id": "K217",
+      "sentence": "Any recipe ideas with what we have?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "idea:",
+                "idea "
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes",
+              "uses chicken",
+              "use the chicken",
+              "uses beef",
+              "uses coconut milk",
+              "uses santan",
+              "uses the beef"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 G-a: only Telur, Beras and Tomat are Enough; everything else is out or running low, so it goes under what each idea still needs, never as at home.",
+      "household": {
+        "foodRules": [],
+        "items": [
+          {
+            "ref": "I1",
+            "name": "Telur",
+            "pet": false,
+            "ingredient": true
+          },
+          {
+            "ref": "I4",
+            "name": "Beras",
+            "pet": false,
+            "ingredient": true
+          },
+          {
+            "ref": "I11",
+            "name": "Tomat",
+            "pet": false,
+            "ingredient": true
+          },
+          {
+            "ref": "I8",
+            "name": "Minyak goreng",
+            "pet": false,
+            "ingredient": true,
+            "status": "out",
+            "out": true
+          },
+          {
+            "ref": "I10",
+            "name": "Daging sapi",
+            "pet": false,
+            "ingredient": true,
+            "status": "out",
+            "out": true
+          },
+          {
+            "ref": "I12",
+            "name": "Santan",
+            "pet": false,
+            "ingredient": true,
+            "status": "out",
+            "out": true
+          },
+          {
+            "ref": "I13",
+            "name": "Ayam",
+            "pet": false,
+            "ingredient": true,
+            "status": "out",
+            "out": true
+          },
+          {
+            "ref": "I14",
+            "name": "Bihun",
+            "pet": false,
+            "ingredient": true,
+            "status": "low"
+          }
+        ]
+      }
+    },
+    {
+      "id": "K218",
+      "sentence": "Is there a recipe for opor?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "opor"
+              ],
+              [
+                "santan",
+                "coconut milk",
+                "saved"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes",
+              "idea:"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 G-b: Opor ayam is a saved recipe (D1, missing Santan): she answers from Saved recipes, not with an idea.",
+      "household": {
+        "foodRules": []
+      }
+    },
+    {
+      "id": "K219",
+      "sentence": "Ide masak buat malam ini yang siap dimasak?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "nasi goreng",
+                "rendang daging",
+                "ide"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 G-c: 'ready to cook' means saved recipes marked ready (Nasi goreng, Rendang daging); an idea is never called ready (idea_as_recipe).",
+      "household": {
+        "foodRules": []
+      }
+    },
+    {
+      "id": "K220",
+      "sentence": "Ide masakan Chinese?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "ide:",
+                "ide "
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2 G-d: No alcohol is saved: no ang ciu, arak, mirin or wine in any idea (breaks_food_preference); 'tanpa arak' is fine.",
+      "household": {
+        "foodRules": [
+          "no_alcohol"
+        ]
+      }
+    },
+    {
+      "id": "K221",
+      "sentence": "Got any recipe ideas?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount",
+        "breaks_food_preference",
+        "idea_as_recipe"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "question",
+            "about": "the household's food rules, the app's own card",
+            "card": "food_rules",
+            "reply": "Vegetarian"
+          },
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "idea:",
+                "idea "
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp",
+              "menit",
+              "minutes"
+            ]
+          }
+        ]
+      ],
+      "note": "C2: not asked yet; the owner types 'Vegetarian' on the card (no preset fits). Ideas then have no meat, chicken, fish or seafood."
     }
   ]
 }

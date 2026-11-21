@@ -10,6 +10,7 @@
 // References are numbered in a fixed order (creation time, then id) so the
 // same household gives the same references on every call of a conversation.
 
+import { foodRulesFromRow } from "@/lib/food-preferences";
 import { cookCheck } from "@/lib/can-cook";
 import { ROUTINE_KINDS } from "@/lib/pet-routine-kinds";
 import { lineName, type RecipeWithLines } from "@/lib/recipes";
@@ -139,6 +140,13 @@ export interface ContextRows {
   menu?: ContextDishRow[];
   /** E1: ready-to-eat food still at home (outcome null); absent on an older read. */
   foods?: ContextFoodRow[];
+  /**
+   * PR C2: households.food_preferences as read (null: not asked yet);
+   * absent when it couldn't be read (a database before migrations/176).
+   */
+  foodPreferences?: unknown;
+  /** PR C2: the household has a kitchen note; absent when not read. Its text never leaves the route. */
+  kitchenNotes?: boolean;
 }
 
 /**
@@ -401,6 +409,9 @@ export function buildContext(
       ...(menu.length ? { menu } : {}),
       // Only once the switches were read: a failed read never assumes Food at home is on (Codex, PR #166).
       ...(rows.featuresRead && rows.foodOn !== false && rows.foods ? { foods: foodsFor(rows.foods, today) } : {}),
+      // PR C2: what recipe ideas follow, and whether kitchen notes exist (never their text).
+      ...(rows.foodPreferences !== undefined ? { foodRules: foodRulesFromRow(rows.foodPreferences) } : {}),
+      ...(typeof rows.kitchenNotes === "boolean" ? { kitchenNotes: rows.kitchenNotes } : {}),
     },
     refs,
     names,

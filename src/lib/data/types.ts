@@ -1,3 +1,4 @@
+import type { FoodRule } from "@/lib/food-preferences";
 import type { RecipePayload, RecipeWithLines } from "@/lib/recipes";
 import type { MenuDishInput } from "@/lib/menu";
 import type {
@@ -342,6 +343,12 @@ export type InventoryItemPatch = Partial<InventoryItemInput> &
 export interface KitchenNotes {
   text: string | null;
   confirmedAt: string | null;
+  /**
+   * The household's food preferences (PR C2, migrations/176), shown beside
+   * the note: null until answered, [] for no rules. Absent on a database
+   * before 176, where the chips don't show.
+   */
+  foodRules?: FoodRule[] | null;
 }
 
 /**
@@ -577,6 +584,12 @@ export interface DataProvider {
   getKitchenNotes(): Promise<KitchenNotes | null>;
   /** Owners only. `confirm`: the one-time health-data OK (D12). */
   setKitchenNotes(notes: string | null, confirm: boolean): Promise<KitchenNotes>;
+  /**
+   * Admins only (migrations/176): the household's food preferences ([] for
+   * no rules; null puts "not asked yet" back, for Undo). Returns what they
+   * were and are now.
+   */
+  setFoodPreferences(rules: FoodRule[] | null): Promise<{ before: FoodRule[] | null; after: FoodRule[] | null }>;
   listRoutineProposals(): Promise<RoutineProposal[]>;
   createRoutineProposal(input: CreateRoutineProposalInput): Promise<RoutineProposal>;
   createRoutineProposalsBatch(inputs: CreateRoutineProposalInput[]): Promise<RoutineProposal[]>;

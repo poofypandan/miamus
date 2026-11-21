@@ -9,6 +9,7 @@
 // their weekdays, worked out here in code, instead of leaving the arithmetic
 // to the model.
 
+import { foodRulesForKakak, type FoodRule } from "@/lib/food-preferences";
 import type { StaffArea } from "@/lib/staff-areas";
 import type { FoodPlace, MenuMeal, RoutineKind } from "@/types/database";
 
@@ -154,6 +155,17 @@ export interface KakakHousehold {
    * and date only.
    */
   foods?: KakakFood[];
+  /**
+   * PR C2 (migrations/176): the household's food preferences, for recipe
+   * ideas: null when nobody has answered yet, [] for no rules. Absent when
+   * they weren't read (a database before 176), so the block says nothing.
+   */
+  foodRules?: FoodRule[] | null;
+  /**
+   * PR C2: whether the household has kitchen notes, never what they say
+   * (they may hold health information). Absent when not read.
+   */
+  kitchenNotes?: boolean;
 }
 
 /** One ready-to-eat food at home (E1). No reference: no tool takes one. */
@@ -332,6 +344,7 @@ export function renderHouseholdBlock(household: KakakHousehold): string {
     );
   }
   lines.push(...recipeLines(household));
+  lines.push(...ideaLines(household));
   lines.push("");
   // Today and the calendar go last so the shared instructions before this
   // block, and the rest of this block within a conversation, stay cached.
@@ -389,6 +402,25 @@ function recipeLines(household: KakakHousehold): string[] {
     for (const dish of menu) lines.push(`- ${dish.day} ${dish.meal}: ${dish.title}${dish.recipe ? ` (${dish.recipe})` : ""}`);
   }
   return lines;
+}
+
+/**
+ * PR C2: what recipe ideas must follow, and whether there are kitchen notes
+ * (never their text), or nothing when neither was read, so an older read's
+ * block is as it was:
+ *
+ *   Food preferences (for recipe ideas): halal (no pork or lard).
+ *   Kitchen notes: yes (for whoever cooks; you never see what they say).
+ */
+function ideaLines(household: KakakHousehold): string[] {
+  const lines: string[] = [];
+  if (household.foodRules !== undefined) {
+    lines.push(`Food preferences (for recipe ideas): ${foodRulesForKakak(household.foodRules)}.`);
+  }
+  if (household.kitchenNotes !== undefined) {
+    lines.push(household.kitchenNotes ? "Kitchen notes: yes (for whoever cooks; you never see what they say)." : "Kitchen notes: none.");
+  }
+  return lines.length ? ["", ...lines] : [];
 }
 
 /**
