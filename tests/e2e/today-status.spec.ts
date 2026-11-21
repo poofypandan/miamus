@@ -443,3 +443,53 @@ test("at 390 px in Indonesian, the date pill and Hari ini stay on one line besid
   await expect(page.locator("[data-stacked]")).toHaveCount(0);
   await expect(page.getByTestId("date-pill-room")).toHaveCount(0);
 });
+
+test("under each face, the person's own areas, the same on a day with no tasks for them (05, section d)", async ({ context, page }) => {
+  const staffRow = (id: string, name: string, hidden: string[]) => ({
+    id,
+    household_id: HOUSEHOLD_ID,
+    name,
+    has_pin: true,
+    user_id: null,
+    archived_at: null,
+    hidden_areas: hidden,
+    created_at: "2026-10-01T00:00:00Z",
+  });
+  await installStub(context, {
+    owner: { locale: "en" },
+    staff: [
+      staffRow(STAFF_ID, "Ari", ["pets", "kitchen", "repairs"]),
+      staffRow("00000000-0000-4000-8000-00000000c002", "Syam", ["home", "repairs"]),
+      staffRow("00000000-0000-4000-8000-00000000c003", "Dewi", []),
+    ],
+  });
+  await page.goto("/dashboard?module=agenda");
+  const circle = (name: string) => page.getByTestId("person-circle").filter({ hasText: name });
+  await expect(circle("Ari")).toBeVisible({ timeout: 20_000 });
+  const areasOf = (name: string) =>
+    circle(name).getByTestId("person-areas").locator("[data-area]").evaluateAll((els) => els.map((e) => e.getAttribute("data-area")));
+  expect(await areasOf("Ari")).toEqual(["home"]);
+  expect(await areasOf("Syam")).toEqual(["pets", "kitchen"]);
+  // Everything: nothing to say.
+  expect(await areasOf("Dewi")).toEqual([]);
+});
+
+test("when everyone keeps every area, the card has no row of symbols at all (Fable)", async ({ context, page }) => {
+  const staffRow = (id: string, name: string) => ({
+    id,
+    household_id: HOUSEHOLD_ID,
+    name,
+    has_pin: true,
+    user_id: null,
+    archived_at: null,
+    hidden_areas: [],
+    created_at: "2026-10-01T00:00:00Z",
+  });
+  await installStub(context, {
+    owner: { locale: "en" },
+    staff: [staffRow(STAFF_ID, "Ari"), staffRow("00000000-0000-4000-8000-00000000c002", "Syam")],
+  });
+  await page.goto("/dashboard?module=agenda");
+  await expect(page.getByTestId("person-circle").first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("person-areas")).toHaveCount(0);
+});

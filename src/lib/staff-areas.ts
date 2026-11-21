@@ -75,6 +75,21 @@ export function ownAreas(person: Person | null | undefined): Set<StaffArea> {
 }
 
 /**
+ * The area symbols under a person's face on Today (Today v3; 05, section d,
+ * which the owner adopted): what that person looks after, from the areas an
+ * owner left on for them, so their circle reads the same on every day (it
+ * used to come from the day's own tasks, and a quiet day left a blank band).
+ * Only the areas the household uses (`available`: no paw with pets off, no
+ * wrench with Repairs off). Someone with every one of them shows none:
+ * "does everything" says nothing. So never more than three.
+ */
+export function areaSymbols(person: Person | null | undefined, available: readonly StaffArea[]): StaffArea[] {
+  const own = ownAreas(person);
+  const theirs = AREAS.filter((area) => available.includes(area) && own.has(area));
+  return theirs.length === available.length ? [] : theirs;
+}
+
+/**
  * The person's areas on `day` (YYYY-MM-DD): their own, plus those of anyone
  * whose approved leave that day gives their work to this person (rule 4).
  * An owner's roster row: all four. Nobody signed in: all four, as the staff
