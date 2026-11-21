@@ -8,6 +8,8 @@ import { useHousehold } from "@/context/household-context";
 import { useToday } from "@/hooks/use-today";
 import { expandChores, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { applyLeaveTriage } from "@/lib/leave";
+import { visibleChores } from "@/lib/features";
+import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { dataProvider } from "@/lib/data";
 import { AGENDA_WEEK_DAYS, weekStartOf } from "@/lib/unified-agenda";
 import { formatDateLocal } from "@/lib/scheduleEngine";
@@ -142,11 +144,14 @@ function RoomTile({ room, onOpen }: { room: HouseRoom; onOpen: () => void }) {
  *
  * The household's chore list holds only the browsed week, and only this
  * week's carries the rolled-over chores (Codex, PR #186). So while another
- * week is browsed, this week's chores are read on their own, once, and the
- * live list takes over again when the browsed week is this one.
+ * week is browsed, this week's chores are read on their own, again whenever
+ * the household's chores change (an edit from a room's sheet), with Bills
+ * off hiding bills as the household's list does; the live list takes over
+ * again when the browsed week is this one.
  */
 export function useOverdueChores(): ChoreOccurrence[] {
   const { householdTasks, leaveRequests, selectedDate } = useHousehold();
+  const { flags } = useHouseholdFeatures();
   const today = useToday();
   const todayStr = formatDateLocal(today);
   const thisWeekStart = formatDateLocal(weekStartOf(today));
@@ -168,9 +173,18 @@ export function useOverdueChores(): ChoreOccurrence[] {
     return () => {
       live = false;
     };
-  }, [browsingThisWeek, thisWeekStart, todayStr]);
+    // householdTasks: read again after any change to the chores.
+  }, [browsingThisWeek, thisWeekStart, todayStr, householdTasks]);
 
-  const rows = browsingThisWeek ? householdTasks : thisWeek?.start === thisWeekStart ? thisWeek.rows : null;
+  const rows = useMemo(
+    () =>
+      browsingThisWeek
+        ? householdTasks
+        : thisWeek?.start === thisWeekStart
+          ? visibleChores(thisWeek.rows, flags)
+          : null,
+    [browsingThisWeek, householdTasks, thisWeek, thisWeekStart, flags]
+  );
   return useMemo(
     () =>
       rows

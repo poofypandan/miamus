@@ -167,6 +167,23 @@ test("browsing another week first: the house still knows what was left, and its 
   await expect(page.getByText("Pel teras")).toBeVisible();
 });
 
+test("browsing another week with Bills off: a late bill never turns its room amber (Codex, PR #186)", async ({ context, page }) => {
+  await installStub(context, {
+    owner: { locale: "en" },
+    rooms: ROOMS,
+    chores: [chore({ title: "Bayar listrik", category: "bill", due_date: day(-2), location_id: GUEST.id })],
+    repairs: [],
+    features: { bills: false },
+  });
+  await seenCards(context);
+  await page.goto("/dashboard?module=chores&chores=today");
+  await page.getByLabel("Jump to date").fill(day(9), { timeout: 20_000 });
+  await page.getByRole("tablist", { name: "Home" }).getByRole("tab", { name: "Rooms" }).click();
+  const house = page.getByRole("region", { name: "The house" });
+  await expect(house.getByRole("button", { name: "LT2 · Kamar Tamu", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Needs attention" })).toHaveCount(0);
+});
+
 test("the house in Bahasa Indonesia", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" }, rooms: ROOMS, chores: CHORES, repairs: [leak] });
   await seenCards(context);
