@@ -473,3 +473,23 @@ test("under each face, the person's own areas, the same on a day with no tasks f
   // Everything: nothing to say.
   expect(await areasOf("Dewi")).toEqual([]);
 });
+
+test("when everyone keeps every area, the card has no row of symbols at all (Fable)", async ({ context, page }) => {
+  const staffRow = (id: string, name: string) => ({
+    id,
+    household_id: HOUSEHOLD_ID,
+    name,
+    has_pin: true,
+    user_id: null,
+    archived_at: null,
+    hidden_areas: [],
+    created_at: "2026-10-01T00:00:00Z",
+  });
+  await installStub(context, {
+    owner: { locale: "en" },
+    staff: [staffRow(STAFF_ID, "Ari"), staffRow("00000000-0000-4000-8000-00000000c002", "Syam")],
+  });
+  await page.goto("/dashboard?module=agenda");
+  await expect(page.getByTestId("person-circle").first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("person-areas")).toHaveCount(0);
+});

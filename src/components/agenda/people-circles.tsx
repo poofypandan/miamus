@@ -40,6 +40,12 @@ export function PeopleCircles({
   const t = useT();
   const workload = useWorkloadParam();
   if (progress.people.length === 0 && !progress.anyone) return null;
+  const symbolsOf = (person: PersonProgress) =>
+    person.onLeave ? [] : areaSymbols(profiles.find((p) => p.id === person.id), areas);
+  // No row of symbols at all when nobody has one to show (the usual home,
+  // where everyone keeps every area, or everyone on leave): the card closes
+  // up instead of keeping an empty band (Fable).
+  const withSymbols = progress.people.some((person) => symbolsOf(person).length > 0);
   return (
     <section
       aria-label={t("Who is on track", "Siapa yang lancar")}
@@ -50,12 +56,12 @@ export function PeopleCircles({
         <Circle
           key={person.id}
           person={person}
-          symbols={areaSymbols(profiles.find((p) => p.id === person.id), areas)}
+          symbols={withSymbols ? symbolsOf(person) : null}
           onPress={() => workload.openPerson(person.id)}
         />
       ))}
       {progress.anyone && progress.anyone.open > 0 && (
-        <AnyoneCircle anyone={progress.anyone} onPress={() => workload.openPerson(ANYONE_PERSON)} />
+        <AnyoneCircle anyone={progress.anyone} symbolRow={withSymbols} onPress={() => workload.openPerson(ANYONE_PERSON)} />
       )}
     </section>
   );
@@ -68,7 +74,16 @@ function counts(person: PersonProgress) {
   return { done, total, left };
 }
 
-function Circle({ person, symbols, onPress }: { person: PersonProgress; symbols: StaffArea[]; onPress: () => void }) {
+function Circle({
+  person,
+  symbols,
+  onPress,
+}: {
+  person: PersonProgress;
+  /** Their area symbols; null when no one on the card has any (no row). */
+  symbols: StaffArea[] | null;
+  onPress: () => void;
+}) {
   const t = useT();
   const { done, total, left } = counts(person);
   const away = person.onLeave || !!person.busy;
@@ -121,18 +136,19 @@ function Circle({ person, symbols, onPress }: { person: PersonProgress; symbols:
       </span>
       <span className="w-full truncate px-0.5 text-center text-xs font-medium text-gray-900">{person.name}</span>
       {/* What they look after, their own areas; nothing when on leave. */}
-      <span className="flex h-4 items-center gap-1 text-subtle-foreground" data-testid="person-areas" aria-hidden>
-        {!person.onLeave &&
-          symbols.map((area) => {
+      {symbols && (
+        <span className="flex h-4 items-center gap-1 text-subtle-foreground" data-testid="person-areas" aria-hidden>
+          {symbols.map((area) => {
             const Icon = AREA_ICON[area];
             return <Icon key={area} data-area={area} className="size-3.5" />;
           })}
-      </span>
+        </span>
+      )}
     </button>
   );
 }
 
-function AnyoneCircle({ anyone, onPress }: { anyone: AnyoneProgress; onPress: () => void }) {
+function AnyoneCircle({ anyone, symbolRow, onPress }: { anyone: AnyoneProgress; symbolRow: boolean; onPress: () => void }) {
   const t = useT();
   const label = t("Anyone", "Siapa saja");
   return (
@@ -158,7 +174,7 @@ function AnyoneCircle({ anyone, onPress }: { anyone: AnyoneProgress; onPress: ()
         </span>
       </span>
       <span className="w-full truncate px-0.5 text-center text-xs font-medium text-gray-900">{label}</span>
-      <span className="h-4" aria-hidden />
+      {symbolRow && <span className="h-4" aria-hidden />}
     </button>
   );
 }
