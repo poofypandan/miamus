@@ -1,26 +1,42 @@
 "use client";
 
-import { Check, House, PawPrint, Users } from "lucide-react";
+import { Check, CookingPot, House, PawPrint, Users, Wrench, type LucideIcon } from "lucide-react";
 import { ProgressRing } from "@/components/agenda/progress-ring";
 import { initialsOf } from "@/components/dashboard/staff-progress-card";
 import { useT } from "@/context/owner-locale-context";
 import { ANYONE_PERSON, useWorkloadParam } from "@/hooks/use-staff-workload";
 import type { AnyoneProgress, PersonProgress, StaffProgress } from "@/lib/staff-progress";
+import { areaSymbols, type StaffArea } from "@/lib/staff-areas";
+import type { StaffProfile } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 /**
  * The people, at a glance (Today v3, 21 Nov; docs/private/landing/06): an
  * initial in a ring for each person, filling with their own day, never a
  * photograph. A tick when their day is done, a small number when something
- * is left; under the name, the symbols of what they look after (the tab
- * bar's house and paw, labelled there). "Anyone" joins only while something
- * nobody owns is still open.
+ * is left; under the name, the symbols of what they look after (the areas
+ * an owner left on for them: the house, the paw, the pot, the wrench, as the
+ * tab bar and the staff app draw them; lib/staff-areas areaSymbols). They
+ * belong to the person, so they read the same on a quiet day. "Anyone" joins
+ * only while something nobody owns is still open.
  *
  * Owners only. In the order people were added, never sorted by how much is
  * done, and no words compare one person with another. A circle opens that
  * person's day in Who did what, as their row did.
  */
-export function PeopleCircles({ progress }: { progress: StaffProgress }) {
+const AREA_ICON: Record<StaffArea, LucideIcon> = { home: House, pets: PawPrint, kitchen: CookingPot, repairs: Wrench };
+
+export function PeopleCircles({
+  progress,
+  profiles,
+  areas,
+}: {
+  progress: StaffProgress;
+  /** The roster, for each person's own areas. */
+  profiles: readonly StaffProfile[];
+  /** The areas this household uses (no pets or Repairs when switched off). */
+  areas: readonly StaffArea[];
+}) {
   const t = useT();
   const workload = useWorkloadParam();
   if (progress.people.length === 0 && !progress.anyone) return null;
@@ -31,7 +47,12 @@ export function PeopleCircles({ progress }: { progress: StaffProgress }) {
       className="flex justify-between overflow-x-auto rounded-2xl bg-card px-1 py-3 shadow-card [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {progress.people.map((person) => (
-        <Circle key={person.id} person={person} onPress={() => workload.openPerson(person.id)} />
+        <Circle
+          key={person.id}
+          person={person}
+          symbols={areaSymbols(profiles.find((p) => p.id === person.id), areas)}
+          onPress={() => workload.openPerson(person.id)}
+        />
       ))}
       {progress.anyone && progress.anyone.open > 0 && (
         <AnyoneCircle anyone={progress.anyone} onPress={() => workload.openPerson(ANYONE_PERSON)} />
@@ -47,7 +68,7 @@ function counts(person: PersonProgress) {
   return { done, total, left };
 }
 
-function Circle({ person, onPress }: { person: PersonProgress; onPress: () => void }) {
+function Circle({ person, symbols, onPress }: { person: PersonProgress; symbols: StaffArea[]; onPress: () => void }) {
   const t = useT();
   const { done, total, left } = counts(person);
   const away = person.onLeave || !!person.busy;
@@ -99,10 +120,13 @@ function Circle({ person, onPress }: { person: PersonProgress; onPress: () => vo
         ) : null}
       </span>
       <span className="w-full truncate px-0.5 text-center text-xs font-medium text-gray-900">{person.name}</span>
-      {/* What they look after, as the tab bar draws it; nothing when on leave. */}
-      <span className="flex h-4 items-center gap-1 text-subtle-foreground" aria-hidden>
-        {!person.onLeave && person.house && <House className="size-3.5" />}
-        {!person.onLeave && person.pets && <PawPrint className="size-3.5" />}
+      {/* What they look after, their own areas; nothing when on leave. */}
+      <span className="flex h-4 items-center gap-1 text-subtle-foreground" data-testid="person-areas" aria-hidden>
+        {!person.onLeave &&
+          symbols.map((area) => {
+            const Icon = AREA_ICON[area];
+            return <Icon key={area} data-area={area} className="size-3.5" />;
+          })}
       </span>
     </button>
   );

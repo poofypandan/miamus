@@ -1,5 +1,6 @@
 "use client";
 
+import { AREAS } from "@/lib/staff-areas";
 import { startTransition, useMemo, useRef, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
@@ -256,6 +257,11 @@ export function AgendaTab() {
   // Food to eat soon (Phase 156): the same kind of quiet line, above it.
   // Food at home and Repairs switched off (Phase 171): their lines go.
   const { food: foodOn, repairs: repairsOn } = useHouseholdFeatures();
+  // The areas this household uses, for the symbols under each person.
+  const householdAreas = useMemo(
+    () => AREAS.filter((area) => (area === "pets" ? petsOn : area === "repairs" ? repairsOn : true)),
+    [petsOn, repairsOn]
+  );
   const eatSoon = useMemo(
     () => (foodOn ? countEatSoon(foodItems, formatDateLocal(today)) : 0),
     [foodItems, today, foodOn]
@@ -865,7 +871,7 @@ export function AgendaTab() {
             in the Who did what sheet. */}
         {range === "day" && hasStaff && progress && (
           // scroll-mt: the late row scrolls here, clear of the sticky header.
-          <PeopleCircles progress={progress} />
+          <PeopleCircles progress={progress} profiles={allProfiles ?? []} areas={householdAreas} />
         )}
 
         {/* Next (Today v3): what happens from here, three rows at most; its
