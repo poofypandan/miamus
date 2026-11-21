@@ -8,7 +8,8 @@ import { AREAS } from "@/lib/staff-areas";
 import { isDay, isTime } from "@/lib/kakak/validate";
 import type { ExpectedShoppingItem, FieldMatcher, KakakTestSet } from "./types";
 
-const REF_FIELDS: Record<string, "people" | "pets" | "rooms" | "items"> = {
+const REF_FIELDS: Record<string, "people" | "pets" | "rooms" | "items" | "recipes"> = {
+  recipe: "recipes",
   assignee: "people",
   room: "rooms",
   pet: "pets",
@@ -19,7 +20,7 @@ const REF_FIELDS: Record<string, "people" | "pets" | "rooms" | "items"> = {
 /** Fields whose sameSet lists references (add_pet_routine's pets, Phase 173 PR B). */
 const REF_SET_FIELDS: Record<string, "people" | "pets" | "rooms" | "items"> = { pets: "pets" };
 
-const DATE_FIELDS = new Set(["due_date", "recurrence_until", "expires_on", "until"]);
+const DATE_FIELDS = new Set(["due_date", "recurrence_until", "expires_on", "until", "day"]);
 const TIME_FIELDS = new Set(["due_time"]);
 
 function schemaFields(tool: string): Set<string> {
@@ -47,7 +48,8 @@ export function checkTestSet(
   const checkValue = (where: string, field: string, matcher: FieldMatcher) => {
     const kind = REF_FIELDS[field];
     for (const value of literals(matcher)) {
-      if (kind && value !== null && !refs[kind].has(String(value))) {
+      // plan_dish's "none" is no recipe, not a reference.
+      if (kind && value !== null && !(field === "recipe" && value === "none") && !refs[kind].has(String(value))) {
         problems.push(`${where}: ${field} ${JSON.stringify(value)} is not in the household`);
       }
       if (DATE_FIELDS.has(field) && value !== null && !isDay(value)) {
@@ -112,7 +114,7 @@ export function checkTestSet(
           return;
         }
         if (t !== path.length - 1) problems.push(`${at}: only the last turn may be a ${turn.kind}`);
-        if (turn.kind === "message") {
+        if (turn.kind === "message" || turn.kind === "suggestions") {
           if ((turn.mentions ?? []).some((group) => group.length === 0 || group.some((n) => !n.trim()))) problems.push(`${at}: an empty mentions group`);
           if ((turn.avoids ?? []).some((n) => !n.trim())) problems.push(`${at}: an empty avoids entry`);
         }

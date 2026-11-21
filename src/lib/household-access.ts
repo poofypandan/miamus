@@ -44,6 +44,52 @@ export interface AccessRequest {
   locale?: string | null;
   /** The WhatsApp number they asked to be told on (628…), if any (migrations/143). */
   whatsapp?: string | null;
+  /** "What can Miamus help with at home?", as they answered it (migrations/175). */
+  wants_help_with?: string | null;
+  /** "Who introduced you to Miamus?", if they answered (migrations/175). */
+  heard_from?: string | null;
+}
+
+/**
+ * The Request access questions' limits (migrations/175). The database checks
+ * them too and has the last word.
+ */
+export const WANTS_HELP_MAX = 300;
+export const HEARD_FROM_MAX = 100;
+
+/** The answer's comma-separated parts, trimmed: what a suggestion is matched against. */
+function answerParts(text: string): string[] {
+  return text
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/** Whether a tapped suggestion is in the answer as one of its parts (any case). */
+export function hasSuggestion(text: string, phrase: string): boolean {
+  const key = phrase.toLocaleLowerCase();
+  return answerParts(text).some((part) => part.toLocaleLowerCase() === key);
+}
+
+/**
+ * A suggestion tapped under "What can Miamus help with at home?" (the
+ * north star: less typing). Not in the answer yet: added at the end, after a
+ * comma. Already there: taken out again. Anything they typed stays. When
+ * adding it would pass `max`, the answer is left as it is.
+ */
+export function toggleSuggestion(text: string, phrase: string, max = WANTS_HELP_MAX): string {
+  const key = phrase.toLocaleLowerCase();
+  // Raw pieces, so only the suggestion's own piece goes and the rest stays
+  // exactly as typed ("2,5 lantai" keeps its decimal comma).
+  const pieces = text.split(",");
+  const at = pieces.findIndex((piece) => piece.trim().toLocaleLowerCase() === key);
+  if (at >= 0) {
+    pieces.splice(at, 1);
+    return pieces.join(",").replace(/^[\s,]+|[\s,]+$/g, "");
+  }
+  const base = text.replace(/[\s,]+$/, "");
+  const next = base ? `${base}, ${phrase}` : phrase;
+  return next.length <= max ? next : text;
 }
 
 /** Pending first (oldest first, so nobody waits longest), then decisions, newest first. */

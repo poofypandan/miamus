@@ -14,7 +14,8 @@ import type { HouseholdTask } from "@/types/database";
 
 // "kitchen": kitchen amounts (Phase 170 PR A, migrations/148), the first
 // feature that joins off (D4); on for the households that existed when 148
-// ran, the founding household among them.
+// ran, the founding household among them. Recipes and the menu left it on
+// 20 Nov (recipesOn).
 export const FEATURES = ["repairs", "bills", "food", "kitchen"] as const;
 export type Feature = (typeof FEATURES)[number];
 export type FeatureFlags = Record<Feature, boolean>;
@@ -68,6 +69,16 @@ export function amountsOn(flags: Pick<FeatureFlags, "kitchen">): boolean {
 }
 
 /**
+ * The items as cooking and Add missing to Shopping count them: with Kitchen
+ * amounts off, none is tracked, so nothing reads or takes an amount the
+ * screens hide (recipes and the menu are on for every home since 20 Nov,
+ * so a home with the switch off reaches them too).
+ */
+export function countedItems<T extends { track_amount?: boolean }>(items: readonly T[], amounts: boolean): readonly T[] {
+  return amounts ? items : items.map((item) => (item.track_amount ? { ...item, track_amount: false } : item));
+}
+
+/**
  * D6: fresh food and pantry items browse under Food → Ingredients, beside
  * Ready to eat, while kitchen amounts and Food at home are both on;
  * otherwise everything stays under Shopping, as before. Each item lives in
@@ -78,23 +89,24 @@ export function ingredientsUnderFood(flags: Pick<FeatureFlags, "kitchen" | "food
 }
 
 /**
- * Recipes (Phase 170 PR B, migrations/151) belong to the Kitchen switch,
- * like amounts: the Menu pill shows while it's on. Off hides the pill;
- * the recipes stay saved and come back with the switch.
+ * Recipes and the menu (Phase 170 PR B and C) are on for every home since
+ * 20 Nov (owner, decision 2 on Can we cook it?): the Menu pill, Menu hari
+ * ini and Today's menu line no longer wait for the Kitchen switch, which
+ * now holds kitchen amounts only. Kept as a function, with the flags, so
+ * every reader stays one place to change.
  */
-export function recipesOn(flags: Pick<FeatureFlags, "kitchen">): boolean {
-  return flags.kitchen;
+export function recipesOn(): boolean {
+  return true;
 }
 
 export type KitchenViewValue = "food" | "buy" | "menu";
 
 /**
  * The Kitchen pill for a ?kitchen= value: with Food at home off there is no
- * Food, and with the Kitchen switch off there is no Menu; either falls back
- * to the first pill that's there.
+ * Food, and it falls back to the first pill that's there.
  */
 export function kitchenViewFor(view: KitchenViewValue, flags: FeatureFlags): KitchenViewValue {
-  if (view === "menu" && !recipesOn(flags)) return flags.food ? "food" : "buy";
+  if (view === "menu" && !recipesOn()) return flags.food ? "food" : "buy";
   return view === "food" && !flags.food ? "buy" : view;
 }
 
@@ -104,7 +116,7 @@ export function kitchenViewFor(view: KitchenViewValue, flags: FeatureFlags): Kit
  * One pill is no pills.
  */
 export function kitchenViews(flags: FeatureFlags): KitchenViewValue[] {
-  const menu = recipesOn(flags) ? (["menu"] as const) : [];
+  const menu = recipesOn() ? (["menu"] as const) : [];
   return flags.food ? ["food", ...menu, "buy"] : ["buy", ...menu];
 }
 

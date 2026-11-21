@@ -88,3 +88,54 @@ test("automatic approvals are labelled; a hand-approved one is told by WhatsApp,
   await expect(page.getByText("Link copied")).toBeVisible();
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("https://miamus.app");
 });
+
+// The two Request access answers (owner, 2026-11-20; migrations/175), under
+// the requester's name, in the operator's language; nothing where none was
+// given.
+const withAnswers = [
+  {
+    user_id: "00000000-0000-4000-8000-0000000000d1",
+    full_name: "Maya Putri",
+    email: "maya@example.test",
+    status: "pending",
+    requested_at: "2026-11-20T01:00:00Z",
+    decided_at: null,
+    auto: false,
+    locale: "id",
+    wants_help_with: "Staff at home, Repairs",
+    heard_from: "My sister Dewi",
+  },
+  {
+    user_id: "00000000-0000-4000-8000-0000000000d2",
+    full_name: "Old Request",
+    email: "old@example.test",
+    status: "pending",
+    requested_at: "2026-11-19T01:00:00Z",
+    decided_at: null,
+    auto: false,
+    locale: "en",
+    wants_help_with: null,
+    heard_from: null,
+  },
+];
+
+for (const locale of ["en", "id"] as const) {
+  test(`the answers show under the requester's name (${locale})`, async ({ context, page }) => {
+    await installStub(context, { owner: { locale } });
+    await context.route(`${STUB_URL}/rest/v1/rpc/list_household_access_requests*`, (route) =>
+      route.fulfill({ json: withAnswers })
+    );
+
+    await page.goto("/dashboard/approvals");
+    await expect(page.getByText("Maya Putri")).toBeVisible({ timeout: 20_000 });
+    const card = page.locator("[data-slot=card]").filter({ hasText: "Maya Putri" });
+    await expect(card).toContainText(locale === "id" ? "Ingin dibantu" : "Wants help with");
+    await expect(card).toContainText("Staff at home, Repairs");
+    await expect(card).toContainText(locale === "id" ? "Tahu Miamus dari" : "Heard about Miamus from");
+    await expect(card).toContainText("My sister Dewi");
+
+    const old = page.locator("[data-slot=card]").filter({ hasText: "Old Request" });
+    await expect(old).toBeVisible();
+    await expect(old.locator("dl")).toHaveCount(0);
+  });
+}

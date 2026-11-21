@@ -10,6 +10,7 @@ import { kakakSystem, toolsFor } from "@/lib/kakak/engine";
 import type { KakakHousehold } from "@/lib/kakak/household";
 import { correctionFor, guardReplyText, replyProblems } from "@/lib/kakak/reply-guard";
 import { validateToolCall } from "@/lib/kakak/validate";
+import { dishAnswerFromBlock } from "@/lib/kakak/dish-answer";
 import { budgetFetch, type Budget } from "./budget";
 import { scriptedReply, type ActualTurn, type RejectedAttempt, type ToolCall } from "./grade";
 import type { KakakCase } from "./types";
@@ -287,13 +288,19 @@ export async function playConversation(
       }
     }
     // What the owner would see: the route's guard on the model's words.
+    // A dish card with no line, or one the guard dropped, gets the app's
+    // own answer (engine.ts; run 44705966410).
+    // The amount watch stays off here: states_amount grades her own words.
     const guarded =
-      classified.kind === "invalid" ? { text, tells: [] } : guardReplyText(classified.kind, text, caseHousehold.ownerLocale);
+      classified.kind === "invalid"
+        ? { text, tells: [] }
+        : guardReplyText(classified.kind, text, caseHousehold.ownerLocale);
+    const shown = guarded.text || (classified.kind === "suggestions" ? dishAnswerFromBlock(caseHousehold, plain) : "");
     const turn: ActualTurn = {
       ...classified,
       calls: plain,
-      text: guarded.text,
-      ...(guarded.text !== text ? { rawText: text } : {}),
+      text: shown,
+      ...(shown !== text ? { rawText: text } : {}),
       ...(guarded.tells.length ? { guarded: guarded.tells } : {}),
     };
     result.turns.push(turn);
