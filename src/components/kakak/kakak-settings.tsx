@@ -55,7 +55,7 @@ export function KakakSettings({ status, reload }: { status: KakakStatus; reload:
       <Card className="py-4">
         <CardContent className="flex flex-col gap-4 px-4">
           <div className="flex items-start gap-3">
-            <KakakAvatar className="size-10" />
+            <KakakAvatar large className="size-10" />
             <p className="text-sm text-gray-900">
               {t(
                 "Kakak sets up chores, shopping, pet routines, food, ingredients and what staff see from what you type or say, and answers questions about how Miamus works. She shows you a card first; nothing is saved until you confirm.",

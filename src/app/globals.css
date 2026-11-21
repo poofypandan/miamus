@@ -45,6 +45,8 @@
   --color-kakak: var(--kakak);
   --color-kakak-tint: var(--kakak-tint);
   --color-kakak-line: var(--kakak-line);
+  /* Mark D's disc (20 Nov): the same warm white as --card. */
+  --color-kakak-disc: var(--kakak-disc);
   /* Warm paper (21 Nov, the app's visual direction, PR 1): status colours
      with meaning, to replace emerald-, amber- and red- over time (PR 8).
      Amber never carries a state by its tint alone: always an icon and its
@@ -127,6 +129,10 @@
      floats (Kakak, Lapor, toasts, sheets). Added here, used from PR 3. */
   --shadow-card: 0 1px 2px rgb(60 40 20 / 0.04), 0 10px 28px -14px rgb(60 40 20 / 0.16);
   --shadow-float: 0 2px 6px rgb(60 40 20 / 0.08), 0 16px 36px -10px rgb(60 40 20 / 0.28);
+  /* Kakak's mark D sits on its own shadow, since its disc is the surfaces'
+     own warm white: the deeper one from 36 px, the small one below. */
+  --shadow-kakak: 0 0 0 1px rgb(31 26 23 / 0.05), 0 1px 2px rgb(60 40 20 / 0.10), 0 5px 14px -5px rgb(60 40 20 / 0.24);
+  --shadow-kakak-sm: 0 0 0 1px rgb(31 26 23 / 0.06), 0 1px 3px rgb(60 40 20 / 0.16);
   /* The one large line a screen (30 px). Used from PR 4. */
   --text-title: 1.875rem;
   --text-title--line-height: 2.125rem;
@@ -214,6 +220,7 @@
   --kakak: #b65f55;
   --kakak-tint: #fbf1ee;
   --kakak-line: #f1ddd7;
+  --kakak-disc: #fffdf8;
 }
 
 .dark {
@@ -252,6 +259,8 @@
   --kakak: #e5a196;
   --kakak-tint: #2b201e;
   --kakak-line: #4a3431;
+  /* Mark D on dark: the same warm white, with no shadow needed (README). */
+  --kakak-disc: #fffdf8;
 }
 
 @layer base {

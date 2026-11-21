@@ -93,6 +93,7 @@ people are **staf** and **admin**.
 | Let Kakak help (household switch) | **Izinkan Kakak membantu** | The opt-in switch; says what is sent and to whom. |
 | Kakak's guess — check it | **Tebakan Kakak — cek lagi** | Marks a field Kakak guessed (a date, a room) so the owner looks again. |
 | Sorry, I didn't catch that. Could you say it another way? | **Maaf, Kakak belum paham. Bisa Anda katakan dengan cara lain?** | Said instead of a Kakak reply that the server dropped (a note to self, a reference, the wrong language). Builds on the sheet's existing "Maaf, Kakak belum paham." |
+| Add Chore: What · Who · When · More | **Tambah Tugas: Apa · Siapa · Kapan · Lainnya** | 21 Nov: the form short by default (Fable's 07, section 10). Kapan reads back in words: **Hari ini, sekali** · **Besok pukul 09.00, sekali** · **Setiap Senin pukul 09.00** · **Setiap hari, mulai besok, sampai 30 Des**. |
 | Rooms · Chores · Repairs (Home pill) | **Ruangan · Tugas · Perbaikan** | Phase 175: was Today · Rooms (Phase 158) and Repairs (Phase 159). Rooms first since 21 Nov, when Home moved to the centre tab and opens on the house. "Ruangan", not "Kamar": a lounge or a terrace isn't a kamar. |
 | Tabs: Today · Pets · Home · Kitchen · Settings | **Hari ini · Hewan · Rumah · Dapur · Pengaturan** | 21 Nov: Home in the centre (Fable's tab order). No pets: Hari ini · Rumah · Dapur · Pengaturan. |
 | The house (Home → Rooms drawing) · Needs attention · since 7 Nov | **Rumah · Perlu perhatian · sejak Sab 7 Nov** | 21 Nov: rooms drawn floor by floor, the top floor first. Amber is "kuning" in words, always with the warning mark. |
@@ -383,6 +384,7 @@ people are **staf** and **admin**.
 | Notifications on for this phone · Turn on notifications for this phone | **Notifikasi aktif di HP ini** · **Aktifkan notifikasi di HP ini** | Phase 175 check, P5: Settings → Notifikasi and the Set up card. "HP", never "perangkat". |
 | Untick what you don't have. (starter list, a home with no rooms yet) | **Hapus centang yang tidak ada.** | Phase 175 check, F3: the card's starter list starts ticked, as /setup does. |
 | Use soon | **Segera dipakai** | Phase 176: the first group under Ingredients. "Dipakai", as in *Pakai bahan ini*. |
+| Everything · Use soon · To buy (Kitchen shelves' pills) · Nothing in the kitchen yet | **Semua · Segera dipakai · Perlu dibeli** · **Dapur masih kosong** | 21 Nov: the owners' Kitchen → Food as shelves (Fable's 08). A tile's word: **Hari ini · Besok · 3 hari lagi · Lewat 2 hari · Hampir habis · Habis · Cek tanggalnya**. A tile is **kotak**; a place is **rak**. |
 | Expires today / Expires tomorrow / Expires in 5 days | **Kedaluwarsa hari ini** / **Kedaluwarsa besok** / **Kedaluwarsa 5 hari lagi** | Phase 176: under an ingredient's name. Past the date it is the food row's words: **Lewat 2 hari — cek dulu**. |
 | {name} · moved to Fridge | **{name} · dipindahkan ke Kulkas** | Phase 176: the move toast, with Undo / **Batalkan**. |
 | Out of the freezer. When does it expire now? | **Keluar dari freezer. Sekarang kapan kedaluwarsa?** | Phase 176: above the date chips after a move out of the freezer. No date is filled in. |
