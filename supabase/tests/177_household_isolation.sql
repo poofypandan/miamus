@@ -98,7 +98,9 @@ begin
   insert into public.user_preferences (user_id, locale) values (admin, 'en');
   insert into public.staff_profiles (id, household_id, name, pin, has_pin)
   values (staff, hh, 'Staf ' || upper(t), extensions.crypt('1234', extensions.gen_salt('bf')), true);
-  insert into public.device_sessions (user_id, household_id, staff_id) values (phone, hh, staff);
+  insert into public.device_sessions (id, user_id, household_id, staff_id) values (pg_temp.id(t, 35), phone, hh, staff);
+  -- Someone who left: what restore_staff_profile brings back.
+  insert into public.staff_profiles (id, household_id, name, archived_at) values (pg_temp.id(t, 38), hh, 'Mantan ' || upper(t), now());
 
   insert into public.task_entities (id, household_id, entity_type, name) values (pet, hh, 'pet', 'Anjing ' || upper(t));
   insert into public.master_schedules (id, entity_id, title, module, frequency_type, fixed_times, proof)
@@ -152,7 +154,17 @@ begin
   values (pg_temp.id(t, 29), admin, hh, jsonb_build_object('endpoint', 'https://fcm.googleapis.com/fcm/send/iso177' || t,
                                                            'keys', jsonb_build_object('p256dh', 'k', 'auth', 'a')));
   insert into public.staff_push_people (device_user_id, staff_id, household_id) values (phone, staff, hh);
-  insert into public.staff_sign_in_attempts (user_id, household_id, staff_id, kind, success) values (phone, hh, staff, 'pin', true);
+  insert into public.staff_sign_in_attempts (user_id, household_id, staff_id, kind, success) values
+    (phone, hh, staff, 'pin', true),
+    -- A claim the claim functions can find: the person claimed their name
+    -- on this phone today (staff_claims_today, undo_staff_claim).
+    (phone, hh, staff, 'claim', true);
+  -- The phone's own push subscription: what makes its staff member a push
+  -- target (staff_will_be_notified).
+  insert into public.push_subscriptions (id, user_id, household_id, subscription)
+  values (pg_temp.id(t, 36), phone, hh, jsonb_build_object('endpoint', 'https://fcm.googleapis.com/fcm/send/iso177phone' || t,
+                                                           'keys', jsonb_build_object('p256dh', 'k', 'auth', 'a')));
+
   insert into public.household_setup (household_id) values (hh);
   insert into public.north_star_days (day, household_id, due, closed) values (current_date - 1, hh, 1, 1);
   insert into public.routine_push_sent (schedule_id, occurs_on, slot_time, push, household_id)
@@ -170,38 +182,66 @@ end $$;
 select pg_temp.seed('a');
 select pg_temp.seed('b');
 
+-- A dish of B's cooked a minute ago, for the un-cook and change probes
+-- (written as an old row: cooking goes through functions only).
+set local session_replication_role = replica;
+insert into public.menu_dishes (id, household_id, day, meal, title, cooked_at, cooked_uses)
+values (pg_temp.id('b', 34), pg_temp.id('b', 1), current_date, 'dinner', 'Soto', now() - interval '1 minute', '[]');
+set local session_replication_role = origin;
+
+-- Household C: a household nobody here belongs to, holding only what a
+-- "move A's rows to another household" probe needs to point at (a pet, an
+-- item, an account). Empty otherwise, so a move can never be refused by
+-- colliding with an existing row instead of by isolation (Codex, PR #158).
+insert into auth.users (id, instance_id, aud, role, email, is_anonymous, created_at, updated_at) values
+  (pg_temp.id('c', 2), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'admin-c@iso177.test', false, now(), now()),
+  (pg_temp.id('c', 9), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'operator@iso177.test', false, now(), now());
+insert into public.households (id, name, owner_auth_id) values (pg_temp.id('c', 1), 'Rumah C', pg_temp.id('c', 2));
+insert into public.task_entities (id, household_id, entity_type, name) values (pg_temp.id('c', 5), pg_temp.id('c', 1), 'pet', 'Kucing C');
+insert into public.inventory_items (id, household_id, name, category, scope) values (pg_temp.id('c', 10), pg_temp.id('c', 1), 'Gula C', 'pantry', 'home');
+
+-- Service-wide tables hold a row, so an empty read proves a refusal.
+insert into public.platform_admins (user_id) values (pg_temp.id('c', 9));
+insert into public.north_star_recorded_days (day) values (date '2001-01-01') on conflict do nothing;
+
+-- Quiet hours (21.00-06.00 WIB) would empty staff_will_be_notified whatever
+-- the household: off for this test (rolled back with it).
+create or replace function public.staff_push_quiet(p_now timestamptz default null) returns boolean
+language sql stable set search_path = '' as $$ select false $$;
+
 \set hA '''00000000-0000-0000-0177-0000000a0001'''
 \set adminA '''00000000-0000-0000-0177-0000000a0002'''
 \set phoneA '''00000000-0000-0000-0177-0000000a0003'''
 \set hB '''00000000-0000-0000-0177-0000000b0001'''
 \set adminB '''00000000-0000-0000-0177-0000000b0002'''
 \set phoneB '''00000000-0000-0000-0177-0000000b0003'''
+\set hC '''00000000-0000-0000-0177-0000000c0001'''
 
 -- ---- Which rows are B's, for every table ---------------------------------------------------
 -- key: the column that names the household (or the thing that does);
 -- a/b: its value for A and for B. Tables with household_id need no line.
-create temp table scope (tbl text primary key, key text, a uuid, b uuid);
+create temp table scope (tbl text primary key, key text, a uuid, b uuid, c uuid);
 insert into pg_temp.scope
-select c.table_name, 'household_id', :hA::uuid, :hB::uuid
+select c.table_name, 'household_id', :hA::uuid, :hB::uuid, :hC::uuid
   from information_schema.columns c
   join pg_tables t on t.schemaname = 'public' and t.tablename = c.table_name
  where c.table_schema = 'public' and c.column_name = 'household_id';
 insert into pg_temp.scope values
-  ('households', 'id', :hA, :hB),
-  ('household_access_requests', 'user_id', :adminA, :adminB),
-  ('user_preferences', 'user_id', :adminA, :adminB),
-  ('account_deletions', 'user_id', :adminA, :adminB),
-  ('task_logs', 'entity_id', pg_temp.id('a', 5), pg_temp.id('b', 5)),
-  ('master_schedules', 'entity_id', pg_temp.id('a', 5), pg_temp.id('b', 5)),
-  ('medical_records', 'entity_id', pg_temp.id('a', 5), pg_temp.id('b', 5)),
-  ('routine_proposals', 'pet_id', pg_temp.id('a', 5), pg_temp.id('b', 5)),
-  ('inventory_audit_logs', 'item_id', pg_temp.id('a', 10), pg_temp.id('b', 10)),
+  ('households', 'id', :hA, :hB, :hC),
+  ('household_access_requests', 'user_id', :adminA, :adminB, pg_temp.id('c', 2)),
+  ('user_preferences', 'user_id', :adminA, :adminB, pg_temp.id('c', 2)),
+  ('account_deletions', 'user_id', :adminA, :adminB, pg_temp.id('c', 2)),
+  ('task_logs', 'entity_id', pg_temp.id('a', 5), pg_temp.id('b', 5), pg_temp.id('c', 5)),
+  ('master_schedules', 'entity_id', pg_temp.id('a', 5), pg_temp.id('b', 5), pg_temp.id('c', 5)),
+  ('medical_records', 'entity_id', pg_temp.id('a', 5), pg_temp.id('b', 5), pg_temp.id('c', 5)),
+  ('routine_proposals', 'pet_id', pg_temp.id('a', 5), pg_temp.id('b', 5), pg_temp.id('c', 5)),
+  ('inventory_audit_logs', 'item_id', pg_temp.id('a', 10), pg_temp.id('b', 10), pg_temp.id('c', 10)),
   -- Settings for the whole service, no household's: no client may read them.
-  ('kakak_config', null, null, null),
-  ('signup_config', null, null, null),
-  ('north_star_recorded_days', null, null, null),
+  ('kakak_config', null, null, null, null),
+  ('signup_config', null, null, null, null),
+  ('north_star_recorded_days', null, null, null, null),
   -- Who runs Miamus: no household's, and no client reads it.
-  ('platform_admins', null, null, null);
+  ('platform_admins', null, null, null, null);
 
 select pg_temp.ok(not exists (
   select 1 from pg_tables t where t.schemaname = 'public'
@@ -218,6 +258,9 @@ begin
   end loop;
 end $$;
 select pg_temp.ok(true, 'the seed holds a row of B''s in every household table');
+select pg_temp.ok((select count(*) from public.kakak_config) > 0 and (select count(*) from public.signup_config) > 0
+                  and (select count(*) from public.north_star_recorded_days) > 0 and (select count(*) from public.platform_admins) > 0,
+  'every service-wide table holds a row (so a client''s empty read is a refusal)');
 
 -- Copies of B's rows (new ids) and of A's rows moved to B, for the insert
 -- attacks: every column a client could send, generated ones left out.
@@ -278,8 +321,11 @@ begin
     for s in select * from pg_temp.scope order by tbl loop
       if s.key is null then
         -- Service-wide settings: no client reads or writes them.
+        -- Never empty (checked above): 0 rows seen means hidden.
         r := pg_temp.try_as(a.uid, format('select count(*) from public.%I', s.tbl));
         insert into pg_temp.results values (a.name, s.tbl, 'read service settings', r, r->>'state' = '42501' or r->>'v' = '0');
+        r := pg_temp.try_as(a.uid, format('delete from public.%I', s.tbl));
+        insert into pg_temp.results values (a.name, s.tbl, 'delete service settings', r, pg_temp.refused(r));
         continue;
       end if;
       cols := pg_temp.insertable_columns(s.tbl);
@@ -293,16 +339,32 @@ begin
       r := pg_temp.try_as(a.uid, format('delete from public.%I where %I = %L', s.tbl, s.key, s.b));
       insert into pg_temp.results values (a.name, s.tbl, 'delete B''s rows', r, pg_temp.refused(r));
 
-      r := pg_temp.try_as(a.uid, format('insert into public.%I (%s) select %s from %I', s.tbl, cols, cols, 'b_' || s.tbl));
-      insert into pg_temp.results values (a.name, s.tbl, 'add a row to B', r, pg_temp.errored(r));
+      -- bill_payments_server_fields runs before RLS and reads tasks with the
+      -- caller's own rights, so it refuses (23514) before the policy is ever
+      -- asked. Off for the write probes on that table, so its RLS is what
+      -- answers (the guard is tested by 138's own test).
+      if s.tbl = 'bill_payments' then
+        alter table public.bill_payments disable trigger bill_payments_server_fields;
+      end if;
 
-      r := pg_temp.try_as(a.uid, format('insert into public.%I (%s) select %s from %I', s.tbl, cols, cols, 'a2b_' || s.tbl));
-      insert into pg_temp.results values (a.name, s.tbl, 'copy an A row into B', r, pg_temp.errored(r));
+      -- Inserts: a row that collides with an existing key is skipped
+      -- (on conflict do nothing), so only a refusal (42501: RLS, a missing
+      -- grant, or a guard) passes; never a unique-key error (Codex, PR #158).
+      r := pg_temp.try_as(a.uid, format('insert into public.%I (%s) select %s from %I on conflict do nothing', s.tbl, cols, cols, 'b_' || s.tbl));
+      insert into pg_temp.results values (a.name, s.tbl, 'add a row to B', r, r->>'state' = '42501');
 
-      -- Refused, or the row stays in A (some tables pin household_id in a trigger).
+      r := pg_temp.try_as(a.uid, format('insert into public.%I (%s) select %s from %I on conflict do nothing', s.tbl, cols, cols, 'a2b_' || s.tbl));
+      insert into pg_temp.results values (a.name, s.tbl, 'copy an A row into B', r, r->>'state' = '42501');
+
+      -- Moves go to household C, which holds nothing to collide with: refused,
+      -- or the row stays in A (some tables pin household_id in a trigger).
       r := pg_temp.try_as(a.uid, format('with moved as (update public.%I set %I = %L where %I = %L returning %I) select count(*) from moved where %I = %L',
-                                        s.tbl, s.key, s.b, s.key, s.a, s.key, s.key, s.b));
-      insert into pg_temp.results values (a.name, s.tbl, 'move A''s rows to B', r, pg_temp.errored(r) or pg_temp.refused(r));
+                                        s.tbl, s.key, s.c, s.key, s.a, s.key, s.key, s.c));
+      insert into pg_temp.results values (a.name, s.tbl, 'move A''s rows to another household', r, pg_temp.refused(r));
+
+      if s.tbl = 'bill_payments' then
+        alter table public.bill_payments enable trigger bill_payments_server_fields;
+      end if;
     end loop;
   end loop;
 end $$;
@@ -323,7 +385,9 @@ begin
                            'push_subscriptions', 'household_access_requests', 'user_preferences'] loop
     r := pg_temp.try_as(pg_temp.id('b', 3),
            format('select count(*) from public.%I where %I = %L', t,
-                  (select key from pg_temp.scope where tbl = t), (select b from pg_temp.scope where tbl = t)));
+                  (select key from pg_temp.scope where tbl = t), (select b from pg_temp.scope where tbl = t))
+           -- A phone sees its own push subscription; never the admin's.
+           || case when t = 'push_subscriptions' then format(' and user_id = %L', pg_temp.id('b', 2)) else '' end);
     if not pg_temp.refused(r) then
       raise exception 'FAIL: B''s own staff phone reads owner-only %: %', t, r;
     end if;
@@ -386,60 +450,111 @@ select pg_temp.ok(pg_temp.try_as(null, $q$select count(*) from storage.objects$q
   'a session with no user sees no photo at all');
 
 -- ---- Functions a client can call, pointed at B --------------------------------------------
-create temp table rpc (label text, stmt text);
+-- Each call names the refusal it must get (a pattern on "state:message",
+-- or on "v=<value>" for one that answers instead of raising), for A's admin
+-- and A's phone, and a control: the same call (or its success form) by B's
+-- own admin or phone, which must succeed. So an unrelated error, a void
+-- success, or an input that matches nothing can't pass (Codex, PR #158).
+create function pg_temp.outcome(r jsonb) returns text language sql immutable as $$
+  select case when r->>'state' <> '' then (r->>'state') || ':' || (r->>'msg') else 'v=' || coalesce(r->>'v', 'null') end
+$$;
+create temp table rpc (label text, stmt text, expect_admin text, expect_phone text,
+                       control_by text, control_stmt text, control_expect text);
 insert into pg_temp.rpc values
-  ('list B''s phones', format('select count(*) from public.list_linked_phones(%L)', :hB)),
-  ('read B''s house code', format('select public.my_house_code(%L)', :hB)),
-  ('rotate B''s house code', format('select public.rotate_house_code(%L)', :hB)),
-  ('unlink B''s phone', format('select public.remove_linked_phone(%L, (select id from public.device_sessions limit 1))', :hB)),
-  ('save a push subscription under B', format($q$select public.save_push_subscription(%L, '{"endpoint":"https://fcm.googleapis.com/fcm/send/x177","keys":{"p256dh":"k","auth":"a"}}')$q$, :hB)),
-  ('switch a feature for B', format('select public.set_household_feature(%L, %L, false)', :hB, 'repairs')),
-  ('switch B''s pets', format('select public.set_household_has_pets(%L, true)', :hB)),
-  ('switch Kakak for B', format('select public.set_kakak_enabled(%L, false)', :hB)),
-  ('write B''s kitchen notes', format('select public.set_kitchen_notes(%L, %L, false)', :hB, 'x')),
-  ('make B''s staff claim link', format('select public.staff_claim_link(%L)', :hB)),
-  ('read B''s claims', format('select count(*) from public.staff_claims_today(%L)', :hB)),
-  ('undo a claim in B', format('select public.undo_staff_claim(%L, %L)', :hB, pg_temp.id('b', 4))),
-  ('start a Kakak call for B', format($q$select public.kakak_begin(%L)->>'ok'$q$, :hB)),
-  ('read B''s Kakak status', format('select count(*) from public.kakak_status(%L)', :hB)),
-  ('reserve B''s voice budget', format($q$select public.kakak_voice_reserve(%L, 10, 1000)->>'ok'$q$, :hB)),
-  ('spend B''s voice budget', format($q$select public.kakak_voice_spend(%L, 10, 1000)->>'ok'$q$, :hB)),
-  ('settle B''s voice hold', format($q$select public.kakak_voice_settle(%L, %L)->>'ok'$q$, :hB, pg_temp.id('b', 33))),
-  ('release B''s voice hold', format($q$select public.kakak_voice_release(%L, %L)->>'ok'$q$, :hB, pg_temp.id('b', 33))),
-  ('record B''s Kakak call', format($q$select public.kakak_record(%L, 'm', 'message', '{}', 1, 0, 0, 1, 1, 1)$q$, pg_temp.id('b', 26))),
-  ('set B''s Kakak result', format($q$select public.kakak_set_result(%L, 'confirmed')$q$, pg_temp.id('b', 26))),
-  ('record B''s setup', format($q$select public.record_household_setup(%L, '{"rooms_added": 1}')$q$, :hB)),
-  ('ask whether B''s owners get requests', format('select public.household_requests_push_on(%L)', :hB)),
-  ('make a profile in B', format('select count(*) from public.ensure_my_member_profile(%L)', :hB)),
-  ('archive B''s staff', format('select public.archive_staff_profile(%L)', pg_temp.id('b', 4))),
-  ('restore B''s staff', format('select public.restore_staff_profile(%L)', pg_temp.id('b', 4))),
-  ('reset B''s staff PIN', format('select public.set_staff_pin(%L, null)', pg_temp.id('b', 4))),
-  ('set B''s staff PIN', format($q$select public.set_staff_pin(%L, '9999')$q$, pg_temp.id('b', 4))),
-  ('check B''s staff PIN', format($q$select public.check_staff_pin(%L, '1234')->>'status' = 'ok'$q$, pg_temp.id('b', 4))),
-  ('take B''s staff pushes', format($q$select public.set_my_push_person(%L, true, '1234')->>'status' = 'ok'$q$, pg_temp.id('b', 4))),
-  ('cook B''s dish', format($q$select public.cook_menu_dish(%L, '[]', null)$q$, pg_temp.id('b', 22))),
-  ('uncook B''s dish', format('select public.uncook_menu_dish(%L)', pg_temp.id('b', 22))),
-  ('change B''s cooked amounts', format($q$select public.change_cooked_uses(%L, '[]', null, null)$q$, pg_temp.id('b', 22))),
-  ('eat B''s food', format('select public.eat_food_portion(%L, gen_random_uuid(), null)', pg_temp.id('b', 19))),
-  ('undo B''s portion', format('select public.undo_food_portion(%L, %L)', pg_temp.id('b', 19), pg_temp.id('b', 31))),
-  ('end B''s leave', format('select public.end_leave_early(%L, current_date)', pg_temp.id('b', 23))),
-  ('ask which of B''s staff get pushes', format('select cardinality(public.staff_will_be_notified(array[%L]::uuid[], false))', pg_temp.id('b', 4)));
+  ('list B''s phones', format('select count(*) from public.list_linked_phones(%L)', :hB),
+   '^42501:admins_only$', '^42501:admins_only$', 'admin', null, '^v=[1-9]'),
+  ('read B''s house code', format('select public.my_house_code(%L)', :hB),
+   '^42501:admins_only$', '^42501:admins_only$', 'admin', null, '^v=[A-HJKMNP-Z2-9]{6}$'),
+  ('rotate B''s house code', format('select public.rotate_house_code(%L)', :hB),
+   '^42501:admins_only$', '^42501:admins_only$', 'admin', null, '^v=[A-HJKMNP-Z2-9]{6}$'),
+  ('unlink B''s phone', format('select public.remove_linked_phone(%L, %L)', :hB, pg_temp.id('b', 35)),
+   '^42501:admins_only$', '^42501:admins_only$', 'admin', null, '^v=true$'),
+  ('save a push subscription under B', format($q$select public.save_push_subscription(%L, '{"endpoint":"https://fcm.googleapis.com/fcm/send/x177","keys":{"p256dh":"k","auth":"a"}}')$q$, :hB),
+   '^42501:not a member of this household$', '^42501:not a member of this household$', 'admin', null, '^v=$'),
+  ('switch a feature for B', format('select public.set_household_feature(%L, %L, false)', :hB, 'repairs'),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=$'),
+  ('switch B''s pets', format('select public.set_household_has_pets(%L, true)', :hB),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=$'),
+  ('switch Kakak for B', format('select public.set_kakak_enabled(%L, false)', :hB),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=$'),
+  ('write B''s kitchen notes', format('select public.set_kitchen_notes(%L, %L, false)', :hB, 'Tanpa kacang'),
+   '^42501:admins_only$', '^42501:admins_only$', 'admin', null, '^v=\{'),
+  ('make B''s staff claim link', format('select public.staff_claim_link(%L)', :hB),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=[A-Z2-9]{10}$'),
+  ('read B''s claims', format('select count(*) from public.staff_claims_today(%L)', :hB),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=1$'),
+  ('undo a claim in B', format('select public.undo_staff_claim(%L, %L)', :hB, pg_temp.id('b', 4)),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=true$'),
+  ('start a Kakak call for B', format($q$select public.kakak_begin(%L)->>'reason'$q$, :hB),
+   '^v=not_admin$', '^v=not_admin$', 'admin', format($q$select public.kakak_begin(%L)->>'ok'$q$, :hB), '^v=true$'),
+  ('read B''s Kakak status', format('select count(*) from public.kakak_status(%L)', :hB),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=1$'),
+  ('reserve B''s voice budget', format($q$select public.kakak_voice_reserve(%L, 10, 1000)->>'reason'$q$, :hB),
+   '^v=not_admin$', '^v=not_admin$', 'admin', format($q$select public.kakak_voice_reserve(%L, 10, 1000)->>'ok'$q$, :hB), '^v=true$'),
+  ('spend B''s voice budget', format($q$select public.kakak_voice_spend(%L, 10, 1000)->>'reason'$q$, :hB),
+   '^v=not_admin$', '^v=not_admin$', 'admin', format($q$select public.kakak_voice_spend(%L, 10, 1000)->>'ok'$q$, :hB), '^v=true$'),
+  -- These two answer {"ok": false} both when refused and when the hold isn't
+  -- found; the control proves B's hold is found.
+  ('settle B''s voice hold', format($q$select public.kakak_voice_settle(%L, %L)->>'ok'$q$, :hB, pg_temp.id('b', 33)),
+   '^v=false$', '^v=false$', 'admin', null, '^v=true$'),
+  ('release B''s voice hold', format($q$select public.kakak_voice_release(%L, %L)->>'ok'$q$, :hB, pg_temp.id('b', 33)),
+   '^v=false$', '^v=false$', 'admin', null, '^v=true$'),
+  ('record B''s Kakak call', format($q$select public.kakak_record(%L, 'm', 'message', '{}', 1, 0, 0, 1, 1, 1)$q$, pg_temp.id('b', 26)),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=$'),
+  ('set B''s Kakak result', format($q$select public.kakak_set_result(%L, 'confirmed')$q$, pg_temp.id('b', 26)),
+   '^42501:not_admin$', '^42501:not_admin$', 'admin', null, '^v=$'),
+  ('record B''s setup', format($q$select public.record_household_setup(%L, '{"rooms_added": 1}')$q$, :hB),
+   '^42501:members_only$', '^28000:not_authenticated$', 'admin', null, '^v=$'),
+  -- Answers false when refused; B's phone asking proves B's admin is a target.
+  ('ask whether B''s owners get requests', format('select public.household_requests_push_on(%L)', :hB),
+   '^v=false$', '^v=false$', 'phone', null, '^v=true$'),
+  ('make a profile in B', format('select count(*) from public.ensure_my_member_profile(%L)', :hB),
+   '^42501:not_a_household_member$', '^42501:not_a_household_member$', 'admin', null, '^v=1$'),
+  ('archive B''s staff', format('select public.archive_staff_profile(%L)', pg_temp.id('b', 4)),
+   '^42501:No such person in your household$', '^42501:No such person in your household$', 'admin', null, '^v=\('),
+  ('restore B''s staff', format('select public.restore_staff_profile(%L)', pg_temp.id('b', 38)),
+   '^42501:No such person in your household$', '^42501:No such person in your household$', 'admin', null, '^v=\('),
+  ('reset B''s staff PIN', format('select public.set_staff_pin(%L, null)', pg_temp.id('b', 4)),
+   '^42501:staff_not_found$', '^42501:staff_not_found$', 'admin', null, '^v=$'),
+  ('set B''s staff PIN', format($q$select public.set_staff_pin(%L, '9999')$q$, pg_temp.id('b', 4)),
+   '^42501:staff_not_found$', '^42501:staff_not_found$', 'admin', null, '^v=$'),
+  ('check B''s staff PIN', format($q$select public.check_staff_pin(%L, '1234')->>'status'$q$, pg_temp.id('b', 4)),
+   '^v=no_pin$', '^v=no_pin$', 'phone', null, '^v=ok$'),
+  ('take B''s staff pushes', format($q$select public.set_my_push_person(%L, true, '1234')->>'status'$q$, pg_temp.id('b', 4)),
+   '^42501:staff_phones_only$', '^22023:not_on_roster$', 'phone', null, '^v=ok$'),
+  ('cook B''s dish', format($q$select public.cook_menu_dish(%L, '[]', null)$q$, pg_temp.id('b', 22)),
+   '^42501:not_found$', '^42501:not_found$', 'admin', null, '^v=\{'),
+  ('uncook B''s dish', format('select public.uncook_menu_dish(%L)', pg_temp.id('b', 34)),
+   '^42501:not_found$', '^42501:not_found$', 'admin', null, '^v=\{'),
+  ('change B''s cooked amounts', format($q$select public.change_cooked_uses(%L, '[]', null, null)$q$, pg_temp.id('b', 34)),
+   '^42501:not_found$', '^42501:not_found$', 'admin', null, '^v=\{'),
+  ('eat B''s food', format('select public.eat_food_portion(%L, %L, null)', pg_temp.id('b', 19), pg_temp.id('b', 37)),
+   '^42501:not_found$', '^42501:not_found$', 'phone', null, '^v=\{'),
+  ('undo B''s portion', format('select public.undo_food_portion(%L, %L)', pg_temp.id('b', 19), pg_temp.id('b', 31)),
+   '^42501:not_found$', '^42501:not_found$', 'phone', null, '^v=\{'),
+  ('end B''s leave', format('select public.end_leave_early(%L, current_date)', pg_temp.id('b', 23)),
+   '^22023:leave_not_active$', '^22023:leave_not_active$', 'admin', null, '^v=\('),
+  ('ask which of B''s staff get pushes', format('select cardinality(public.staff_will_be_notified(array[%L]::uuid[], false))', pg_temp.id('b', 4)),
+   '^v=0$', '^42501:admins_only$', 'admin', null, '^v=1$');
 
 create temp table rpc_results (actor text, label text, r jsonb, pass boolean);
 do $$
 declare a record; x record; r jsonb;
 begin
-  for a in select * from (values ('admin', pg_temp.id('a', 2)), ('phone', pg_temp.id('a', 3))) v(name, uid) loop
-    for x in select * from pg_temp.rpc loop
+  for x in select * from pg_temp.rpc loop
+    for a in select * from (values ('admin', pg_temp.id('a', 2)), ('phone', pg_temp.id('a', 3))) v(name, uid) loop
       r := pg_temp.try_as(a.uid, x.stmt);
       insert into pg_temp.rpc_results values (a.name, x.label, r,
-        r->>'state' <> '' or coalesce(r->>'v', '0') in ('0', 'false', '', '[]'));
+        pg_temp.outcome(r) ~ case a.name when 'admin' then x.expect_admin else x.expect_phone end);
     end loop;
+    r := pg_temp.try_as(case x.control_by when 'admin' then pg_temp.id('b', 2) else pg_temp.id('b', 3) end,
+                        coalesce(x.control_stmt, x.stmt));
+    insert into pg_temp.rpc_results values ('control: B''s ' || x.control_by, x.label, r, pg_temp.outcome(r) ~ x.control_expect);
   end loop;
 end $$;
-select actor, label, r from pg_temp.rpc_results where not pass order by 1, 2;
+select actor, label, pg_temp.outcome(r) from pg_temp.rpc_results where not pass order by 1, 2;
 select pg_temp.ok(not exists (select 1 from pg_temp.rpc_results where not pass),
-  format('every client function pointed at B refuses A''s admin and A''s phone (%s calls; failures listed above)',
+  format('every client function pointed at B refuses A''s admin and A''s phone with its own refusal, and works for B (%s calls; failures listed above)',
          (select count(*) from pg_temp.rpc_results)));
 
 -- Nothing of B's moved while all of that was tried.
@@ -483,7 +598,7 @@ insert into pg_temp.refs (label, actor, stmt) values
   ('couldn''t-do on B''s routine', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, schedule_id, entity_id, slot_time) values (%L, current_date, 'Hujan', 'other', %L, %L, '08:00')$q$, :hA, pg_temp.id('b', 6), pg_temp.id('a', 5))),
   ('couldn''t-do for B''s pet', :phoneA, format($q$with ins as (insert into public.task_exceptions (household_id, occurs_on, note, reason, schedule_id, entity_id, slot_time) values (%L, current_date, 'Hujan', 'other', %L, %L, '08:00') returning entity_id) select count(*) from ins where entity_id = %L$q$, :hA, pg_temp.id('a', 6), pg_temp.id('b', 5), pg_temp.id('b', 5))),
   ('couldn''t-do on B''s shopping item', :phoneA, format($q$insert into public.task_exceptions (household_id, occurs_on, note, reason, chore_id, inventory_item_id) values (%L, current_date, 'Hujan', 'out_of_stock', %L, %L)$q$, :hA, pg_temp.id('a', 13), pg_temp.id('b', 10))),
-  ('a repair reported by B''s staff member', :phoneA, format($q$insert into public.repairs (household_id, title, reported_by_staff) values (%L, 'x', %L)$q$, :hA, pg_temp.id('b', 4))),
+  ('a repair reported by B''s staff member', :phoneA, format($q$insert into public.repairs (household_id, title, status, reported_by_staff) values (%L, 'x', 'reported', %L)$q$, :hA, pg_temp.id('b', 4))),
   ('a repair note by B''s staff member', :phoneA, format($q$insert into public.repair_notes (household_id, repair_id, body, staff_id) values (%L, %L, 'x', %L)$q$, :hA, pg_temp.id('a', 16), pg_temp.id('b', 4))),
   ('a walk-in logged by B''s staff member', :phoneA, format($q$insert into public.repair_visits (household_id, repair_id, before_photo_url, logged_by_staff) values (%L, %L, %L, %L)$q$, :hA, pg_temp.id('a', 16), pg_temp.url(:hA || '/repairs/b.webp'), pg_temp.id('b', 4))),
   ('supervision by B''s staff member', :phoneA, format($q$insert into public.repair_supervision (household_id, visit_id, staff_id) values (%L, %L, %L)$q$, :hA, pg_temp.id('a', 18), pg_temp.id('b', 4))),
@@ -507,7 +622,7 @@ insert into pg_temp.refs (label, actor, stmt) values
 -- Refused by the older guards, under their own names.
 update pg_temp.refs set expect = 'cooked_through_functions_only' where label = 'a dish cooked by B''s staff member';
 update pg_temp.refs set expect = 'staff_not_in_household' where label in ('a repair note by B''s staff member', 'food added by B''s staff member');
-update pg_temp.refs set expect = 'repair_staff_report_only' where label = 'a repair reported by B''s staff member';
+update pg_temp.refs set expect = 'staff_not_in_household' where label = 'a repair reported by B''s staff member';
 update pg_temp.refs set expect = 'routine_staff' where label = 'a routine for B''s staff member';
 update pg_temp.refs set expect = 'repair_visit_staff' where label = 'a walk-in logged by B''s staff member';
 update pg_temp.refs set expect = 'task_exception_person' where label = 'couldn''t-do in B''s staff member''s name';
@@ -547,6 +662,8 @@ select pg_temp.ok(pg_temp.try_as(:adminA, format($q$insert into public.household
   'control: A''s admin still assigns a chore under another');
 select pg_temp.ok(pg_temp.try_as(:phoneA, format($q$update public.inventory_items set stock_status = 'low', stock_status_by = %L where id = %L$q$, pg_temp.id('a', 4), pg_temp.id('a', 10)))->>'n' = '1',
   'control: A''s phone still marks stock low');
+select pg_temp.ok(pg_temp.try_as(:phoneA, format($q$insert into public.repairs (household_id, title, status, reported_by_staff) values (%L, 'x', 'reported', %L)$q$, :hA, pg_temp.id('a', 4)))->>'state' = '',
+  'control: A''s phone still reports a repair in A''s staff member''s name');
 select pg_temp.ok(pg_temp.try_as(:adminA, format($q$update public.bill_payments set receipt_url = %L where id = %L$q$, replace(pg_temp.url(:hA || '/bills/receipt.webp'), 'household-logs', 'owner-receipts'), pg_temp.id('a', 15)))->>'n' = '1',
   'control: A''s admin still attaches a receipt from A''s own folder to a bill payment');
 select pg_temp.ok(pg_temp.try_as(:adminA, format($q$insert into public.repairs (household_id, title, status, photo_url) values (%L, 'x', 'open', %L)$q$, :hA, pg_temp.url(:hA || '/repairs/new.webp')))->>'state' = '',
