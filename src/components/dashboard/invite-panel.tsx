@@ -25,7 +25,7 @@ export function InvitePanel() {
   const t = useT();
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("Invite someone", "Undang")}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t("Invite someone", "Undang")}</h2>
       <InviteCard
         kind="owner"
         icon={UserPlus}
@@ -117,7 +117,7 @@ function InviteCard({
         {link && (
           // break-all, not truncate: a link you cannot read is a link you
           // cannot check before sending it to someone.
-          <p className="rounded-lg bg-muted px-3 py-2 text-[11px] break-all text-muted-foreground select-all">
+          <p className="rounded-lg bg-muted px-3 py-2 text-xs break-all text-muted-foreground select-all">
             {link}
           </p>
         )}
@@ -158,7 +158,7 @@ function InviteCard({
         )}
 
         {link && (
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {t(
               `Paste it into WhatsApp or a message. Single use, expires in ${INVITE_TTL_DAYS} days, and anyone with it can join until it is used, so send it only to the person or phone it is for.`,
               `Tempel di WhatsApp atau pesan. Sekali pakai, berlaku ${INVITE_TTL_DAYS} hari, dan siapa pun yang memegangnya bisa bergabung sampai dipakai, jadi kirim hanya ke orang atau HP yang dituju.`

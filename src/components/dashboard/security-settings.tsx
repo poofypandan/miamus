@@ -71,7 +71,7 @@ export function SecuritySettings() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("App lock", "Kunci aplikasi")}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t("App lock", "Kunci aplikasi")}</h2>
       <Card className="py-4">
         <CardContent className="flex flex-col gap-3 px-4">
           <div className="flex items-start justify-between gap-3">
@@ -102,7 +102,7 @@ export function SecuritySettings() {
             >
               <span
                 className={cn(
-                  "flex size-6 items-center justify-center rounded-full bg-white shadow-sm transition-transform",
+                  "flex size-6 items-center justify-center rounded-full bg-card shadow-sm transition-transform",
                   enabled ? "translate-x-[22px]" : "translate-x-0.5"
                 )}
               >
@@ -129,7 +129,7 @@ export function SecuritySettings() {
           {/* Said plainly rather than implied: this lock is about the phone in
               someone's hand. What keeps the household's data private is the
               database (Phase 88/90), which this setting does not touch. */}
-          <p className="text-[11px] text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             {t(
               "This protects the app on this phone only. Your home's data stays protected by your Google sign-in either way.",
               "Ini hanya melindungi aplikasi di HP ini. Data rumah Anda tetap terlindungi oleh login Google Anda."
