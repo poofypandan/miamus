@@ -1,16 +1,16 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { STAFF_ID, installStub } from "./stub-backend";
 
-// Talk to Kakak, the new voice flow (opt-in per phone with ?newvoice=1; the
-// current flow, still the default, is kakak-voice.spec.ts). The browser's
-// SpeechRecognition is replaced by
-// a fake the test speaks through, and speechSynthesis.speak by a recorder, so
-// what is under test is the sheet's side: the mic listening until Done
-// (through pauses, restarting the recognizer the way Chrome on Android needs),
-// the live words, Done putting them in the typing box to check, Send taking
+// Talk to Kakak: tap to talk, tap Done to send, the default since 20 Nov (the
+// older flow is behind ?newvoice=0: kakak-voice.spec.ts). The browser's
+// SpeechRecognition is replaced by a fake the test speaks through, and
+// speechSynthesis.speak by a recorder, so what is under test is the sheet's
+// side: the mic listening until Done (through pauses, restarting the
+// recognizer the way Chrome on Android needs), the live words, Done sending
 // them through the real /api/kakak route in practice mode
-// (KAKAK_PRACTICE=true, no AI), the card, reading it aloud, and the keyboard
-// tip where the browser can't listen.
+// (KAKAK_PRACTICE=true, no AI), Edit taking them back, the two-minute limit
+// keeping them unsent, the card, reading it aloud, and the keyboard tip
+// where the browser can't listen.
 
 type Mode = "works" | "missing" | "refused";
 
@@ -88,7 +88,7 @@ async function say(page: Page, words: string, final: boolean) {
   );
 }
 
-test("new voice: keeps listening through a pause, Done fills the box without sending, Send sends (practice mode)", async ({
+test("new voice: keeps listening through a pause, nothing is sent until Done, Done sends (practice mode)", async ({
   context,
   page,
 }) => {
@@ -98,7 +98,7 @@ test("new voice: keeps listening through a pause, Done fills the box without sen
   page.on("request", (request) => {
     if (request.method() === "POST" && new URL(request.url()).pathname === "/api/kakak") asked.push(request.postDataJSON().reply);
   });
-  await page.goto("/dashboard?newvoice=1");
+  await page.goto("/dashboard");
 
   await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
   // Reading aloud is off until turned on, and remembered on this phone.
@@ -108,7 +108,7 @@ test("new voice: keeps listening through a pause, Done fills the box without sen
   await expect(speaker).toHaveAttribute("aria-pressed", "true");
 
   await page.getByRole("button", { name: "Bicara dengan Kakak" }).click();
-  await expect(page.getByText("Kakak mendengarkan. Ketuk Selesai kalau sudah.")).toBeVisible();
+  await expect(page.getByText("Kakak mendengarkan. Ketuk Selesai untuk mengirim.")).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { __lang: string }).__lang)).toBe("id-ID");
   expect(await page.evaluate(() => (window as unknown as { __continuous: boolean }).__continuous)).toBe(true);
 
@@ -125,22 +125,18 @@ test("new voice: keeps listening through a pause, Done fills the box without sen
   // with a new one, the words joined.
   await pause(page);
   await expect.poll(() => starts(page)).toBe(2);
-  await expect(page.getByText("Kakak mendengarkan. Ketuk Selesai kalau sudah.")).toBeVisible();
+  await expect(page.getByText("Kakak mendengarkan. Ketuk Selesai untuk mengirim.")).toBeVisible();
+  // Through the pause nothing went to Kakak: she waits for the tap.
+  expect(asked).toEqual([]);
   await say(page, "setiap Senin jam 9", true);
   await expect(live).toHaveText("Ari pel teras setiap Senin jam 9");
 
-  // Done puts the words in the box to check. Nothing is sent yet.
+  // Done sends them straight away, through the real route, shown as the
+  // owner's line with Edit words (Ubah kata-kata) under it.
   await page.getByRole("button", { name: "Selesai" }).click();
-  await expect(box).toHaveValue("Ari pel teras setiap Senin jam 9");
-  await expect(page.getByText("Cek kata-katanya, lalu ketuk Kirim.")).toBeVisible();
-  await expect(live).toHaveCount(0);
-  await page.waitForTimeout(300);
-  expect(asked).toEqual([]);
-  expect(await starts(page)).toBe(2); // not started again after Done
-
-  // Send sends them, through the real route, as if typed.
-  await page.getByRole("button", { name: "Kirim", exact: true }).click();
   await expect(page.getByText("Ari pel teras setiap Senin jam 9", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ubah kata-kata" })).toBeVisible();
+  await expect(live).toHaveCount(0);
   await expect(page.getByText(/^Mode latihan:/)).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Pel teras", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sudah benar" })).toBeVisible();
@@ -157,6 +153,7 @@ test("new voice: keeps listening through a pause, Done fills the box without sen
   expect(stub.tasks[0]).toMatchObject({ title: "Pel teras", assigned_to: STAFF_ID, due_time: "09:00", recurrence: "weekly" });
   expect(stub.seen.realBackend).toEqual([]);
   expect(asked).toEqual(["Ari pel teras setiap Senin jam 9"]);
+  expect(await starts(page)).toBe(2); // not started again after Done
 
   // The speaker choice is remembered on this phone.
   await page.getByRole("button", { name: "Bilang ke Kakak" }).click();
@@ -171,7 +168,7 @@ test("new voice: Cancel drops the words and sends nothing", async ({ context, pa
     asked++;
     return route.fulfill({ json: { kind: "message", text: "ok", history: { messages: [] }, requestId: "x" } });
   });
-  await page.goto("/dashboard?newvoice=1");
+  await page.goto("/dashboard");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Talk to Kakak" }).click();
@@ -193,7 +190,7 @@ test("new voice: typing and tapping Send while the mic is on sends once", async 
     asked.push(route.request().postDataJSON().reply);
     return route.fulfill({ json: { kind: "message", text: "Noted.", history: { messages: [] }, requestId: "x" } });
   });
-  await page.goto("/dashboard?newvoice=1");
+  await page.goto("/dashboard");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Talk to Kakak" }).click();
@@ -215,7 +212,7 @@ test("new voice: typing and tapping Send while the mic is on sends once", async 
 test("new voice: a recognizer that refuses to run (iPhone Home Screen app) falls back to the tip", async ({ context, page }) => {
   await fakeSpeech(context, "refused");
   await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
-  await page.goto("/dashboard?newvoice=1");
+  await page.goto("/dashboard");
 
   await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Bicara dengan Kakak" }).click();
@@ -223,7 +220,77 @@ test("new voice: a recognizer that refuses to run (iPhone Home Screen app) falls
   await expect(page.getByRole("button", { name: "Bicara dengan Kakak" })).toHaveCount(0);
 });
 
-test("new voice: off by default (the current flow), on with ?newvoice=1 for this phone, off again with ?newvoice=0", async ({
+test("new voice: Edit takes a misheard sentence back to the box; fixed, it is sent once more and nothing was saved", async ({
+  context,
+  page,
+}) => {
+  await fakeSpeech(context, "works");
+  const stub = await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const asked: string[] = [];
+  await page.route("**/api/kakak", (route) => {
+    const reply = route.request().postDataJSON().reply as string;
+    asked.push(reply);
+    return route.fulfill({ json: { kind: "message", text: `Noted: ${reply}`, history: { messages: [] }, requestId: "x" } });
+  });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Talk to Kakak" }).click();
+  await say(page, "Buy eggs for Mocca", true);
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("Noted: Buy eggs for Mocca")).toBeVisible();
+
+  // Misheard: Edit puts the words back in the box, and her answer goes.
+  await page.getByRole("button", { name: "Edit words" }).click();
+  const box = page.getByRole("textbox", { name: "What should I set up?" });
+  await expect(box).toHaveValue("Buy eggs for Mocca");
+  await expect(page.getByText("Noted: Buy eggs for Mocca")).toHaveCount(0);
+  await expect(page.getByTestId("kakak-said")).toHaveCount(0);
+
+  await box.fill("Buy eggs for Mocha");
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await expect(page.getByText("Noted: Buy eggs for Mocha")).toBeVisible();
+  // A typed line has no Edit: it was in the box already.
+  await expect(page.getByRole("button", { name: "Edit words" })).toHaveCount(0);
+  expect(asked).toEqual(["Buy eggs for Mocca", "Buy eggs for Mocha"]);
+  expect(stub.tasks).toHaveLength(0);
+});
+
+test("new voice: at two minutes listening stops by itself and the words wait in the box, unsent", async ({ context, page }) => {
+  await fakeSpeech(context, "works");
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  let asked = 0;
+  await page.route("**/api/kakak", (route) => {
+    asked++;
+    return route.fulfill({ json: { kind: "message", text: "ok", history: { messages: [] }, requestId: "x" } });
+  });
+  await page.clock.install();
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Talk to Kakak" }).click();
+  await say(page, "Plan the week: Ari mops on Monday and Syam walks the dogs at six", true);
+  const notice = page.getByTestId("kakak-limit-notice");
+  await page.clock.runFor(100_000);
+  await expect(notice).toHaveCount(0);
+
+  // From 1:45, a quiet countdown.
+  await page.clock.runFor(5_500);
+  await expect(notice).toHaveText("Listening stops in 15 s. Tap Done to send.");
+  await page.clock.runFor(5_000);
+  await expect(notice).toHaveText("Listening stops in 10 s. Tap Done to send.");
+
+  // At 2:00 it stops by itself: the words go in the box, and nothing is sent.
+  await page.clock.runFor(10_000);
+  await expect(page.getByText("Listening stopped at 2 minutes. Check the words, then tap Send.")).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "What should I set up?" })).toHaveValue(
+    "Plan the week: Ari mops on Monday and Syam walks the dogs at six"
+  );
+  await expect(notice).toHaveCount(0);
+  expect(asked).toBe(0);
+});
+
+test("new voice: on by default, off with ?newvoice=0 for this phone, on again with ?newvoice=1", async ({
   context,
   page,
 }) => {
@@ -234,25 +301,48 @@ test("new voice: off by default (the current flow), on with ?newvoice=1 for this
     await page.getByRole("button", { name: "Talk to Kakak" }).click();
   };
 
-  // Default: the current flow, with Stop.
+  // Default: tap to talk, with Done.
   await page.goto("/dashboard");
   await listen();
-  await expect(page.getByText("Listening… tap Stop when you're done")).toBeVisible();
-  expect(await page.evaluate(() => (window as unknown as { __continuous: boolean }).__continuous)).toBe(false);
-
-  // ?newvoice=1: the new flow, with Done, and it stays on without the parameter.
-  await page.goto("/dashboard?newvoice=1");
-  await listen();
-  await expect(page.getByText("Listening. Tap Done when you're finished.")).toBeVisible();
+  await expect(page.getByText("Listening. Tap Done to send.")).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { __continuous: boolean }).__continuous)).toBe(true);
-  expect(await page.evaluate(() => localStorage.getItem("miamus.kakak.newVoice"))).toBe("on");
-  await page.goto("/dashboard");
-  await listen();
-  await expect(page.getByText("Listening. Tap Done when you're finished.")).toBeVisible();
 
-  // ?newvoice=0: back to the current flow.
+  // ?newvoice=0: the older flow, with Stop, and it stays off without the parameter.
   await page.goto("/dashboard?newvoice=0");
   await listen();
   await expect(page.getByText("Listening… tap Stop when you're done")).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem("miamus.kakak.newVoice"))).toBeNull();
+  expect(await page.evaluate(() => (window as unknown as { __continuous: boolean }).__continuous)).toBe(false);
+  expect(await page.evaluate(() => localStorage.getItem("miamus.kakak.newVoice"))).toBe("off");
+  await page.goto("/dashboard");
+  await listen();
+  await expect(page.getByText("Listening… tap Stop when you're done")).toBeVisible();
+
+  // ?newvoice=1: back on.
+  await page.goto("/dashboard?newvoice=1");
+  await listen();
+  await expect(page.getByText("Listening. Tap Done to send.")).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("miamus.kakak.newVoice"))).toBe("on");
+});
+
+test("new voice: once a spoken routine is saved, its words can't be edited (Codex, PR #165)", async ({ context, page }) => {
+  await fakeSpeech(context, "works");
+  const stub = await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  await page.goto("/dashboard");
+
+  await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Talk to Kakak" }).click();
+  await say(page, "Lights off for Mochi and Bento every day at 9:30 pm", true);
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("Routine · Mochi & Bento")).toBeVisible({ timeout: 20_000 });
+  // Before the card is confirmed nothing is saved, and the words can be fixed.
+  await expect(page.getByRole("button", { name: "Edit words" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const done = page.getByTestId("kakak-saved");
+  await expect(done).toBeVisible();
+  await expect.poll(() => stub.schedules.filter((s) => s.kind === "lights").length).toBe(2);
+  // Saved: Edit would leave the saved screen and its Undo with the routine
+  // still saved, and resending could add it twice.
+  await expect(page.getByRole("button", { name: "Edit words" })).toHaveCount(0);
+  await expect(done).toBeVisible();
 });
