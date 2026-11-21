@@ -200,6 +200,16 @@ export const GUIDE: readonly GuideEntry[] = [
     covers: ["starter-list-2026-11"],
   },
   {
+    id: "the-days-chores",
+    group: "home",
+    title: { en: "The day's chores", id: "Tugas hari itu" },
+    body: {
+      en: "Home → Chores lists the day's chores by time, each with who, the room and how often. Done ones get a tick and stay in place; the camera beside one shows its photos. From earlier, in amber, is what is left from other days. Tap a chore to change it.",
+      id: "Rumah → Tugas menampilkan tugas hari itu menurut jam, dengan siapa, ruangan, dan seberapa sering. Yang selesai diberi centang dan tetap di tempatnya; kamera di sampingnya membuka fotonya. Dari hari sebelumnya, berwarna kuning, ialah yang tertinggal. Ketuk tugas untuk mengubahnya.",
+    },
+    where: "home_chores",
+  },
+  {
     id: "add-a-chore",
     group: "home",
     title: { en: "Adding a chore by hand", id: "Menambah tugas sendiri" },
