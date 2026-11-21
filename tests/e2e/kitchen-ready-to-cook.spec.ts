@@ -201,3 +201,14 @@ test("the staff tip, in Indonesian", async ({ context, page }) => {
   await expect(tip).toContainText("Kurang 1: santan");
   await shot(page, "staff-id-tip");
 });
+
+test("the staff tip on keeping the kitchen up to date: two short lines, in Indonesian, no prices", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: false }, items, recipes, menu, kitchenSyncTip: true });
+  await page.goto("/staff");
+  const tip = page.getByRole("region", { name: "Supaya stok selalu benar" });
+  await expect(tip).toBeVisible({ timeout: 20_000 });
+  await expect(tip).toContainText("Di Dapur → Belanja, ketuk barangnya.");
+  await expect(tip).toContainText("Tekan Sudah dimasak di Menu hari ini.");
+  await expect(tip).not.toContainText(/Rp|Missing|Kitchen/);
+  await shot(page, "staff-id-kitchen-sync-tip");
+});

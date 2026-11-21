@@ -778,6 +778,18 @@ export interface StaffWhatsNewEntry {
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
   {
+    // 20 Nov (kitchen sync S1, owner: "the app only works if the maids and
+    // the app syncs"): for anyone who sees Dapur. Two short lines, one tap
+    // each, nothing to read past them.
+    id: "staff-kitchen-sync-2026-11",
+    date: "2026-11-20",
+    title: "Supaya stok selalu benar",
+    lines: [
+      "Ada yang hampir habis atau habis? Di Dapur → Belanja, ketuk barangnya.",
+      "Selesai masak? Tekan Sudah dimasak di Menu hari ini.",
+    ],
+  },
+  {
     // 20 Nov (Can we cook it?, D18): once Today has a menu.
     id: "staff-ready-to-cook-2026-11",
     date: "2026-11-20",
