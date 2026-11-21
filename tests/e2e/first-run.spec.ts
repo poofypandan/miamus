@@ -83,10 +83,10 @@ test("a new household sees the first page, and its steps tick off from real data
   await expect(page.getByText("Nothing on this day yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add Chore" })).toHaveCount(0);
 
-  // Add a person goes to Household, Staff.
-  await card.getByRole("link", { name: "Add a person" }).click();
+  // Add staff goes to Settings, Staff.
+  await card.getByRole("link", { name: "Add staff" }).click();
   await expect(page).toHaveURL(/module=access&page=staff/);
-  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add staff" })).toBeVisible();
 
   // Sari is on the roster: Set up stays open until there is a first task,
   // and now offers that instead.
@@ -94,7 +94,7 @@ test("a new household sees the first page, and its steps tick off from real data
   await page.goto("/dashboard");
   await expect(card).toContainText("1 of 5", { timeout: 20_000 });
   await expect(step(page, "setup")).toHaveAttribute("data-done", "false");
-  await expect(card.getByRole("link", { name: "Add a person" })).toHaveCount(0);
+  await expect(card.getByRole("link", { name: "Add staff" })).toHaveCount(0);
 
   // Add a task opens the chore form with Sari already chosen.
   await card.getByRole("button", { name: "Add a task" }).click();
@@ -167,7 +167,7 @@ test("Bahasa Indonesia: the three lines, the starter list, and Nanti saja hides 
   await expect(step(page, "setup")).toContainText("Siapkan rumah");
   await expect(card).toContainText("Kirim link ke staf Anda");
   await expect(card).toContainText("Lihat tugas pertama selesai");
-  await expect(card.getByRole("link", { name: "Tambah Orang" })).toBeVisible();
+  await expect(card.getByRole("link", { name: "Tambah staf" })).toBeVisible();
 
   // The starter list opens from the card, as on Chores.
   await card.getByRole("button", { name: "Pakai daftar awal" }).click();

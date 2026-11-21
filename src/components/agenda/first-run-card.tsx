@@ -141,7 +141,7 @@ export function FirstRunCard({
       const addPerson = (
         <Button className={PRIMARY} asChild>
           <Link href={STAFF_HREF} scroll={false} onClick={go(STAFF_HREF)}>
-            <Plus /> {t("Add a person", "Tambah Orang")}
+            <Plus /> {t("Add staff", "Tambah staf")}
           </Link>
         </Button>
       );

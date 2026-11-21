@@ -139,6 +139,11 @@ export const CHORES = {
   carport: { key: "carport", title: { id: "Bersihkan carport", en: "Clean the carport" }, cadence: { kind: "weekly", weekday: SUN }, category: "cleaning", job: "driver" },
   gutters: { key: "gutters", title: { id: "Bersihkan talang air", en: "Clear the gutters" }, cadence: { kind: "months", every: 6 }, category: "maintenance", job: "garden" },
   fans: { key: "fans", title: { id: "Lap kipas angin", en: "Wipe the fans" }, cadence: { kind: "monthly", day: 15 }, category: "cleaning", job: "cleaning" },
+  // Three more for whoever has the kitchen (staff onboarding, owner decision
+  // 6, 20 Nov): offered unticked on Add staff, never by a home's template.
+  prepTomorrow: { key: "prep-tomorrow", title: { id: "Siapkan bahan untuk besok", en: "Get tomorrow's ingredients ready" }, cadence: { kind: "daily" }, category: "errand", job: "kitchen" },
+  kitchenTrash: { key: "kitchen-trash", title: { id: "Buang sampah dapur", en: "Take out the kitchen rubbish" }, cadence: { kind: "daily" }, category: "cleaning", job: "kitchen" },
+  freezer: { key: "freezer", title: { id: "Bersihkan freezer", en: "Clean the freezer" }, cadence: { kind: "months", every: 3 }, category: "cleaning", job: "kitchen" },
 } as const satisfies Record<string, CatalogueChore>;
 
 /** Rooms, saved in Indonesian (A1). Names are at most 60 characters (the table's check). */
@@ -256,7 +261,7 @@ export function firstDue(cadence: Cadence, today: string): string {
   }
 }
 
-function repeatOf(cadence: Cadence): { recurrence: ChoreRecurrence; interval: number; weekday: number | null } {
+export function repeatOf(cadence: Cadence): { recurrence: ChoreRecurrence; interval: number; weekday: number | null } {
   switch (cadence.kind) {
     case "daily":
       return { recurrence: "daily", interval: 1, weekday: null };

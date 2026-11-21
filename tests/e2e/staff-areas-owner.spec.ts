@@ -34,7 +34,7 @@ test("English: Syam's switches save on the tap, the list says what he doesn't se
     features: { repairs: true },
   });
   await page.goto("/dashboard?module=access&page=staff");
-  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Add staff" })).toBeVisible({ timeout: 20_000 });
 
   // The owner's own row has no switches: owners are never limited.
   await expect(page.getByRole("button", { name: "What Moshe sees" })).toHaveCount(0);
@@ -82,7 +82,7 @@ test("Bahasa Indonesia: the same switches; Repairs and Pet routines only while t
     features: { repairs: false },
   });
   await page.goto("/dashboard?module=access&page=staff");
-  await expect(page.getByRole("button", { name: "Tambah Orang" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Tambah staf" })).toBeVisible({ timeout: 20_000 });
   // Syam's pet routines are off, but this home has no pets: nothing to say.
   await expect(page.getByText(/Tidak melihat/)).toHaveCount(0);
 
@@ -116,7 +116,7 @@ test("Undo reverses only its own switch, and a slow save never lands on someone 
   const staff = roster();
   await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, features: { repairs: true } });
   await page.goto("/dashboard?module=access&page=staff");
-  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Add staff" })).toBeVisible({ timeout: 20_000 });
 
   // Kitchen off, then Repairs off; Undo on the Kitchen toast brings back
   // only Kitchen.
@@ -166,7 +166,7 @@ test("Undo tapped while another switch is still saving keeps both (Codex, #131)"
   const staff = roster();
   await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, features: { repairs: true } });
   await page.goto("/dashboard?module=access&page=staff");
-  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Add staff" })).toBeVisible({ timeout: 20_000 });
 
   await page.getByRole("button", { name: "What Ari sees" }).click();
   const ari = page.getByRole("dialog", { name: "What Ari sees" });
@@ -202,7 +202,7 @@ test("reopening reads the roster again: a change from another owner's phone isn'
   const staff = roster();
   await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, features: { repairs: true } });
   await page.goto("/dashboard?module=access&page=staff");
-  await expect(page.getByRole("button", { name: "Add Person" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Add staff" })).toBeVisible({ timeout: 20_000 });
 
   // Open Ari and close without changing anything.
   await page.getByRole("button", { name: "What Ari sees" }).click();

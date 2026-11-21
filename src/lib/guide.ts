@@ -146,10 +146,11 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "Adding a new staff member", id: "Menambah staf baru" },
     body: {
-      en: "Settings → Staff: type the name they go by and tap Add Person. Tap the eye beside them to choose what they see, then send the one WhatsApp message. Give them their chores in Home → Chores. Staff under 18 need a parent's or guardian's consent first.",
-      id: "Pengaturan → Staf: ketik nama panggilannya, lalu ketuk Tambah Orang. Ketuk ikon mata di sampingnya untuk memilih yang dia lihat, lalu kirim satu pesan WhatsApp. Beri tugasnya di Rumah → Tugas. Staf di bawah 18 tahun perlu izin orang tua atau wali dulu.",
+      en: "Settings → Staff → Add staff: their name, and what they do (Kitchen, Chores, Pets, Repairs), which sets what they see. With Kitchen, the usual kitchen chores come ticked. Then send the WhatsApp message. Staff under 18 need a parent's or guardian's consent first.",
+      id: "Pengaturan → Staf → Tambah staf: namanya, dan apa yang dikerjakan (Dapur, Tugas rumah, Hewan, Perbaikan), yang mengatur yang dia lihat. Dengan Dapur, tugas dapur yang biasa sudah dicentang. Lalu kirim pesan WhatsApp-nya. Staf di bawah 18 tahun perlu izin orang tua atau wali dulu.",
     },
     where: "settings_staff",
+    covers: ["add-staff-2026-11"],
   },
   {
     id: "link-a-staff-phone",
@@ -280,8 +281,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Kitchen chores", id: "Tugas dapur" },
     body: {
-      en: "Washing up, the stove and the fridge are ordinary chores: add them in Home → Chores and give them to the person by name, so they show even to someone who only sees Kitchen. They sit with the day's other tasks; staff who see Kitchen also get the day's menu.",
-      id: "Cuci piring, kompor, dan kulkas adalah tugas biasa: tambahkan di Rumah → Tugas dan beri langsung ke orangnya, supaya tetap tampil walau dia hanya melihat Dapur. Tugasnya ada bersama tugas lain hari itu; staf yang melihat Dapur juga mendapat menu hari ini.",
+      en: "Washing up, the stove and the fridge are ordinary chores, given to the person by name so they show even to someone who only sees Kitchen. Add staff offers them when you pick Kitchen; add more in Home → Chores. Staff who see Kitchen also get the day's menu.",
+      id: "Cuci piring, kompor, dan kulkas adalah tugas biasa, diberikan langsung ke orangnya supaya tetap tampil walau dia hanya melihat Dapur. Tambah staf menawarkannya saat Anda memilih Dapur; tambah lainnya di Rumah → Tugas. Staf yang melihat Dapur juga mendapat menu hari ini.",
     },
     where: "home_chores",
   },

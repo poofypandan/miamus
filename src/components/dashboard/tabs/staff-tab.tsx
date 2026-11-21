@@ -20,7 +20,6 @@ import {
   Lock,
   LogOut,
   PackageX,
-  Plus,
   RotateCcw,
   Send,
   ShieldCheck,
@@ -32,8 +31,6 @@ import {
   UserRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -64,7 +61,6 @@ import { dataProvider } from "@/lib/data";
 import { useRequireOwner } from "@/hooks/use-require-owner";
 import { useStaffProfiles, useStaffNameLookup } from "@/hooks/use-staff-profiles";
 import { useToday } from "@/hooks/use-today";
-import { useSubmitLock } from "@/hooks/use-submit-lock";
 import { useScrollTopOnChange } from "@/hooks/use-tab-navigation";
 import { pushInPlace } from "@/lib/in-place-navigation";
 import { isOnLeave, pendingLeave } from "@/lib/leave";
@@ -86,6 +82,7 @@ import { RoomsManager } from "@/components/dashboard/rooms-manager";
 import { FeaturesPanel } from "@/components/dashboard/features-panel";
 import { StaffAreasDialog, StaffAreasLine } from "@/components/dashboard/staff-areas-dialog";
 import { SendStaffMessageButton } from "@/components/setup/send-staff-message";
+import { AddStaffSheet } from "@/components/dashboard/add-staff-sheet";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { featuresOnCount } from "@/lib/features";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -483,9 +480,8 @@ function StaffRoster({
 }) {
   const t = useT();
   const locale = useOwnerLocale();
-  const [newName, setNewName] = useState("");
+  // Add staff (staff onboarding step 2): a sheet, in place of the name field.
   const [adding, setAdding] = useState(false);
-  const addLock = useSubmitLock();
   const [resetting, setResetting] = useState<string | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffProfile | null>(null);
   // Who the owner is about to take off the roster, held until they confirm.
@@ -502,34 +498,6 @@ function StaffRoster({
   // Who has notifications on a phone (Phase 166): owners see it, never set it.
   const staffPush = useStaffPushOverview();
   const today = formatDateLocal(useToday());
-
-  async function addStaff() {
-    const name = newName.trim();
-    if (!name) {
-      toast.error(t("Enter a name first", "Masukkan nama dulu"));
-      return;
-    }
-    // Two taps in one tick must not add the same person twice (demo check F-1).
-    if (!addLock.acquire()) return;
-    setAdding(true);
-    try {
-      await dataProvider.createStaffProfile(name);
-      await reload();
-      setNewName("");
-      toast.success(
-        t(
-          `${name} added — they choose their own PIN on first sign-in`,
-          `${name} ditambahkan — PIN dipilih sendiri saat pertama masuk`
-        )
-      );
-    } catch (err) {
-      console.error(err);
-      toast.error(t("Failed to add this person", "Gagal menambahkan orang ini"));
-    } finally {
-      addLock.release();
-      setAdding(false);
-    }
-  }
 
   async function archive(profile: StaffProfile) {
     setBusyId(profile.id);
@@ -604,6 +572,7 @@ function StaffRoster({
   return (
     <div className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold text-gray-900">{t("Staff", "Staf")}</h2>
+      <WhatsNewCard id="add-staff-2026-11" onTry={() => setAdding(true)} />
 
       {/* How the pieces fit (Phase 120): until the first person is added
           (Phase 155). One line and an optional video since Phase 172 (D11
@@ -656,8 +625,8 @@ function StaffRoster({
             {staff.length === 0 ? (
               <p className="px-4 py-3 text-sm text-muted-foreground">
                 {t(
-                  "Nobody yet. Add the first name below — their PIN can wait until they sign in.",
-                  "Belum ada. Tambahkan nama pertama di bawah — PIN-nya bisa menunggu sampai mereka masuk."
+                  "Nobody yet. Add the first person below; they choose their own PIN.",
+                  "Belum ada. Tambahkan orang pertama di bawah; PIN-nya dia pilih sendiri."
                 )}
               </p>
             ) : (
@@ -742,39 +711,10 @@ function StaffRoster({
         </Card>
       )}
 
-      <Card className="py-4">
-        {/* A form, so the keyboard's Go / Enter adds the name too (Phase 120). */}
-        <form
-          className="flex flex-col gap-3 px-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!adding) void addStaff();
-          }}
-        >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="new-staff-name" className="text-xs">
-              {t("New person's name", "Nama orang baru")}
-            </Label>
-            <Input
-              id="new-staff-name"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder={t("e.g. Budi", "mis. Budi")}
-              maxLength={40}
-              autoComplete="off"
-            />
-            <p className="text-[11px] text-muted-foreground">
-              {t(
-                "The name they'll tap when signing in with a PIN, so use what they go by.",
-                "Nama yang mereka ketuk saat masuk dengan PIN, jadi pakai nama panggilannya."
-              )}
-            </p>
-          </div>
-          <Button type="submit" disabled={adding} className="min-h-[48px]">
-            {adding ? <Loader2 className="animate-spin" /> : <Plus />} {t("Add Person", "Tambah Orang")}
-          </Button>
-        </form>
-      </Card>
+      <Button className="min-h-[48px] rounded-xl" onClick={() => setAdding(true)}>
+        <UserPlus /> {t("Add staff", "Tambah staf")}
+      </Button>
+      <AddStaffSheet open={adding} onClose={() => setAdding(false)} roster={allProfiles ?? []} reload={reload} />
 
       {/* Kept visible rather than hidden away: their name is still on months
           of finished work, so an owner who finds it there needs somewhere
