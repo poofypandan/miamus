@@ -205,3 +205,23 @@ describe("a counted item short only for the week together (Codex, PR #195)", () 
     ]);
   });
 });
+
+describe("one dish short on its own, another only for the week (Codex, PR #195)", () => {
+  it("ties the week's shortfall to both dishes, soonest first", () => {
+    const counted = item({ id: "ayam", name: "Ayam", track_amount: true, quantity: 1, unit: "kg" });
+    const big = recipe("big", "Ayam bakar", [line({ item_id: "ayam", name: "Ayam", amount: 1200, unit: "g" })]);
+    const small = recipe("small", "Opor", [line({ item_id: "ayam", name: "Ayam", amount: 600, unit: "g" })]);
+    const needs = menuNeeds({
+      ...base,
+      items: [counted],
+      recipes: [big, small],
+      amounts: true,
+      // The dish short on its own is later in the week.
+      dishes: [dish("d1", "2026-11-21", "big", "Ayam bakar"), dish("d2", TODAY, "small", "Opor")],
+    });
+    expect(needs).toHaveLength(1);
+    expect(needs[0]).toMatchObject({ name: "Ayam", kind: "short", buy: 0.8 });
+    expect(needs[0].dishes.map((d) => d.dishId)).toEqual(["d2", "d1"]);
+    expect(dishesWithAddable(needs).map((d) => d.dishId)).toEqual(["d2", "d1"]);
+  });
+});
