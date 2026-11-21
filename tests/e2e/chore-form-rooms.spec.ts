@@ -52,12 +52,14 @@ test("Chore form: rooms by floor, several rooms at once, a whole floor, and a sp
       localStorage.setItem(`miamus.whats-new.${card}`, "seen");
     }
   });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
 
   // Several rooms at once: one chore per room, saved together.
   await page.getByRole("button", { name: "Add Chore" }).first().click({ timeout: 20_000 });
   let dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox").first().fill("Vakum");
+  // The room is behind More (21 Nov: Add Chore short by default).
+  await dialog.getByRole("button", { name: "More", exact: true }).click();
   await dialog.getByRole("combobox", { name: "Room" }).click();
   const list = dialog.getByRole("listbox", { name: "Rooms" });
   // Floors are headings, the whole floor first, then its rooms; loose rooms last.
@@ -87,6 +89,7 @@ test("Chore form: rooms by floor, several rooms at once, a whole floor, and a sp
   await page.getByRole("button", { name: "Add Chore" }).first().click();
   dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox").first().fill("Lap cermin");
+  await dialog.getByRole("button", { name: "More", exact: true }).click();
   await dialog.getByRole("combobox", { name: "Room" }).click();
   await dialog.getByRole("option", { name: "GB2 Bathroom" }).click();
   const spots = dialog.getByRole("group", { name: "Spot" });
@@ -103,6 +106,7 @@ test("Chore form: rooms by floor, several rooms at once, a whole floor, and a sp
   await page.getByRole("button", { name: "Add Chore" }).first().click();
   dialog = page.getByRole("dialog");
   await dialog.getByRole("textbox").first().fill("Buang sampah");
+  await dialog.getByRole("button", { name: "More", exact: true }).click();
   await dialog.getByRole("combobox", { name: "Room" }).click();
   await dialog.getByRole("option", { name: "Whole floor" }).click();
   await expect(dialog.getByText("LT2 · Whole floor")).toBeVisible();

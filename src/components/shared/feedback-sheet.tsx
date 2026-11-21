@@ -42,8 +42,10 @@ export function FeedbackSheet({
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       <SheetContent side="bottom" className="mx-auto max-h-[92dvh] max-w-md gap-0 overflow-y-auto rounded-t-2xl">
-        {/* Mounted only while open, so each opening starts with an empty box. */}
-        {open && <FeedbackForm locale={locale} asStaff={asStaff} onDone={onClose} />}
+        {/* Each opening starts with an empty box: the sheet's content unmounts
+            once it has closed. Not gated on open, so the whole sheet travels
+            down as it closes instead of shrinking to nothing first (Fable, PR 7). */}
+        <FeedbackForm locale={locale} asStaff={asStaff} onDone={onClose} />
       </SheetContent>
     </Sheet>
   );

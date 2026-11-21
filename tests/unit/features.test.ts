@@ -64,8 +64,12 @@ describe("what off hides", () => {
     expect(visibleChores([...chores], FEATURE_DEFAULTS).map((c) => c.id)).toEqual(["a", "b", "c"]);
   });
 
-  it("sends ?chores=repairs back to Today while Repairs is off", () => {
-    expect(choresViewFor("repairs", { ...FEATURE_DEFAULTS, repairs: false })).toBe("today");
+  it("opens Home on Rooms; ?chores=today is Chores; Repairs falls back to Rooms while off", () => {
+    expect(choresViewFor(null, FEATURE_DEFAULTS)).toBe("rooms");
+    expect(choresViewFor("rooms", FEATURE_DEFAULTS)).toBe("rooms");
+    expect(choresViewFor("today", FEATURE_DEFAULTS)).toBe("today");
+    expect(choresViewFor("nonsense", FEATURE_DEFAULTS)).toBe("rooms");
+    expect(choresViewFor("repairs", { ...FEATURE_DEFAULTS, repairs: false })).toBe("rooms");
     expect(choresViewFor("rooms", { ...FEATURE_DEFAULTS, repairs: false })).toBe("rooms");
     expect(choresViewFor("repairs", FEATURE_DEFAULTS)).toBe("repairs");
   });

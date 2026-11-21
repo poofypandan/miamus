@@ -38,10 +38,12 @@ const chicken = {
   expires_on: null,
 };
 
+// 21 Nov: the owners' Kitchen → Food is shelves (Fable's 08); Add ingredient
+// sits beside Add food, and each ingredient is a tile on its place's shelf.
 async function openAddIngredient(page: Page) {
   await page.goto("/dashboard?module=inventory");
-  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
-  await ingredients.getByRole("button", { name: "Add ingredient" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Add ingredient" }).click({ timeout: 20_000 });
+  const ingredients = page.getByRole("region", { name: "The kitchen", exact: true });
   const form = page.getByRole("dialog", { name: "Add item" });
   await expect(form).toBeVisible();
   return { ingredients, form };
@@ -78,9 +80,8 @@ test("add an ingredient with a place, a date and an amount in one sheet", async 
     quantity: 2,
     unit: "pcs",
   });
-  const row = ingredients.getByRole("group", { name: "Use soon" }).getByRole("button", { name: /Daging giling/ });
-  await expect(row).toContainText("Freezer · Expires tomorrow");
-  await expect(row).toContainText("2 pcs left");
+  // Tomorrow is the more pressing word; its sheet still shows the amount.
+  await expect(ingredients.getByRole("region", { name: "Use soon" }).getByRole("button", { name: "Daging giling, Tomorrow" })).toBeVisible();
 });
 
 test("nothing tapped: saved as before, no place stored, no date, not tracked", async ({ context, page }) => {
@@ -92,7 +93,7 @@ test("nothing tapped: saved as before, no place stored, no date, not tracked", a
   await expect.poll(() => stub.supplies.length).toBe(2);
   expect(stub.supplies[1]).toMatchObject({ name: "Tomat", kept_in: null, expires_on: null });
   expect(stub.supplies[1].track_amount ?? false).toBe(false);
-  await expect(ingredients.getByRole("group", { name: "Fridge" }).getByRole("button", { name: /Tomat/ })).toBeVisible();
+  await expect(ingredients.getByRole("region", { name: "Fridge" }).getByRole("button", { name: "Tomat", exact: true })).toBeVisible();
 });
 
 test("an amount of 0 reads as blank: not tracked, and the date kept (Phase 176 follow-ups)", async ({ context, page }) => {
@@ -108,9 +109,7 @@ test("an amount of 0 reads as blank: not tracked, and the date kept (Phase 176 f
   expect(stub.supplies[1]).toMatchObject({ name: "Kemangi", expires_on: jakartaDay(1) });
   expect(stub.supplies[1].track_amount ?? false).toBe(false);
   expect(stub.supplies[1].stock_status).not.toBe("out");
-  const row = ingredients.getByRole("group", { name: "Use soon" }).getByRole("button", { name: /Kemangi/ });
-  await expect(row).toContainText("Expires tomorrow");
-  await expect(row).not.toContainText("Out");
+  await expect(ingredients.getByRole("region", { name: "Use soon" }).getByRole("button", { name: "Kemangi, Tomorrow", exact: true })).toBeVisible();
 });
 
 test("a tap on the default place is a choice: it stays when the category changes (Codex, PR #117)", async ({ context, page }) => {
@@ -134,6 +133,8 @@ test("Household Supplies and Shopping show the form as before", async ({ context
   await page.keyboard.press("Escape");
 
   await page.getByRole("tab", { name: "Shopping" }).click();
+  // Supplies at home is one row that opens the list (21 Nov).
+  await page.getByRole("button", { name: /^Supplies at home/ }).click();
   await page.getByRole("button", { name: "Add item" }).click();
   const shopping = page.getByRole("dialog", { name: "Add item" });
   await expect(shopping.getByLabel("Name")).toBeVisible();
@@ -146,8 +147,7 @@ test("Household Supplies and Shopping show the form as before", async ({ context
 test("editing an ingredient shows its place and date, and sends only what changed", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [chicken] });
   await page.goto("/dashboard?module=inventory");
-  const ingredients = page.getByRole("region", { name: "Ingredients", exact: true });
-  await ingredients.getByRole("button", { name: /Dada Ayam/ }).click({ timeout: 20_000 });
+  await page.getByRole("region", { name: "The kitchen", exact: true }).getByRole("button", { name: /^Dada Ayam/ }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Edit item" }).click();
   const form = page.getByRole("dialog", { name: "Edit item" });
   await expect(form.getByRole("button", { name: "Freezer" })).toHaveAttribute("aria-pressed", "true");
@@ -189,10 +189,10 @@ test("Add ingredient: an exact name already there says so, Open it opens it, and
   await expect.poll(() => stub.supplies.length).toBe(2);
 });
 
-test("Add ready-to-eat food: the name is in Ingredients, Open it there", async ({ context, page }) => {
+test("Add food: the name is in Ingredients, Open it there", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, items: [chicken] });
   await page.goto("/dashboard?module=inventory");
-  await page.getByRole("button", { name: "Add ready-to-eat food" }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Add food" }).click({ timeout: 20_000 });
   const form = page.getByRole("dialog", { name: "Add food" });
   await form.getByLabel(/What is it\?/).fill("dada ayam");
   await expect(
