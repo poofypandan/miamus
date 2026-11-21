@@ -409,6 +409,12 @@ test("a staff phone cooks from Menu hari ini: the ingredients come off, Undo put
   // 1,5 kg asked of 1 kg: the chicken is out; 750 g of rice: 3,25 kg left.
   expect(stub.supplies.find((r) => r.id === chicken.id)).toMatchObject({ quantity: 0, stock_status: "out" });
   expect(stub.supplies.find((r) => r.id === rice.id)).toMatchObject({ quantity: 3.25 });
+  // Bawang merah isn't counted by amount: asked whether it ran out (S2a). Chicken came off by amount, so it isn't.
+  const ranOut = page.getByRole("dialog", { name: "Ada bahan yang habis?" });
+  await expect(ranOut.getByRole("button", { name: /Bawang merah/ })).toBeVisible();
+  await expect(ranOut.getByRole("button", { name: /Ayam|Beras/ })).toHaveCount(0);
+  await ranOut.getByRole("button", { name: "Tidak ada", exact: true }).click();
+  // The cooked toast, with Batalkan, once that sheet is closed.
   await expect(page.getByText("Soto ayam sudah dimasak")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ada sisa?" })).toBeVisible();
   await shot(page, "staff-leftovers");
@@ -514,6 +520,7 @@ test("Undo of cooking puts back the date cooking cleared (Phase 177, migrations/
     amount: 1,
     cleared_date: "2026-12-01",
   });
+  await page.getByRole("button", { name: "Tidak ada", exact: true }).click();
   await page.getByRole("button", { name: "Tidak ada sisa" }).click();
   await page.getByRole("button", { name: "Batalkan" }).click();
   await expect.poll(() => stub.supplies.find((r) => r.id === chicken.id)?.quantity).toBe(1);
@@ -535,6 +542,7 @@ test("a staff phone's Undo more than 10 minutes after cooking is refused with an
   await page.getByRole("button", { name: "Sudah dimasak" }).click();
   await page.getByRole("button", { name: "Pakai bahan ini" }).click();
   await expect.poll(() => stub.supplies.find((r) => r.id === rice.id)?.quantity).toBe(3.5);
+  await page.getByRole("button", { name: "Tidak ada", exact: true }).click();
   await page.getByRole("button", { name: "Tidak ada sisa" }).click();
   // The server's clock: cooked 11 minutes ago (a very slow signal, or a stale toast).
   stub.menu[0].cooked_at = new Date(Date.now() - 11 * 60 * 1000).toISOString();

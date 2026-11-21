@@ -45,7 +45,9 @@ function tabHref(module: DashboardModule, param?: [string, string]): string {
   if (!param) return base;
   return `${base}${base.includes("?") ? "&" : "?"}${param[0]}=${param[1]}`;
 }
-const home = (view: Exclude<ChoresView, "today">) => tabHref("chores", ["chores", view]);
+// Home opens on Rooms (21 Nov), so Rooms is the bare tab and the others
+// carry their ?chores= value.
+const home = (view: ChoresView) => (view === "rooms" ? tabHref("chores") : tabHref("chores", ["chores", view]));
 const kitchen = (view: KitchenViewValue) => (view === "food" ? tabHref("inventory") : tabHref("inventory", ["kitchen", view]));
 
 /**
@@ -56,12 +58,12 @@ const kitchen = (view: KitchenViewValue) => (view === "food" ? tabHref("inventor
  */
 export const GUIDE_PLACES = {
   today: { en: "Today", id: "Hari ini", href: tabHref("agenda") },
-  home_chores: { en: "Home → Chores", id: "Rumah → Tugas", href: tabHref("chores") },
+  home_chores: { en: "Home → Chores", id: "Rumah → Tugas", href: home("today") },
   home_rooms: { en: "Home → Rooms", id: "Rumah → Ruangan", href: home("rooms") },
   home_repairs: { en: "Home → Repairs", id: "Rumah → Perbaikan", href: home("repairs") },
   // The checklist is a sheet over Home → Chores, opened by ?bills=open
   // (chores-tab.tsx), the way Today's What's new card opens it.
-  home_bills: { en: "Home → Bills and upkeep", id: "Rumah → Tagihan dan perawatan", href: tabHref("chores", ["bills", "open"]) },
+  home_bills: { en: "Home → Bills and upkeep", id: "Rumah → Tagihan dan perawatan", href: `${home("today")}&bills=open` },
   pets: { en: "Pets", id: "Hewan", href: tabHref("pets") },
   kitchen_food: { en: "Kitchen → Food", id: "Dapur → Makanan", href: kitchen("food") },
   kitchen_menu: { en: "Kitchen → Menu", id: "Dapur → Menu", href: kitchen("menu") },
@@ -116,10 +118,11 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "The five tabs", id: "Lima tab" },
     body: {
-      en: "Today shows the day at a glance and what is waiting for you. Home has chores, rooms and repairs. Pets has each pet's routines and health. Kitchen has food, the menu and shopping. Settings has people, features and notifications.",
-      id: "Hari ini menampilkan ringkasan hari dan yang menunggu Anda. Rumah berisi tugas, ruangan, dan perbaikan. Hewan berisi rutinitas dan kesehatan tiap hewan. Dapur berisi makanan, menu, dan belanja. Pengaturan berisi orang, fitur, dan notifikasi.",
+      en: "Today shows the day at a glance and what is waiting for you. Pets has each pet's routines and health. Home, in the middle, has rooms, chores and repairs. Kitchen has food, the menu and shopping. Settings has people, features and notifications.",
+      id: "Hari ini menampilkan ringkasan hari dan yang menunggu Anda. Hewan berisi rutinitas dan kesehatan tiap hewan. Rumah, di tengah, berisi ruangan, tugas, dan perbaikan. Dapur berisi makanan, menu, dan belanja. Pengaturan berisi orang, fitur, dan notifikasi.",
     },
     where: null,
+    covers: ["home-centre-2026-11"],
   },
   {
     id: "today",
@@ -221,8 +224,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Rooms, floors and spots", id: "Ruangan, lantai, dan bagian" },
     body: {
-      en: "Home → Rooms lists every room by floor and what is set up there. A room can hold rooms inside it, like a bathroom in its bedroom; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
-      id: "Rumah → Ruangan menampilkan semua ruangan per lantai beserta tugasnya. Ruangan bisa punya ruangan di dalamnya, seperti kamar mandi di dalam kamar; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
+      en: "Home opens on Rooms: your house, one band a floor, top floor first. Amber means an open repair or a chore left from an earlier day. A room can hold rooms inside it; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
+      id: "Rumah dibuka di Ruangan: rumah Anda, satu baris per lantai, lantai teratas di atas. Kuning berarti ada perbaikan atau tugas tertinggal. Ruangan bisa punya ruangan di dalamnya; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
     },
     where: "home_rooms",
     covers: ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "rooms-inside-2026-11"],
@@ -336,8 +339,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Food that is ready to eat", id: "Makanan siap dimakan" },
     body: {
-      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first, so it gets eaten in time.",
-      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas, supaya sempat dimakan.",
+      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first. Ask Kakak \"What should we eat?\" and she answers from this list.",
+      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas. Tanya Kakak \"Makan apa?\" dan Kakak menjawab dari daftar ini.",
     },
     where: "kitchen_food",
     needs: "food",
@@ -371,8 +374,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "The shopping list", id: "Daftar belanja" },
     body: {
-      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought.",
-      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa.",
+      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought. Or tell Kakak \"I bought the santan\".",
+      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa. Atau bilang ke Kakak \"Santan sudah dibeli\".",
     },
     where: "kitchen_shopping",
   },
@@ -381,8 +384,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Keeping the kitchen up to date", id: "Menjaga stok tetap benar" },
     body: {
-      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out, and tap Sudah dimasak on Menu hari ini. With Food at home on, they mark food Dimakan, Diberikan or Dibuang. Their phone shows them a short tip.",
-      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis, dan menekan Sudah dimasak di Menu hari ini. Kalau Makanan di rumah menyala, mereka menandai makanan Dimakan, Diberikan, atau Dibuang. HP mereka menampilkan tips.",
+      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out. After Sudah dimasak, Miamus asks what ran out: one tap each. With Food at home on, they mark food Dimakan, Diberikan or Dibuang.",
+      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis. Setelah Sudah dimasak, Miamus bertanya bahan apa yang habis: sekali ketuk. Dengan Makanan di rumah, makanan ditandai Dimakan, Diberikan, atau Dibuang.",
     },
     where: "kitchen_shopping",
   },

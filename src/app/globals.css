@@ -399,14 +399,16 @@
 }
 
 /*
- * The Agenda's view change (Phase 115): Day ⇄ Week, a new week, a tap on
- * Today. Opacity and nothing else — no slide, no resize — so it runs on the
- * compositor and cannot drop a frame however tall the incoming view is. The
- * outgoing view is simply replaced; fading the new one in over 180ms is what
- * makes the swap read as a transition rather than a jump.
+ * The view change (Phase 115; 04, PR 7): a new tab, the staff page, the
+ * landing over the splash. Opacity and nothing else — no slide, no resize —
+ * so it runs on the compositor and cannot drop a frame however tall the
+ * incoming view is, and a fixed child (the date pill, Kakak's band) keeps
+ * its place: a transform would make the view its containing block. The
+ * outgoing view is simply replaced; the new one arrives fast and comes to
+ * rest (ease-arrive), which reads as a transition rather than a jump.
  */
 @theme inline {
-  --animate-view-fade: view-fade 180ms ease-out;
+  --animate-view-fade: view-fade 240ms var(--ease-arrive);
 
   @keyframes view-fade {
     from {
@@ -816,5 +818,62 @@
     inset: auto !important;
     overflow: visible !important;
     height: auto !important;
+  }
+}
+
+/*
+ * A press settles (04, PR 7): the thing under the thumb gives to 98 % and
+ * comes back on ease-settle. The `scale` property, not transform, so it
+ * composes with anything that already moves. Nothing moves under reduced
+ * motion. The shared Button has its own copy in its classes.
+ */
+@utility press {
+  transition: scale 160ms var(--ease-settle);
+  &:active:not(:disabled) {
+    scale: 0.98;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:active:not(:disabled) {
+      scale: none;
+    }
+  }
+}
+
+/* Sheets only fade under reduced motion (04, PR 7): no slide in or out. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sheet-content"] {
+    --tw-enter-translate-x: 0 !important;
+    --tw-enter-translate-y: 0 !important;
+    --tw-exit-translate-x: 0 !important;
+    --tw-exit-translate-y: 0 !important;
+  }
+}
+
+/*
+ * A row in a grouped list, pressed (Fable, PR 7): no scale, which would
+ * shrink it inside the card's clip; the track at half strength at once, and
+ * back over 200 ms when the thumb lifts.
+ */
+@utility press-row {
+  transition: background-color 200ms var(--ease-settle);
+  &:active:not(:disabled) {
+    background-color: color-mix(in srgb, var(--muted) 50%, transparent);
+    transition-duration: 0ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/*
+ * Paper does not fade (Fable, PR 7): a bottom sheet is solid from its first
+ * frame and travels; only its scrim fades. Under reduced motion, where it
+ * doesn't travel, the sheet fades as a whole (above).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot="sheet-content"][data-side="bottom"] {
+    --tw-enter-opacity: 1 !important;
+    --tw-exit-opacity: 1 !important;
   }
 }

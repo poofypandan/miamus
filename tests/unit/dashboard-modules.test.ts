@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import { DASHBOARD_MODULES, highlightedTab, moduleFromParam, moduleHref } from "@/lib/dashboard-modules";
 
 describe("dashboard tabs (Phase 175)", () => {
-  it("orders the bar Today, Home, Pets, Kitchen, Settings", () => {
-    expect(DASHBOARD_MODULES).toEqual(["agenda", "chores", "pets", "inventory", "access"]);
+  it("orders the bar Today, Pets, Home, Kitchen, Settings (Home in the centre)", () => {
+    expect(DASHBOARD_MODULES).toEqual(["agenda", "pets", "chores", "inventory", "access"]);
   });
 
   it("keeps every URL key working", () => {
