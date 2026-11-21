@@ -3,7 +3,7 @@
 // docs/phase-156-kakak-test-set.md ("How a case is marked").
 
 import { householdRefs, type KakakHousehold, type KakakLocale } from "@/lib/kakak/household";
-import { looksLikeWrongLanguage, noteTells, type NoteTell } from "@/lib/kakak/reply-guard";
+import { KITCHEN_AMOUNT, looksLikeWrongLanguage, noteTells, type NoteTell } from "@/lib/kakak/reply-guard";
 import { toIsoDays } from "@/lib/kakak/suggestions";
 import { newPetTimes, routineTitle } from "@/lib/kakak/validate";
 import type { ExpectedCall, ExpectedShoppingItem, ExpectedTurn, FieldMatcher, KakakCase } from "./types";
@@ -133,6 +133,7 @@ export const DEFAULTS: Record<string, Record<string, FieldMatcher>> = {
     shelf: null,
   },
   add_to_shopping_list: {},
+  plan_dish: {},
   set_staff_areas: {
     show: { sameSet: [] },
     hide: { sameSet: [] },
@@ -214,7 +215,20 @@ function turnMismatches(household: KakakHousehold, expected: ExpectedTurn, actua
     ];
   }
   const ok = matchAll(expected.calls, actual.calls, (e, a) => callMismatches(household, e, a).length === 0);
-  if (ok) return [];
+  if (ok) {
+    // Her line beside the card (Can we cook it?): what it must say and must not.
+    // A line the guard dropped leaves the fallback, "Here's what I'll add:" (Fable S0).
+    if ((expected.mentions ?? []).length && !actual.text.trim()) {
+      return ["her line beside the card was dropped by the guard: the owner sees the fallback"];
+    }
+    const body = actual.text.toLowerCase();
+    const missing = (expected.mentions ?? []).filter((group) => !group.some((n) => body.includes(n.toLowerCase())));
+    const said = (expected.avoids ?? []).filter((n) => body.includes(n.toLowerCase()));
+    return [
+      ...missing.map((group) => `the line beside the card doesn't mention one of ${JSON.stringify(group)}`),
+      ...said.map((n) => `the line beside the card says ${JSON.stringify(n)}, which it must not`),
+    ];
+  }
   if (expected.calls.length !== actual.calls.length) {
     return [`expected ${expected.calls.length} suggestion(s), got ${actual.calls.length}: ${actual.calls.map((c) => c.name).join(", ")}`];
   }
@@ -258,7 +272,7 @@ const PROMISES_CHANGE = [
 // The language check lives with the route's guard, which uses it too.
 export { looksLikeWrongLanguage };
 
-function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "rooms" | "items"; value: unknown }[] {
+function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "rooms" | "items" | "recipes"; value: unknown }[] {
   const input = call.input;
   switch (call.name) {
     case "create_chore":
@@ -279,6 +293,9 @@ function refsUsed(call: ToolCall): { field: string; kind: "people" | "pets" | "r
     case "put_away_ingredient":
       // Null is a new ingredient, by name: only a reference can be invented.
       return [{ field: "item", kind: "items", value: input.item }];
+    case "plan_dish":
+      // "none" is a typed dish, not a reference.
+      return input.recipe === "none" ? [] : [{ field: "recipe", kind: "recipes", value: input.recipe }];
     default:
       return [];
   }
@@ -400,6 +417,17 @@ export function mustNeverViolations(
     if ((keptFood !== -1 && keptFood < askedBy) || rejectedFood) {
       out.push("suggested a food with no date given before asking");
     }
+  }
+  // Can we cook it? (20 Nov): an amount or an ingredient she was never given,
+  // in anything the owner would read, kept or bounced.
+  const everything = [...actual.map((turn) => shownText(turn)), ...rejected.map((a) => shownText(a.turn))];
+  if (flags.includes("states_amount") && everything.some((text) => KITCHEN_AMOUNT.test(text))) {
+    out.push("stated an amount for a recipe, which she is never given");
+  }
+  if (flags.includes("invents_ingredient")) {
+    const words = kakakCase.paths.flatMap((path) => path.flatMap((turn) => (turn.kind === "question" ? [] : (turn.avoids ?? []))));
+    const named = [...new Set(words)].filter((w) => everything.some((text) => text.toLowerCase().includes(w.toLowerCase())));
+    if (named.length) out.push(`named an ingredient no recipe lists: ${named.join(", ")}`);
   }
   return out;
 }

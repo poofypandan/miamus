@@ -93,12 +93,12 @@ describe("household dates", () => {
 });
 
 describe("tool definitions", () => {
-  it("are closed and require every property; strict except the four validate.ts checks in full", () => {
-    expect(KAKAK_TOOLS).toHaveLength(7);
+  it("are closed and require every property; strict except the five validate.ts checks in full", () => {
+    expect(KAKAK_TOOLS).toHaveLength(8);
     for (const tool of KAKAK_TOOLS) {
       if (!("input_schema" in tool)) throw new Error("custom tools only");
       // The API's limit of 16 union-typed parameters (tools.ts, kakak-tool-limits.test.ts).
-      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient", "set_staff_areas"].includes(tool.name);
+      const loose = ["add_to_shopping_list", "add_food", "put_away_ingredient", "set_staff_areas", "plan_dish"].includes(tool.name);
       expect(tool.strict).toBe(loose ? undefined : true);
       expect(tool.input_schema.additionalProperties).toBe(false);
       expect([...(tool.input_schema.required ?? [])].sort()).toEqual(
@@ -401,10 +401,11 @@ describe("the test set", () => {
     // 116, plus 23 on 2026-11-14: K131–K144 (questions about Miamus, thanks) and
     // K146–K154 (a new ingredient, amounts), plus K117–K126 (what a staff
     // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
-    // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K301–K303 on
-    // 2026-11-20 (staff onboarding step 1: how to add, explain to, and remove a staff
-    // member, answered from the guide). All for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(158);
+    // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K161–K174
+    // and K175–K176 (the film's sentence) and K177–K187 (Fable's A1–A10) on 2026-11-20, plus
+    // K301–K303 on 2026-11-20 (staff onboarding step 1: how to add, explain to, and remove a
+    // staff member, answered from the guide). All for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(186);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 
