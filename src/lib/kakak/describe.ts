@@ -229,7 +229,9 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
         heading: t("Shopping list", "Daftar belanja"),
         rows: item.entries.map((entry) =>
           entry.type === "item"
-            ? { label: entry.status === "out" ? t("Buy", "Beli") : t("Running low", "Hampir habis"), value: entry.name }
+            ? entry.status === "ok"
+              ? { label: t("Bought", "Sudah dibeli"), value: `${entry.name} · ${t("Enough", "Masih ada")}` }
+              : { label: entry.status === "out" ? t("Buy", "Beli") : t("Running low", "Hampir habis"), value: entry.name }
             : { label: t("Buy", "Beli"), value: entry.petName ? `${entry.note} · ${entry.petName}` : entry.note },
         ),
       };

@@ -154,7 +154,7 @@ function TodayChores() {
       <WhatsNewCard id="starter-list-2026-11" onTry={() => setStarterOpen(true)} />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-gray-900">{t("Chores", "Tugas")}</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground">{t("Chores", "Tugas")}</h2>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button
             variant="outline"
@@ -264,7 +264,7 @@ function TodayChores() {
 
           {done.length > 0 && (
             <div className="flex flex-col gap-2">
-              <h3 className="text-xs font-medium text-gray-500">{t("Completed", "Selesai")}</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">{t("Completed", "Selesai")}</h3>
               {done.map((occurrence) => (
                 // No onPress on a completed chore: its footer holds the proof
                 // photos, which are themselves buttons, and a button inside a

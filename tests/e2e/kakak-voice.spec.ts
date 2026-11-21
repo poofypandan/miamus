@@ -1,7 +1,9 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { STAFF_ID, installStub } from "./stub-backend";
 
-// Talk to Kakak (voice beta). The browser's SpeechRecognition is replaced by
+// Talk to Kakak, the older voice flow (Stop ends it), now behind ?newvoice=0
+// since tap to talk became the default (20 Nov; kakak-voice-new.spec.ts).
+// The browser's SpeechRecognition is replaced by
 // a fake the test speaks through, and speechSynthesis.speak by a recorder, so
 // what is under test is the sheet's side: the mic, the live words in the
 // typing box, the spoken request going through the real /api/kakak route in
@@ -91,7 +93,7 @@ async function say(page: Page, words: string, final: boolean) {
 test("voice: speak a request, see the words live, and Kakak's card comes back (practice mode)", async ({ context, page }) => {
   await fakeSpeech(context, "works");
   const stub = await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?newvoice=0");
 
   await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
   // Reading aloud is off until turned on, and remembered on this phone.
@@ -143,7 +145,7 @@ test("voice: Cancel keeps the words in the box and sends nothing", async ({ cont
     asked++;
     return route.fulfill({ json: { kind: "message", text: "ok", history: { messages: [] }, requestId: "x" } });
   });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?newvoice=0");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Talk to Kakak" }).click();
@@ -162,7 +164,7 @@ test("voice: tapping Send while the mic is on sends once", async ({ context, pag
     asked.push(route.request().postDataJSON().reply);
     return route.fulfill({ json: { kind: "message", text: "Noted.", history: { messages: [] }, requestId: "x" } });
   });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?newvoice=0");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Talk to Kakak" }).click();
@@ -194,7 +196,7 @@ test("voice: the card's question is read once, and not again when an item is rem
     })
   );
   await page.route("**/api/kakak/outcome", (route) => route.fulfill({ json: { ok: true } }));
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?newvoice=0");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Read replies aloud" }).click();
@@ -217,7 +219,7 @@ async function askAndHear(page: Page, locale: "id" | "en", reply: string) {
   await page.route("**/api/kakak", (route) =>
     route.fulfill({ json: { kind: "message", text: reply, history: { messages: [] }, requestId: "x" } })
   );
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?newvoice=0");
   const id = locale === "id";
   await page.getByRole("button", { name: id ? "Bilang ke Kakak" : "Tell Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: id ? "Bacakan jawaban Kakak" : "Read replies aloud" }).click();
@@ -279,7 +281,7 @@ test("voice: closing the sheet stops the sentences still waiting to be read", as
 test("voice: a browser with no speech recognition gets the keyboard mic tip", async ({ context, page }) => {
   await fakeSpeech(context, "missing");
   await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?newvoice=0");
 
   await page.getByRole("button", { name: "Tell Kakak" }).click({ timeout: 20_000 });
   // One line since Phase 172 (D11 rule 7).
@@ -293,7 +295,7 @@ test("voice: a browser with no speech recognition gets the keyboard mic tip", as
 test("voice: a recognizer that refuses to run (iPhone Home Screen app) falls back to the tip", async ({ context, page }) => {
   await fakeSpeech(context, "refused");
   await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?newvoice=0");
 
   await page.getByRole("button", { name: "Bilang ke Kakak" }).click({ timeout: 20_000 });
   await page.getByRole("button", { name: "Bicara dengan Kakak" }).click();

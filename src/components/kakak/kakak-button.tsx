@@ -68,7 +68,7 @@ export function KakakButton() {
     <>
       {/* Room under the tab's last row: the band below is 4.75rem tall, so
           the last row ends above it once scrolled to the bottom. */}
-      <div aria-hidden="true" className="h-20 shrink-0" />
+      <div aria-hidden="true" className="h-24 shrink-0" />
       {/* On document.body: the pull-to-refresh wrapper is transformed, which
           would make position: fixed relative to it instead of the screen.
 
@@ -80,13 +80,13 @@ export function KakakButton() {
           row is never pressed by mistake. */}
       {createPortal(
         <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 mx-auto w-full max-w-md">
-          <div aria-hidden="true" className="h-3 bg-gradient-to-t from-slate-50 to-slate-50/0" />
+          <div aria-hidden="true" className="h-8 bg-gradient-to-t from-background from-25% to-background/0" />
           <div
             data-testid="kakak-band"
             className="pointer-events-auto flex items-center justify-end gap-3 bg-background px-4 pt-1 pb-3"
           >
             {showHint && (
-              <p className="min-w-0 flex-1 text-right text-xs leading-snug text-gray-600">
+              <p className="min-w-0 flex-1 text-right text-xs leading-snug text-gray-600 in-data-[date-pill]:hidden">
                 {t("Kakak can set things up for you.", "Kakak bisa mengaturnya untuk Anda.")}
               </p>
             )}

@@ -27,9 +27,10 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icon/192", sizes: "192x192", type: "image/png", purpose: "any" },
       { src: "/icon/512", sizes: "512x512", type: "image/png", purpose: "any" },
       // Android builds the home-screen icon AND the launch splash from this
-      // one: the splash is it cut to a 160dp circle. The app's first frame
-      // redraws exactly that circle and settles from it (MiamusMark's
-      // `opening`), so change this tile and that frame has to follow.
+      // one: the splash is it cut to a 240dp circle, the glyph a 220dp box
+      // (launch-mark-size.ts, measured 21 Nov). The app's first frame redraws
+      // exactly that circle and holds it (MiamusMark's `opening`), so change
+      // this tile, its 80% glyph, and that frame has to follow.
       { src: "/maskable-icon", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };

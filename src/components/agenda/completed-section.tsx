@@ -44,25 +44,25 @@ export function CompletedSection({
   return (
     <section
       aria-label={`${t.title} (${count})`}
-      className="flex flex-col gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-2"
+      className="flex flex-col gap-2 rounded-2xl bg-done-tint/50 p-2"
     >
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls={bodyId}
-        className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-1 text-left active:bg-emerald-500/10"
+        className="flex min-h-[40px] items-center gap-1.5 rounded-lg px-1 text-left active:bg-done-tint"
       >
-        <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
-        <h3 className="text-sm font-semibold text-emerald-800">
+        <CheckCircle2 className="size-4 shrink-0 text-done" />
+        <h3 className="text-sm font-semibold text-done-foreground">
           {t.title} · {count}
         </h3>
-        <span className="ml-auto text-[11px] font-medium text-emerald-700">
+        <span className="ml-auto text-[11px] font-medium text-done-foreground">
           {open ? t.hide : t.show}
         </span>
         <ChevronDown
           className={cn(
-            "size-4 shrink-0 text-emerald-700 transition-transform duration-200 motion-reduce:transition-none",
+            "size-4 shrink-0 text-done-foreground transition-transform duration-200 motion-reduce:transition-none",
             open && "rotate-180"
           )}
         />
