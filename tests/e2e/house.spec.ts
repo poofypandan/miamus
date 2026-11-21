@@ -148,6 +148,25 @@ test("Home opens on the house: top floor first, amber only for a repair or an ea
   await expect(pills.getByRole("tab", { name: "Rooms" })).toHaveAttribute("aria-selected", "true");
 });
 
+test("browsing another week first: the house still knows what was left, and its link opens today (Codex, PR #186)", async ({
+  context,
+  page,
+}) => {
+  await installStub(context, { owner: { locale: "en" }, rooms: ROOMS, chores: CHORES, repairs: [leak] });
+  await seenCards(context);
+  await page.goto("/dashboard?module=chores&chores=today");
+  await page.getByLabel("Jump to date").fill(day(9), { timeout: 20_000 });
+  await page.getByRole("tablist", { name: "Home" }).getByRole("tab", { name: "Rooms" }).click();
+
+  const house = page.getByRole("region", { name: "The house" });
+  await expect(house.getByRole("button", { name: "LT1 · Teras, needs attention" })).toBeVisible();
+  const attention = page.getByRole("region", { name: "Needs attention" });
+  await attention.getByRole("button", { name: /^Pel teras/ }).click();
+  await expect(page).toHaveURL(/chores=today/);
+  await expect(page.getByText("From earlier")).toBeVisible();
+  await expect(page.getByText("Pel teras")).toBeVisible();
+});
+
 test("the house in Bahasa Indonesia", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" }, rooms: ROOMS, chores: CHORES, repairs: [leak] });
   await seenCards(context);

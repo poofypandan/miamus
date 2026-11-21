@@ -1,15 +1,19 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { addDays } from "date-fns";
 import { ChevronRight, TriangleAlert } from "lucide-react";
 import { useT } from "@/context/owner-locale-context";
 import { useHousehold } from "@/context/household-context";
 import { useToday } from "@/hooks/use-today";
 import { expandChores, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import { applyLeaveTriage } from "@/lib/leave";
+import { dataProvider } from "@/lib/data";
+import { AGENDA_WEEK_DAYS, weekStartOf } from "@/lib/unified-agenda";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import type { House, HouseBand, HouseRoom } from "@/lib/house-view";
 import { cn } from "@/lib/utils";
+import type { HouseholdTask } from "@/types/database";
 
 /**
  * Home → Rooms as the house (21 Nov; Fable's home-floors.html): the Miamus
@@ -135,15 +139,45 @@ function RoomTile({ room, onOpen }: { room: HouseRoom; onOpen: () => void }) {
  * Chores left from an earlier day, for the house's amber: today's carried-over
  * chores, the same ones Home → Chores lists under "From earlier" (Phase 113),
  * whatever day Chores is browsing. Leave applies, as everywhere (Phase 140).
+ *
+ * The household's chore list holds only the browsed week, and only this
+ * week's carries the rolled-over chores (Codex, PR #186). So while another
+ * week is browsed, this week's chores are read on their own, once, and the
+ * live list takes over again when the browsed week is this one.
  */
 export function useOverdueChores(): ChoreOccurrence[] {
-  const { householdTasks, leaveRequests } = useHousehold();
-  const todayStr = formatDateLocal(useToday());
+  const { householdTasks, leaveRequests, selectedDate } = useHousehold();
+  const today = useToday();
+  const todayStr = formatDateLocal(today);
+  const thisWeekStart = formatDateLocal(weekStartOf(today));
+  const browsingThisWeek = formatDateLocal(weekStartOf(selectedDate)) === thisWeekStart;
+  const [thisWeek, setThisWeek] = useState<{ start: string; rows: HouseholdTask[] } | null>(null);
+
+  useEffect(() => {
+    if (browsingThisWeek) return;
+    let live = true;
+    const start = new Date(`${thisWeekStart}T00:00:00`);
+    const to = formatDateLocal(addDays(start, AGENDA_WEEK_DAYS - 1));
+    dataProvider
+      .listHouseholdTasks(thisWeekStart, to, todayStr)
+      .then((rows) => {
+        if (live) setThisWeek({ start: thisWeekStart, rows });
+      })
+      // No amber from chores until it loads; repairs still show.
+      .catch((err) => console.warn("This week's chores for the house did not load", err));
+    return () => {
+      live = false;
+    };
+  }, [browsingThisWeek, thisWeekStart, todayStr]);
+
+  const rows = browsingThisWeek ? householdTasks : thisWeek?.start === thisWeekStart ? thisWeek.rows : null;
   return useMemo(
     () =>
-      applyLeaveTriage(expandChores({ rows: householdTasks, date: todayStr, today: todayStr }), leaveRequests)
-        .filter((o) => o.overdue && o.status !== "completed")
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    [householdTasks, todayStr, leaveRequests]
+      rows
+        ? applyLeaveTriage(expandChores({ rows, date: todayStr, today: todayStr }), leaveRequests)
+            .filter((o) => o.overdue && o.status !== "completed")
+            .sort((a, b) => a.date.localeCompare(b.date))
+        : [],
+    [rows, todayStr, leaveRequests]
   );
 }

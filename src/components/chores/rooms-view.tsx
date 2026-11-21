@@ -25,6 +25,7 @@ import { useRepairs } from "@/hooks/use-repairs";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { canSortIntoFloors } from "@/lib/organise-rooms";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
+import { useHousehold } from "@/context/household-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useChoresView } from "@/hooks/use-chores-view";
 import { useHouseholdLocations, useLocationName } from "@/hooks/use-household-locations";
@@ -411,6 +412,9 @@ export function RoomsView() {
 function NeedsAttention({ repairs, late }: { repairs: Repair[]; late: ChoreOccurrence[] }) {
   const t = useT();
   const { setView } = useChoresView();
+  // From earlier shows only on today (expandChores), so the link opens today.
+  const { setSelectedDate } = useHousehold();
+  const todayDate = useToday();
   const locale = useOwnerLocale();
   const placeName = useLocationName();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -432,7 +436,10 @@ function NeedsAttention({ repairs, late }: { repairs: Repair[]; late: ChoreOccur
             <button
               key={occurrence.key}
               type="button"
-              onClick={() => setView("today")}
+              onClick={() => {
+                setSelectedDate(todayDate);
+                setView("today");
+              }}
               className={cn(
                 "flex min-h-[64px] w-full items-center gap-3 px-3 py-2.5 text-left active:bg-muted",
                 (repairs.length > 0 || index > 0) && "border-t"
