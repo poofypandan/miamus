@@ -242,15 +242,10 @@ function FoodPreferences({ initial }: { initial: FoodRule[] | null }) {
       <p className="text-sm font-medium text-gray-900">{label}</p>
       <FoodRulesChips value={rules} locale={locale} disabled={saving} onChange={(next) => void change(next)} label={label} />
       <p className="text-xs text-muted-foreground">
-        {rules === null
-          ? t(
-              "Optional. For Kakak's recipe ideas and for whoever cooks. Kakak asks once, the first time you ask for ideas.",
-              "Opsional. Untuk ide masak dari Kakak dan untuk yang memasak. Kakak menanyakannya sekali, saat Anda pertama kali minta ide."
-            )
-          : t(
-              "For Kakak's recipe ideas and for whoever cooks. Allergies go in the note below.",
-              "Untuk ide masak dari Kakak dan untuk yang memasak. Alergi ditulis di catatan di bawah."
-            )}
+        {t(
+          "Optional. Shown to whoever cooks, and used for Kakak's recipe ideas. Allergies go in the note below.",
+          "Opsional. Ditampilkan untuk yang memasak, dan dipakai untuk ide masak dari Kakak. Alergi ditulis di catatan di bawah."
+        )}
       </p>
     </div>
   );

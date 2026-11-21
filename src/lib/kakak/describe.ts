@@ -166,17 +166,17 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
   const t = translator(locale);
   switch (item.kind) {
     case "recipe_idea": {
-      // PR C2: Name · For · Ingredients, and a quiet line that the amounts
+      // PR C2: What · For · Ingredients, and a quiet line that the amounts
       // and steps are the owner's to add (Kakak never gives them).
       const name = locale === "en" && item.nameEn ? `${item.nameEn} (${item.name})` : item.name;
       return {
         heading: t("Recipe idea", "Ide resep"),
         rows: [
-          { label: t("Name", "Nama"), value: name },
+          { label: t("What", "Apa"), value: name },
           { label: t("For", "Untuk"), value: t(`${item.servings} servings`, `${item.servings} porsi`) },
           { label: t("Ingredients", "Bahan"), value: item.ingredients.map((line) => line.name).join(", ") },
         ],
-        note: t("Kakak's idea. Add the amounts and steps yourself.", "Ide Kakak. Tambahkan jumlah dan cara membuatnya sendiri."),
+        note: t("Kakak's idea. Add the amounts and steps yourself.", "Ide Kakak. Tambahkan sendiri jumlah dan cara membuatnya."),
       };
     }
     case "menu_dish": {

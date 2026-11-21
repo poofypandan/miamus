@@ -76,7 +76,7 @@ export const FOOD_RULES_PRESETS: { key: string; rules: FoodRule[]; en: string; i
 ];
 
 export function foodRulesQuestion(locale: "en" | "id"): string {
-  return locale === "id" ? "Ada aturan makanan untuk ide masak?" : "Any food rules for ideas?";
+  return locale === "id" ? "Ada aturan makanan untuk ide masak?" : "Any food rules for recipe ideas?";
 }
 
 /**
@@ -86,6 +86,6 @@ export function foodRulesQuestion(locale: "en" | "id"): string {
  */
 export function foodRulesReply(rules: readonly FoodRule[], saved: boolean, locale: "en" | "id"): string {
   const label = rules.length === 0 ? (locale === "id" ? "Tidak ada aturan makanan" : "No food rules") : foodRulesLabel(rules, locale);
-  if (locale === "id") return saved ? `${label}. (Disimpan untuk ide berikutnya.)` : `${label}. (Hanya untuk percakapan ini.)`;
+  if (locale === "id") return saved ? `${label}. (Disimpan untuk berikutnya.)` : `${label}. (Hanya untuk percakapan ini.)`;
   return saved ? `${label}. (Saved for next time.)` : `${label}. (Just for this conversation.)`;
 }

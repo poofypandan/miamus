@@ -33,9 +33,10 @@ export const MAX_IDEAS_CHARS = 720;
 /** A line that starts "Idea:" / "Ide:" (PR C2): Kakak's recipe ideas are always marked so. */
 export const IDEA_LINE = /^[ \t]*(?:idea|ide)[ \t]*:/im;
 
-/** The longest a plain reply may be: an answer, or a reply with recipe ideas. */
+/** The longest a plain reply may be: an answer, or one with at least two recipe ideas. */
 export function maxAnswerChars(text: string): number {
-  return IDEA_LINE.test(text) ? MAX_IDEAS_CHARS : MAX_ANSWER_CHARS;
+  const ideas = text.match(new RegExp(IDEA_LINE.source, "gim"))?.length ?? 0;
+  return ideas >= 2 ? MAX_IDEAS_CHARS : MAX_ANSWER_CHARS;
 }
 
 function propertyNames(schema: unknown, into: Set<string>): Set<string> {

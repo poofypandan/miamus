@@ -33,7 +33,7 @@ async function answerKakak(page: Page, locale: "en" | "id") {
       return route.fulfill({
         json: {
           kind: "question",
-          question: locale === "id" ? "Ada aturan makanan untuk ide masak?" : "Any food rules for ideas?",
+          question: locale === "id" ? "Ada aturan makanan untuk ide masak?" : "Any food rules for recipe ideas?",
           answers: locale === "id" ? ["Halal", "Halal, tanpa alkohol", "Tidak ada"] : ["Halal", "Halal, no alcohol", "No rules"],
           allowTyping: true,
           foodRules: true,
@@ -69,7 +69,7 @@ test("the food-rules card: a tap saves it, says so with Undo, and the answer goe
 
   const card = page.getByTestId("kakak-food-rules");
   await expect(card).toBeVisible();
-  await expect(card).toContainText("Any food rules for ideas?");
+  await expect(card).toContainText("Any food rules for recipe ideas?");
   for (const answer of ["Halal", "Halal, no alcohol", "No rules", "More"]) {
     await expect(card.getByRole("button", { name: answer, exact: true })).toBeVisible();
   }
@@ -78,16 +78,18 @@ test("the food-rules card: a tap saves it, says so with Undo, and the answer goe
 
   await card.getByRole("button", { name: "Halal, no alcohol", exact: true }).click();
   await expect.poll(() => stub.kitchen.foodRules).toEqual(["halal", "no_alcohol"]);
-  await expect(page.getByText("Saved. Change it in Kitchen notes.")).toBeVisible();
+  const saved = page.getByTestId("kakak-food-rules-saved");
+  await expect(saved).toContainText("Saved. Change it in Kitchen notes.");
   await expect.poll(() => asked.length).toBe(2);
   expect(asked[1].reply).toBe("Halal · No alcohol. (Saved for next time.)");
   expect(asked[1].v).toBe(6);
   await expect(page.getByText("Idea: Vegetable curry (Sayur lodeh)")).toBeVisible();
   await shot(page, "kakak-ideas-reply");
 
-  // Undo puts back "not asked yet".
-  await page.getByRole("button", { name: "Undo" }).click();
+  // Undo, in the sheet (the conversation goes on), puts back "not asked yet".
+  await saved.getByRole("button", { name: "Undo" }).click();
   await expect.poll(() => stub.kitchen.foodRules).toBeNull();
+  await expect(saved).toContainText("Undone. Kakak will ask again next time.");
 });
 
 test("Remember off saves nothing; More picks any of the four (Indonesian)", async ({ context, page }) => {
@@ -159,7 +161,7 @@ test("the owner sets the food preferences on Kitchen notes, one tap each", async
   const sheet = page.getByRole("dialog");
   const group = sheet.getByRole("group", { name: "Food preferences" });
   await expect(group).toBeVisible();
-  await expect(sheet.getByText(/Kakak asks once, the first time you ask for ideas/)).toBeVisible();
+  await expect(sheet.getByText(/Shown to whoever cooks, and used for Kakak.s recipe ideas/)).toBeVisible();
   await group.getByRole("button", { name: "Halal" }).click();
   await expect.poll(() => stub.kitchen.foodRules).toEqual(["halal"]);
   await group.getByRole("button", { name: "No alcohol" }).click();

@@ -188,6 +188,25 @@ function Conversation({
    */
   const [spokenTurn, setSpokenTurn] = useState<SpokenTurn | null>(null);
   const [saving, setSaving] = useState(false);
+  /**
+   * The food rules this conversation saved (PR C2, D2): a quiet line with
+   * Undo stays in the sheet, since the conversation goes on (a toast would
+   * sit behind it). `before` is what Undo puts back; `undone` once it has.
+   */
+  const [rulesSaved, setRulesSaved] = useState<{ before: FoodRule[] | null; undone: boolean; busy: boolean } | null>(null);
+
+  async function undoRules() {
+    if (!rulesSaved || rulesSaved.busy || rulesSaved.undone) return;
+    setRulesSaved({ ...rulesSaved, busy: true });
+    try {
+      await saveFoodPreferences(rulesSaved.before);
+      setRulesSaved({ ...rulesSaved, busy: false, undone: true });
+    } catch (err) {
+      console.error("Food preferences undo", err);
+      setRulesSaved({ ...rulesSaved, busy: false });
+      toast.error(t("Couldn't undo. Change it in Kitchen notes.", "Belum bisa dibatalkan. Ubah di Catatan dapur."));
+    }
+  }
   /** The server answered in practice mode (scripted, no AI): say so. */
   const [practice, setPractice] = useState(false);
   const abort = useRef<AbortController | null>(null);
@@ -435,13 +454,37 @@ function Conversation({
         </div>
       )}
 
+      {rulesSaved && (
+        <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/50 px-3 py-1.5" role="status" data-testid="kakak-food-rules-saved">
+          <span className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
+            {rulesSaved.undone
+              ? t("Undone. Kakak will ask again next time.", "Dibatalkan. Kakak akan bertanya lagi lain kali.")
+              : t("Saved. Change it in Kitchen notes.", "Tersimpan. Ubah di Catatan dapur.")}
+          </span>
+          {!rulesSaved.undone && (
+            <button
+              type="button"
+              onClick={() => void undoRules()}
+              disabled={rulesSaved.busy}
+              className="flex min-h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-sm font-medium text-gray-900 active:bg-muted disabled:opacity-50"
+            >
+              <Undo2 className="size-4" aria-hidden="true" />
+              {t("Undo", "Batalkan")}
+            </button>
+          )}
+        </div>
+      )}
+
       {screen.kind === "waiting" && <KakakThinking />}
 
       {screen.kind === "question" && screen.foodRules && (
         <FoodRulesQuestion
           question={screen.question}
           allowTyping={screen.allowTyping && !typingAnswer}
+          typing={typingAnswer}
           onType={() => setTypingAnswer(true)}
+          onSaved={(before) => setRulesSaved({ before, undone: false, busy: false })}
           onAnswer={(reply) => void send(reply)}
         />
       )}
@@ -647,7 +690,8 @@ function kakakLine(screen: Screen, cardIntro: string): string | null {
  * Her replies on her own blush with its hairline (the warm seal, 20 Nov), so
  * her warmth reaches her words; the owner's lines and the cards stay as they are.
  */
-const KAKAK_BUBBLE = "max-w-[85%] rounded-2xl rounded-tl-md border border-kakak-line bg-kakak-tint px-3 py-2 text-sm text-gray-900";
+/** whitespace-pre-line: her recipe ideas come one per line (PR C2). */
+const KAKAK_BUBBLE = "max-w-[85%] whitespace-pre-line rounded-2xl rounded-tl-md border border-kakak-line bg-kakak-tint px-3 py-2 text-sm text-gray-900";
 
 function KakakBubble({ children }: { children: React.ReactNode }) {
   return (
@@ -664,17 +708,24 @@ function KakakBubble({ children }: { children: React.ReactNode }) {
  * chips, any number, then Save). Remember for next time is on by default:
  * the tap is the consent and saves it (migrations/176), with Undo; off,
  * nothing is saved and Kakak follows the answer for this conversation only.
+ * A typed answer is never saved: the Remember switch says so while typing.
  * Either way the answer then goes to Kakak as the owner's reply.
  */
 function FoodRulesQuestion({
   question,
   allowTyping,
+  typing,
   onType,
+  onSaved,
   onAnswer,
 }: {
   question: string;
   allowTyping: boolean;
+  /** The owner chose to type an answer: it goes to Kakak as typed, never saved. */
+  typing: boolean;
   onType: () => void;
+  /** Saved, with what was there before, for the sheet's Undo line. */
+  onSaved: (before: FoodRule[] | null) => void;
   onAnswer: (reply: string) => void;
 }) {
   const t = useT();
@@ -692,18 +743,7 @@ function FoodRulesQuestion({
       try {
         const before = await saveFoodPreferences(rules);
         saved = true;
-        toast.success(t("Saved. Change it in Kitchen notes.", "Tersimpan. Ubah di Catatan dapur."), {
-          duration: UNDO_TOAST_MS,
-          action: {
-            label: t("Undo", "Batalkan"),
-            onClick: () => {
-              void saveFoodPreferences(before).then(
-                () => toast(t("Undone.", "Dibatalkan.")),
-                () => toast.error(t("Couldn't undo. Change it in Kitchen notes.", "Belum bisa dibatalkan. Ubah di Catatan dapur."))
-              );
-            },
-          },
-        });
+        onSaved(before);
       } catch (err) {
         console.error("Food preferences", err);
         toast.error(
@@ -753,15 +793,21 @@ function FoodRulesQuestion({
           </Button>
         </div>
       )}
-      <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-3 py-2">
-        <span className="text-sm text-gray-900">{t("Remember for next time", "Ingat untuk berikutnya")}</span>
-        <Switch
-          on={remember}
-          label={t("Remember for next time", "Ingat untuk berikutnya")}
-          disabled={busy}
-          onToggle={() => setRemember((on) => !on)}
-        />
-      </div>
+      {typing ? (
+        <p className="text-xs text-muted-foreground">
+          {t("A typed answer is used for this conversation only.", "Jawaban yang diketik hanya dipakai di percakapan ini.")}
+        </p>
+      ) : (
+        <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 px-3 py-2">
+          <span className="text-sm text-gray-900">{t("Remember for next time", "Ingat untuk berikutnya")}</span>
+          <Switch
+            on={remember}
+            label={t("Remember for next time", "Ingat untuk berikutnya")}
+            disabled={busy}
+            onToggle={() => setRemember((on) => !on)}
+          />
+        </div>
+      )}
       {allowTyping && (
         <button
           type="button"

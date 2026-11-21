@@ -38,13 +38,13 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     steps: {
       en: [
         "Ask \"Any recipe ideas?\" Kakak suggests two or three dishes from her own knowledge, using what is at home, each marked Idea.",
-        "The first time, she asks your food rules once, such as Halal or No alcohol. Change them any time in Kitchen → Menu → Kitchen notes.",
+        "The first time, she asks once about food rules, such as Halal or No alcohol. Change them any time under Food preferences in Kitchen → Menu → Kitchen notes.",
         "Like one? Say \"Save the second one\". It's saved as a recipe once you confirm; add the amounts and steps yourself.",
       ],
       id: [
         "Tanya \"Ada ide masak?\" Kakak menyarankan dua atau tiga masakan dari pengetahuannya sendiri, memakai yang ada di rumah, masing-masing ditandai Ide.",
-        "Pertama kali, Kakak menanyakan aturan makanan sekali saja, misalnya Halal atau Tanpa alkohol. Ubah kapan saja di Dapur → Menu → Catatan dapur.",
-        "Suka salah satunya? Bilang \"Simpan yang kedua\". Resepnya tersimpan setelah Anda konfirmasi; tambahkan jumlah dan cara membuatnya sendiri.",
+        "Pertama kali, Kakak bertanya sekali soal aturan makanan, misalnya Halal atau Tanpa alkohol. Ubah kapan saja di Preferensi makanan, Dapur → Menu → Catatan dapur.",
+        "Suka salah satunya? Bilang \"Simpan yang kedua\". Resepnya tersimpan setelah Anda konfirmasi; tambahkan sendiri jumlah dan cara membuatnya.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },

@@ -94,7 +94,7 @@ describe("the food preferences", () => {
     expect(foodRulesQuestion("id")).toBe("Ada aturan makanan untuk ide masak?");
     expect(FOOD_RULES_PRESETS.map((p) => p.id)).toEqual(["Halal", "Halal, tanpa alkohol", "Tidak ada"]);
     expect(FOOD_RULES_PRESETS.map((p) => p.en)).toEqual(["Halal", "Halal, no alcohol", "No rules"]);
-    expect(foodRulesReply(["halal", "no_alcohol"], true, "id")).toBe("Halal · Tanpa alkohol. (Disimpan untuk ide berikutnya.)");
+    expect(foodRulesReply(["halal", "no_alcohol"], true, "id")).toBe("Halal · Tanpa alkohol. (Disimpan untuk berikutnya.)");
     expect(foodRulesReply([], false, "en")).toBe("No food rules. (Just for this conversation.)");
   });
 });
@@ -190,14 +190,14 @@ describe("save_recipe_idea", () => {
     expect(describeSuggestion(card, "en")).toEqual({
       heading: "Recipe idea",
       rows: [
-        { label: "Name", value: "Vegetable curry (Sayur lodeh)" },
+        { label: "What", value: "Vegetable curry (Sayur lodeh)" },
         { label: "For", value: "4 servings" },
         { label: "Ingredients", value: "Santan, Tempe" },
       ],
       note: "Kakak's idea. Add the amounts and steps yourself.",
     });
     expect(describeSuggestion(card, "id").heading).toBe("Ide resep");
-    expect(describeSuggestion(card, "id").note).toBe("Ide Kakak. Tambahkan jumlah dan cara membuatnya sendiri.");
+    expect(describeSuggestion(card, "id").note).toBe("Ide Kakak. Tambahkan sendiri jumlah dan cara membuatnya.");
     expect(savedSummary([card], "en")).toBe("Saved — Vegetable curry");
     expect(savedSummary([card], "id")).toBe("Tersimpan — Sayur lodeh");
   });
@@ -261,9 +261,9 @@ describe("the conversation", () => {
       foodRules: true,
     });
     if (result.kind !== "question") throw new Error("expected a question");
-    expect(nextUserTurn(result.history, "Halal. (Disimpan untuk ide berikutnya.)")).toEqual({
+    expect(nextUserTurn(result.history, "Halal. (Disimpan untuk berikutnya.)")).toEqual({
       role: "user",
-      content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "Halal. (Disimpan untuk ide berikutnya.)" }],
+      content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "Halal. (Disimpan untuk berikutnya.)" }],
     });
   });
 
