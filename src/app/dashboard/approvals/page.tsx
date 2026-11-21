@@ -126,7 +126,7 @@ export default function HouseholdApprovalsPage() {
           get this far, and only they can read it. */}
       <Link
         href="/dashboard/north-star"
-        className="flex min-h-[44px] items-center gap-3 rounded-xl border bg-white px-4 py-3 text-sm font-medium text-gray-900"
+        className="flex min-h-[44px] items-center gap-3 rounded-xl border bg-card px-4 py-3 text-sm font-medium text-foreground"
       >
         <ChartColumn className="size-4 text-muted-foreground" aria-hidden />
         <span className="flex-1">{t("North star numbers", "Angka ukuran utama")}</span>
@@ -134,7 +134,7 @@ export default function HouseholdApprovalsPage() {
       </Link>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-900">Waiting</h2>
+        <h2 className="text-sm font-semibold text-foreground">Waiting</h2>
         {pending.length === 0 ? (
           <p className="text-sm text-muted-foreground">No requests waiting.</p>
         ) : (
@@ -168,7 +168,7 @@ export default function HouseholdApprovalsPage() {
 
       {decided.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-semibold text-gray-900">Decided in the last 30 days</h2>
+          <h2 className="text-sm font-semibold text-foreground">Decided in the last 30 days</h2>
           <Card className="py-2">
             <CardContent className="flex flex-col divide-y px-0">
               {decided.map((request) => (
@@ -218,7 +218,7 @@ function TellThem({ request, onTold }: { request: AccessRequest; onTold: () => v
   const message = approvedMessage(request.full_name, request.locale);
   const mail = emailThemHref(request);
   const button =
-    "flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium text-gray-900 active:bg-muted";
+    "flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg border px-2.5 text-xs font-medium text-foreground active:bg-muted";
 
   async function told() {
     if (!request.whatsapp || !supabase) return;
@@ -267,7 +267,7 @@ function RequestIdentity({ request }: { request: AccessRequest }) {
   });
   return (
     <div className="flex min-w-0 flex-col">
-      <span className="truncate text-sm font-medium text-gray-900">{requesterLabel(request)}</span>
+      <span className="truncate text-sm font-medium text-foreground">{requesterLabel(request)}</span>
       {request.full_name && request.email && (
         <span className="truncate text-xs text-muted-foreground">{request.email}</span>
       )}
@@ -293,17 +293,17 @@ function RequestAnswers({ request }: { request: AccessRequest }) {
   const heard = request.heard_from?.trim();
   if (!help && !heard) return null;
   return (
-    <dl className="mt-2 flex flex-col gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs">
+    <dl className="mt-2 flex flex-col gap-1.5 rounded-lg bg-background px-3 py-2 text-xs">
       {help && (
         <div className="flex flex-col">
           <dt className="text-muted-foreground">{t("Wants help with", "Ingin dibantu")}</dt>
-          <dd className="break-words whitespace-pre-line text-gray-900">{help}</dd>
+          <dd className="break-words whitespace-pre-line text-foreground">{help}</dd>
         </div>
       )}
       {heard && (
         <div className="flex flex-col">
           <dt className="text-muted-foreground">{t("Heard about Miamus from", "Tahu Miamus dari")}</dt>
-          <dd className="break-words text-gray-900">{heard}</dd>
+          <dd className="break-words text-foreground">{heard}</dd>
         </div>
       )}
     </dl>
@@ -315,9 +315,9 @@ function StatusBadge({ status }: { status: AccessRequest["status"] }) {
     <Badge
       variant="secondary"
       className={cn(
-        "shrink-0 text-[10px]",
-        status === "approved" && "bg-emerald-100 text-emerald-800",
-        status === "rejected" && "bg-slate-100 text-slate-700"
+        "shrink-0 text-xs",
+        status === "approved" && "bg-done-tint text-done-foreground",
+        status === "rejected" && "bg-muted text-muted-foreground"
       )}
     >
       {status === "approved" ? "Approved" : status === "rejected" ? "Rejected" : "Pending"}
@@ -334,7 +334,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       >
         <ArrowLeft className="size-3.5" /> Dashboard
       </Link>
-      <h1 className="text-lg font-semibold text-gray-900">Household requests</h1>
+      <h1 className="text-lg font-semibold text-foreground">Household requests</h1>
       {children}
     </div>
   );
