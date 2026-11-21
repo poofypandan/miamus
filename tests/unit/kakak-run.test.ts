@@ -113,6 +113,7 @@ describe("playConversation", () => {
       "add_food",
       "put_away_ingredient",
       "set_staff_areas",
+      "plan_dish",
       "ask_question",
     ]);
     expect(tools.filter((t) => t.strict).map((t) => t.name)).toEqual(["create_chore", "add_pet_routine", "ask_question"]);

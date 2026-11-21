@@ -12,8 +12,8 @@
 import type { KakakLocale } from "./household";
 import { KAKAK_TOOLS, KAKAK_TOOL_NAMES } from "./tools";
 
-/** The household block's references: M1 (the owner), S people, P pets, R rooms, I items (context.ts). */
-export const REFERENCE = /\b[MSPRI]\d+\b/;
+/** The household block's references: M1 (the owner), S people, P pets, R rooms, I items, D recipes (context.ts). */
+export const REFERENCE = /\b[MSPRID]\d+\b/;
 export const ISO_DATE = /\b\d{4}-\d{2}-\d{2}\b/;
 /** Beside a card: longer than Kakak's one or two short sentences is a note or an explanation. */
 export const MAX_REPLY_CHARS = 200;
@@ -71,7 +71,25 @@ export function looksLikeWrongLanguage(text: string, locale: KakakLocale): boole
 }
 
 export type NoteTell = "reference" | "date" | "internal_name";
-export type ReplyTell = NoteTell | "too_long" | "language";
+export type ReplyTell = NoteTell | "too_long" | "language" | "amount";
+
+/**
+ * An amount with a kitchen unit: "400 ml", "1,5 kg", "2 sdm", "3 siung".
+ * Kakak is never given a recipe's amounts (Can we cook it?, 20 Nov), so one
+ * in what she says about a recipe is made up.
+ */
+export const KITCHEN_AMOUNT =
+  /\b\d+(?:[.,]\d+)?\s?(?:ml|mL|l|liter|litre|liters|litres|g|gr|gram|grams|kg|sdm|sdt|tbsp|tsp|siung|batang|butir|lembar|ikat|cups?|kaleng|bungkus|sachet)\b/i;
+
+/**
+ * Whether the guard watches for amounts in this turn: a plan_dish card, or
+ * a plain reply that names one of the home's saved recipes.
+ */
+export function watchesAmounts(text: string, recipeNames: readonly string[], plansDish: boolean): boolean {
+  if (plansDish) return true;
+  const body = text.toLowerCase();
+  return recipeNames.some((name) => name.trim().length >= 3 && body.includes(name.trim().toLowerCase()));
+}
 
 /** Tells of a note to self, in any language: a reference, an ISO date, a tool or field name. */
 export function noteTells(text: string): NoteTell[] {
@@ -83,10 +101,16 @@ export function noteTells(text: string): NoteTell[] {
 }
 
 /** Every reason the text must not reach the owner; empty when it may. `max`: the longest it may be. */
-export function replyTells(text: string, locale: KakakLocale, max: number = MAX_REPLY_CHARS): ReplyTell[] {
+export function replyTells(
+  text: string,
+  locale: KakakLocale,
+  max: number = MAX_REPLY_CHARS,
+  { noAmounts = false }: { noAmounts?: boolean } = {},
+): ReplyTell[] {
   const tells: ReplyTell[] = noteTells(text);
   if (text.length > max) tells.push("too_long");
   if (looksLikeWrongLanguage(text, locale)) tells.push("language");
+  if (noAmounts && KITCHEN_AMOUNT.test(text)) tells.push("amount");
   return tells;
 }
 
@@ -109,11 +133,16 @@ export interface GuardedText {
  * empty, and the sheet says "Ini yang akan Kakak tambahkan:"; a plain reply
  * that fails becomes the safe line.
  */
-export function guardReplyText(kind: "question" | "suggestions" | "message", text: string, locale: KakakLocale): GuardedText {
+export function guardReplyText(
+  kind: "question" | "suggestions" | "message",
+  text: string,
+  locale: KakakLocale,
+  options: { noAmounts?: boolean } = {},
+): GuardedText {
   const trimmed = text.trim();
   if (kind === "question") return { text: "", tells: [] };
   if (!trimmed) return { text: "", tells: [] };
-  const tells = replyTells(trimmed, locale, kind === "message" ? MAX_ANSWER_CHARS : MAX_REPLY_CHARS);
+  const tells = replyTells(trimmed, locale, kind === "message" ? MAX_ANSWER_CHARS : MAX_REPLY_CHARS, options);
   if (tells.length === 0) return { text: trimmed, tells };
   return { text: kind === "message" ? safeReplyLine(locale) : "", tells };
 }
@@ -122,9 +151,9 @@ export function guardReplyText(kind: "question" | "suggestions" | "message", tex
 export type ReplyProblem = ReplyTell | "empty";
 
 /** What is wrong with a plain reply (a turn with no tool), or nothing. */
-export function replyProblems(text: string, locale: KakakLocale): ReplyProblem[] {
+export function replyProblems(text: string, locale: KakakLocale, options: { noAmounts?: boolean } = {}): ReplyProblem[] {
   const trimmed = text.trim();
-  return trimmed ? replyTells(trimmed, locale, MAX_ANSWER_CHARS) : ["empty"];
+  return trimmed ? replyTells(trimmed, locale, MAX_ANSWER_CHARS, options) : ["empty"];
 }
 
 /** How every correction starts, so practice mode never reads one as the owner's words. */
@@ -144,6 +173,9 @@ export function correctionFor(problems: readonly ReplyProblem[], locale: KakakLo
   if (problems.includes("language")) why.push(`It was not in ${language}.`);
   if (problems.some((p) => p === "reference" || p === "date" || p === "internal_name")) {
     why.push("It showed a reference such as S1, a date written as 2026-11-25, or a tool or field name.");
+  }
+  if (problems.includes("amount")) {
+    why.push("It stated an amount for a recipe; you are never given amounts, so point to the recipe in Dapur / Kitchen → Menu.");
   }
   return `${CORRECTION_PREFIX} your last reply was not shown. ${why.join(" ")} Reply to the owner again now, in ${language}: at most three short sentences, in plain words.)`;
 }

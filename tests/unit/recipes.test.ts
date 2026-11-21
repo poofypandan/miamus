@@ -250,16 +250,17 @@ describe("units agree with migrations/151", () => {
 });
 
 describe("the Kitchen pills (D5)", () => {
-  it("Food · Menu · Shopping, Menu only with the Kitchen switch on; Shopping first without Food", () => {
+  it("Food · Menu · Shopping for every home (recipes and the menu left the Kitchen switch, 20 Nov); Shopping first without Food", () => {
     expect(kitchenViews({ ...FEATURE_DEFAULTS, kitchen: true })).toEqual(["food", "menu", "buy"]);
-    expect(kitchenViews(FEATURE_DEFAULTS)).toEqual(["food", "buy"]);
+    expect(kitchenViews(FEATURE_DEFAULTS)).toEqual(["food", "menu", "buy"]);
     expect(kitchenViews({ ...FEATURE_DEFAULTS, food: false, kitchen: true })).toEqual(["buy", "menu"]);
-    expect(kitchenViews({ ...FEATURE_DEFAULTS, food: false })).toEqual(["buy"]);
+    expect(kitchenViews({ ...FEATURE_DEFAULTS, food: false })).toEqual(["buy", "menu"]);
   });
 
-  it("a Menu link with the switch off opens the first pill there", () => {
+  it("a Menu link opens the Menu with the Kitchen switch on or off", () => {
     expect(kitchenViewFor("menu", { ...FEATURE_DEFAULTS, kitchen: true })).toBe("menu");
-    expect(kitchenViewFor("menu", FEATURE_DEFAULTS)).toBe("food");
-    expect(kitchenViewFor("menu", { ...FEATURE_DEFAULTS, food: false })).toBe("buy");
+    expect(kitchenViewFor("menu", FEATURE_DEFAULTS)).toBe("menu");
+    expect(kitchenViewFor("menu", { ...FEATURE_DEFAULTS, food: false })).toBe("menu");
+    expect(kitchenViewFor("food", { ...FEATURE_DEFAULTS, food: false })).toBe("buy");
   });
 });

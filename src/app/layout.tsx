@@ -6,6 +6,8 @@ import { ServiceWorkerRegistrar } from "@/components/shared/service-worker-regis
 import { UpdatePrompt } from "@/components/shared/update-prompt";
 import { NavigationCover } from "@/components/brand/brand-cover";
 import { NewVoiceSwitch } from "@/components/kakak/new-voice-switch";
+import { iosStartupImages } from "@/lib/ios-launch-screens";
+import { LAUNCH_BACKGROUND } from "@/components/brand/brand-mark";
 import "./globals.css";
 
 // Named "--font-sans" (not the font's own "--font-plus-jakarta-sans") to
@@ -49,6 +51,9 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     // The label under the home-screen icon, so the short name.
     title: "Miamus",
+    // What an iPhone shows while the app opens: the launch stage's paper and
+    // mark, one image per screen size (lib/ios-launch-screens, 20 Nov).
+    startupImage: iosStartupImages(),
   },
   // Next 15 renders `appleWebApp.capable` as the standardised
   // `mobile-web-app-capable` only. Older iOS Safari still keys standalone
@@ -63,10 +68,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   // Matches the html/body background exactly (globals.css paints
-  // var(--background), which is pure white) and the manifest's theme_color, so
+  // var(--background), warm paper since 21 Nov) and the manifest's theme_color, so
   // the phone's status bar is the same colour as the page beneath it rather
   // than a grey band above it.
-  themeColor: "#ffffff",
+  themeColor: LAUNCH_BACKGROUND,
   // Lets the page reach the physical edges of the screen instead of being
   // letterboxed inside the safe areas — which is what makes the system bars
   // blend in the installed app. The cost is that env(safe-area-inset-*) stops
