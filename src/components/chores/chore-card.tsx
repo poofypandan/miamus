@@ -220,7 +220,7 @@ export function ChoreCard({
         {done && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
         {/* A span, not a button: the card is already the button. */}
         {editable && !done && (
-          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-background/80 px-2.5 text-xs font-medium text-gray-700 ring-1 ring-border">
+          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-card/80 px-2.5 text-xs font-medium text-gray-700 ring-1 ring-border">
             <Pencil className="size-3" />
             {locale === "en" ? "Edit" : "Ubah"}
           </span>
@@ -327,7 +327,7 @@ export function ChoreCard({
   );
 
   const className = cn(
-    "flex w-full flex-col gap-2 rounded-xl border p-3 text-left",
+    "flex w-full flex-col gap-2 rounded-2xl border p-3 text-left",
     // A plain card for an open chore (Phase 153; amber since Phase 112), white
     // even inside the red "Belum selesai" frame. Done turns green, like a
     // finished routine (Phase 114).
@@ -336,13 +336,13 @@ export function ChoreCard({
       : couldnt
         ? // Amber with an edge (Phase 165): explained, not forgotten.
           "border-amber-300 border-l-[3px] border-l-amber-500 bg-amber-50"
-        : cn("bg-card", AGENDA_TONES.chore.tint)
+        : cn("border-transparent bg-card shadow-card", AGENDA_TONES.chore.tint)
   );
 
   if (proof || menu) {
     // The card's tappable part and its own buttons side by side, never nested.
     return (
-      <div className={className}>
+      <div className={className} data-chore-card="">
         <div className="flex items-start gap-1">
           {onPress ? (
             <button
@@ -362,10 +362,10 @@ export function ChoreCard({
     );
   }
 
-  if (!onPress) return <div className={className}>{body}</div>;
+  if (!onPress) return <div className={className} data-chore-card="">{body}</div>;
 
   return (
-    <button type="button" onClick={onPress} className={cn(className, "active:bg-muted/60")}>
+    <button type="button" onClick={onPress} className={cn(className, "active:bg-muted/60")} data-chore-card="">
       {body}
     </button>
   );

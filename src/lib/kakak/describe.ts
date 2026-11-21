@@ -2,6 +2,7 @@
 // (plan, screen 5): one fact per line — What, Who, When, Repeats, Room.
 // Pure, so the wording is unit-tested in both languages.
 
+import { cookLine, cookTone, uncheckedLine, type CookCheck, type CookTone } from "@/lib/can-cook";
 import { remindLabel } from "@/lib/chore-reminders";
 import { defaultPlace } from "@/lib/ingredients";
 import { clean, formatAmount, unitLabel } from "@/lib/kitchen-units";
@@ -30,6 +31,11 @@ export interface CardRow {
 export interface CardItem {
   heading: string;
   rows: CardRow[];
+  /**
+   * The app's own answer under the rows (Fable S0): "Ready to cook",
+   * "Missing 1: Santan", "To buy: Santan", "Not on your list: Serai".
+   */
+  checks?: { tone: CookTone | "muted"; text: string }[];
   /** One quiet line under the rows ("07.00 is already there"). */
   note?: string;
 }
@@ -140,6 +146,11 @@ const PLACES: Record<string, [string, string]> = {
   pantry: ["Cupboard", "Lemari"],
   counter: ["Counter", "Meja"],
 };
+const MEAL_WORDS: Record<string, [string, string]> = {
+  breakfast: ["Breakfast", "Sarapan"],
+  lunch: ["Lunch", "Makan siang"],
+  dinner: ["Dinner", "Makan malam"],
+};
 const SOURCES: Record<string, [string, string]> = {
   home: ["Cooked at home", "Dimasak di rumah"],
   gift: ["From someone", "Dari orang"],
@@ -154,6 +165,30 @@ const SOURCES: Record<string, [string, string]> = {
 export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody?: StaffArea[]): CardItem {
   const t = translator(locale);
   switch (item.kind) {
+    case "menu_dish": {
+      // Can we cook it? (20 Nov): What · When · For, then the app's own
+      // check (Fable S0). What the recipe is missing is its own Shopping
+      // list card; left off it, a quiet line.
+      const day = item.relative === "today" ? t("Today", "Hari ini") : item.relative === "tomorrow" ? t("Tomorrow", "Besok") : cardDate(item.day, locale);
+      const rows: CardRow[] = [
+        { label: t("What", "Apa"), value: item.title },
+        { label: t("When", "Kapan"), value: `${day} · ${t(...MEAL_WORDS[item.meal])}` },
+      ];
+      if (item.servings) rows.push({ label: t("For", "Untuk"), value: t(`${item.servings} servings`, `${item.servings} porsi`) });
+      // Fable (a): a Buy row only for what saving puts on the list.
+      for (const entry of item.toBuy ?? []) rows.push({ label: t("Buy", "Beli"), value: entry.name });
+      const list = item.missing.join(", ");
+      return {
+        heading: t("Menu", "Menu"),
+        rows,
+        checks: dishChecks(item, locale),
+        note: item.missing.length
+          ? item.overflow
+            ? t(`Also missing, not added to the shopping list: ${list}.`, `Juga kurang, tidak ditambahkan ke daftar belanja: ${list}.`)
+            : t(`Missing, not added to the shopping list: ${list}.`, `Kurang, tidak ditambahkan ke daftar belanja: ${list}.`)
+          : undefined,
+      };
+    }
     case "chore": {
       const rows: CardRow[] = [
         {
@@ -325,6 +360,57 @@ export function describeSuggestion(item: KakakSuggestion, locale: Locale, nobody
   }
 }
 
+type MenuDish = Extract<KakakSuggestion, { kind: "menu_dish" }>;
+
+/** "Opor ayam, tonight" / "Opor ayam, malam ini" (Fable W6); the date further out. */
+function dishSummary(item: MenuDish, locale: Locale): string {
+  const t = translator(locale);
+  const when =
+    item.relative === "today"
+      ? item.meal === "dinner"
+        ? t("tonight", "malam ini")
+        : t("today", "hari ini")
+      : item.relative === "tomorrow"
+        ? t("tomorrow", "besok")
+        : cardDate(item.day, locale);
+  return `${item.title}, ${when}`;
+}
+
+/**
+ * The dish card's answer, from the app's own check, never from Kakak's
+ * words (Fable S0): the same lines as the Menu screens, "now" for a later
+ * day. A typed dish says it has no saved recipe. A card from before the
+ * check (no `check` field) shows nothing extra.
+ */
+function dishChecks(item: MenuDish, locale: Locale): NonNullable<CardItem["checks"]> {
+  if (item.check === undefined) return [];
+  if (item.check === null) return [{ tone: "muted", text: locale === "id" ? "Belum ada resep tersimpan" : "No saved recipe" }];
+  const check: CookCheck = {
+    state: item.check.state,
+    missing: item.check.missing.map((m) => ({ itemId: "", name: m.name, listed: m.listed })),
+    unchecked: item.check.unchecked,
+    missingLines: [],
+  };
+  const out: NonNullable<CardItem["checks"]> = [];
+  if (check.state === "missing") {
+    // The card answers the question asked (owner, 20 Nov, three sections):
+    // "Missing 1: Santan", then quietly what is already on the list.
+    const names = check.missing.map((m) => m.name).join(", ");
+    out.push({ tone: "missing", text: `${locale === "id" ? "Kurang" : "Missing"} ${check.missing.length}: ${names}` });
+    const listed = check.missing.filter((m) => m.listed).map((m) => m.name);
+    if (listed.length) {
+      out.push({ tone: "listed", text: `${locale === "id" ? "Sudah di daftar belanja" : "On the shopping list"}: ${listed.join(", ")}` });
+    }
+  } else {
+    const line = cookLine(check, locale, { later: item.relative !== "today" });
+    const tone = cookTone(check);
+    if (line && tone) out.push({ tone, text: line });
+  }
+  const notListed = uncheckedLine(check, locale);
+  if (notListed) out.push({ tone: "muted", text: notListed });
+  return out;
+}
+
 type StaffAreas = Extract<KakakSuggestion, { kind: "staff_areas" }>;
 
 /**
@@ -377,7 +463,9 @@ export function savedSummary(items: KakakSuggestion[], locale: Locale): string {
             ? first.nameEn
             : first.kind === "staff_areas"
               ? t(`What ${first.staffName} sees`, `Yang dilihat ${first.staffName}`)
-              : first.name;
+              : first.kind === "menu_dish"
+                ? dishSummary(first, locale)
+                : first.name;
   const more = items.length > 1 ? t(` and ${items.length - 1} more`, ` dan ${items.length - 1} lainnya`) : "";
   return t(`Saved — ${name}${more}`, `Tersimpan — ${name}${more}`);
 }
