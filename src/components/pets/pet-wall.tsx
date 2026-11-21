@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Stethoscope, TriangleAlert } from "lucide-react";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
@@ -30,6 +30,14 @@ import type { TaskEntity } from "@/types/database";
 export function PetWall({ pets }: { pets: TaskEntity[] }) {
   const t = useT();
   const layout = wallLayout(pets.length);
+  const fills = layout.rows !== null;
+  useEffect(() => {
+    if (!fills) return;
+    document.body.dataset.petsWall = "";
+    return () => {
+      delete document.body.dataset.petsWall;
+    };
+  }, [fills]);
   const style =
     layout.rows === null
       ? { gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gridAutoRows: "233px" }
@@ -42,7 +50,10 @@ export function PetWall({ pets }: { pets: TaskEntity[] }) {
       aria-label={t("Your pets", "Hewan Anda")}
       // Shares the column down to Kakak's pill (flex-1) while every pet fits;
       // from seven, fixed rows that scroll, the cut row showing there is more.
-      className={cn("grid gap-2", layout.rows !== null && "min-h-0 flex-1")}
+      // While every pet fits, the wall reaches 20 px into the room kept
+      // above Kakak's band, ending about 12 px above her strip (Fable's
+      // look, #197); the band's fade steps aside meanwhile (data-pets-wall).
+      className={cn("grid gap-2", layout.rows !== null && "-mb-5 min-h-0 flex-1")}
       style={style}
     >
       {pets.map((pet) => (
