@@ -41,7 +41,7 @@ async function openDapur(page: Page) {
 }
 
 const addSheet = (page: Page) => page.getByRole("dialog", { name: "Tambah makanan" });
-const detailSheet = (page: Page) => page.getByRole("dialog").filter({ hasText: "Sudah habis?" });
+const detailSheet = (page: Page) => page.getByRole("dialog").filter({ has: page.getByRole("group", { name: "Sudah habis?" }) });
 
 // Longer than any self-caused pop takes, and than the hook's own 1s fallback.
 const SETTLED_MS = 1500;
