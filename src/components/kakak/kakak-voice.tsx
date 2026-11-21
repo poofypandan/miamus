@@ -176,7 +176,7 @@ function Voice({
         className={cn(
           "flex flex-col items-center gap-2",
           // A soft panel around the mic or the tip; just the speaker switch otherwise.
-          (showBig || showTip) && "rounded-2xl border bg-slate-50/70",
+          (showBig || showTip) && "rounded-2xl border bg-background/70",
           showBig ? "px-4 pb-3 pt-5" : showTip ? "px-3 py-2" : "py-0"
         )}
       >

@@ -1345,8 +1345,10 @@ export interface Database {
         Args: Record<string, never>;
         Returns: string;
       };
+      // Both answers optional to the database (old app builds send none);
+      // the Request access screen requires the first (migrations/175).
       request_household_access: {
-        Args: Record<string, never>;
+        Args: { p_wants_help_with?: string | null; p_heard_from?: string | null };
         Returns: string;
       };
       // Platform admins only: pending requests, then the last 30 days' decisions.
@@ -1363,6 +1365,9 @@ export interface Database {
           auto: boolean;
           locale: string;
           whatsapp: string | null;
+          // migrations/175
+          wants_help_with: string | null;
+          heard_from: string | null;
         }[];
       };
       // The optional WhatsApp number to be told on (migrations/143): the

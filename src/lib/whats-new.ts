@@ -48,6 +48,49 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     tryLabel: { en: "Show me", id: "Lihat" },
   },
   {
+    // 20 Nov (Can we cook it?, Kakak on top): in the Kakak sheet, for
+    // households with Kakak only, under the calm-start rules.
+    id: "kakak-cook-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    kakakOnly: true,
+    title: { en: "New: ask Kakak if you can cook it", id: "Baru: tanya Kakak, bahannya lengkap?" },
+    steps: {
+      en: [
+        "Say what you're cooking: \"We're making opor tonight. Do we have everything?\" Kakak checks your saved recipe against what is at home and answers in one line.",
+        "Her card puts the dish on the menu and what is missing on the shopping list. Nothing is saved until you tap Looks right.",
+        "No saved recipe for it? She says so. Add it once in Kitchen → Menu and she can check it next time.",
+      ],
+      id: [
+        "Sebutkan yang mau dimasak: \"Malam ini opor, bahannya lengkap?\" Kakak mengecek resep yang tersimpan dengan stok di rumah, lalu menjawab singkat.",
+        "Kartunya memasukkan masakan ke menu dan yang kurang ke daftar belanja. Tidak ada yang tersimpan sebelum Anda ketuk Sudah benar.",
+        "Resepnya belum ada? Kakak akan bilang. Tambahkan sekali di Dapur → Menu, nanti Kakak bisa mengeceknya.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // 20 Nov (Can we cook it?, D18): shown on Kitchen → Menu, under the
+    // calm-start rules (one card a week, never to new households).
+    id: "ready-to-cook-2026-11",
+    date: "2026-11-20",
+    audience: "owner",
+    title: { en: "New: can we cook it?", id: "Baru: bahannya lengkap?" },
+    steps: {
+      en: [
+        "Every recipe and planned dish now shows Ready to cook, or what is missing, such as Missing 1: coconut milk. It checks what is at home now.",
+        "It goes by Enough, Running low and Out. An ingredient that isn't on your list shows as Not on your list.",
+        "Recipes and the menu are now in every home's Kitchen. In Recipes, Ready to cook now puts what you can cook first.",
+      ],
+      id: [
+        "Setiap resep dan masakan di menu sekarang menunjukkan Bahan lengkap, atau yang kurang, misalnya Kurang 1: santan. Yang dicek adalah stok di rumah saat ini.",
+        "Dasarnya Masih ada, Hampir habis, dan Habis. Bahan yang belum ada di daftar Anda tampil sebagai Belum ada di daftar.",
+        "Resep dan menu sekarang ada di Dapur setiap rumah. Di Resep, Bahan lengkap menaruh yang bisa dimasak di paling atas.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 20 Nov (the warm seal, Kakak's new mark): her look, so a short note. In
     // the Kakak sheet after the short-card note, under the calm-start rules.
     id: "kakak-warm-seal-2026-11",
@@ -172,12 +215,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
       en: [
         "Plan the week in Kitchen → Menu: tap + on a day, pick a recipe or type a dish. Copy last week fills the empty days.",
         "Add missing to Shopping adds up what the week needs against what's at home, and shows you the list first.",
-        "Staff see Menu hari ini on their Today. When they tap Sudah dimasak, the ingredients come off what's at home.",
+        "Staff see Menu hari ini on their Today and tap Sudah dimasak. With Kitchen amounts on, the ingredients come off what's at home.",
       ],
       id: [
         "Rencanakan menu seminggu di Dapur → Menu: ketuk + di satu hari, pilih resep atau ketik masakan. Salin minggu lalu mengisi hari yang masih kosong.",
         "Tambahkan yang kurang ke Belanja menjumlahkan kebutuhan seminggu dengan stok di rumah, dan menunjukkan daftarnya dulu.",
-        "Staf melihat Menu hari ini di Tugas Hari Ini. Saat mereka menekan Sudah dimasak, bahannya dikurangi dari stok di rumah.",
+        "Staf melihat Menu hari ini di Tugas Hari Ini dan menekan Sudah dimasak. Kalau Jumlah bahan menyala, bahannya dikurangi dari stok di rumah.",
       ],
     },
     tryLabel: { en: "Got it", id: "Mengerti" },
@@ -733,6 +776,16 @@ export interface StaffWhatsNewEntry {
 
 export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
   {
+    // 20 Nov (Can we cook it?, D18): once Today has a menu.
+    id: "staff-ready-to-cook-2026-11",
+    date: "2026-11-20",
+    title: "Baru: bahannya lengkap?",
+    lines: [
+      "Di Menu hari ini, setiap masakan menunjukkan Bahan lengkap, atau yang kurang, misalnya Kurang 1: santan. Jadi Anda tahu sebelum mulai masak.",
+      "Bahan yang kurang biasanya sudah ada di daftar Belanja. Belum ada? Tandai Hampir habis atau Habis.",
+    ],
+  },
+  {
     // 19 Nov (product change #2): the task card with its two photo places.
     id: "staff-task-card-2026-11",
     date: "2026-11-19",
@@ -771,7 +824,7 @@ export const STAFF_WHATS_NEW: StaffWhatsNewEntry[] = [
     title: "Baru: Menu hari ini",
     lines: [
       "Menu hari ini ada di atas Tugas Hari Ini. Ketuk masakannya untuk melihat resepnya.",
-      "Setelah masak, tekan Sudah dimasak. Bahannya dikurangi sendiri. Salah tekan? Tekan Batalkan.",
+      "Setelah masak, tekan Sudah dimasak. Salah tekan? Tekan Batalkan.",
     ],
   },
   {

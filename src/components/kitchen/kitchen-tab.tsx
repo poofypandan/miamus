@@ -72,7 +72,7 @@ export function KitchenTab() {
           <WhatsNewCard id="kitchen-amounts-2026-11" />
         </div>
       )}
-      {view === "menu" && recipesOn(flags) ? (
+      {view === "menu" && recipesOn() ? (
         <div className="px-4">
           <MenuView />
         </div>
@@ -110,7 +110,7 @@ export function StaffKitchen() {
   return (
     <div className="flex flex-col gap-4">
       <KitchenSwitch locale="id" />
-      {view === "menu" && recipesOn(flags) ? (
+      {view === "menu" && recipesOn() ? (
         <StaffMenu />
       ) : view === "food" ? (
         <div className="flex flex-col gap-6">

@@ -457,7 +457,7 @@ function PlaceSheet({
                 id="place-floor"
                 value={floorId}
                 onChange={(e) => chooseFloor(e.target.value)}
-                className="min-h-[48px] rounded-lg border bg-background px-3 text-sm"
+                className="min-h-[48px] rounded-lg border bg-card px-3 text-sm"
               >
                 <option value={NO_FLOOR}>{t("No floor", "Tanpa lantai")}</option>
                 {floors.map((floor) => (
@@ -479,7 +479,7 @@ function PlaceSheet({
                 id="place-inside"
                 value={insideId}
                 onChange={(e) => chooseInside(e.target.value)}
-                className="min-h-[48px] rounded-lg border bg-background px-3 text-sm"
+                className="min-h-[48px] rounded-lg border bg-card px-3 text-sm"
               >
                 <option value={NOT_INSIDE}>{t("Not inside a room", "Tidak di dalam ruangan")}</option>
                 {choices.map((room) => (
