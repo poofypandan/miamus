@@ -140,10 +140,10 @@ describe("the cards", () => {
   });
 
   it("need this page or newer: an older page is asked to reopen", () => {
-    expect(KAKAK_CLIENT_VERSION).toBe(4);
-    expect(clientVersionFor(added)).toBe(4);
-    expect(needsNewerApp(removed, 3)).toBe(true);
-    expect(needsNewerApp(removed, 4)).toBe(false);
+    expect(KAKAK_CLIENT_VERSION).toBe(5);
+    expect(clientVersionFor(added)).toBe(5);
+    expect(needsNewerApp(removed, 4)).toBe(true);
+    expect(needsNewerApp(removed, 5)).toBe(false);
   });
 
   it("read as the sheets do, with no job title, in both languages", () => {

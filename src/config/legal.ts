@@ -230,7 +230,37 @@ export const LEGAL = {
   // 35 days, migrations/172), and asks ElevenLabs to delete each generation
   // from its history right after (zero retention is Enterprise-only); it may
   // keep logs, and backups up to 30 days. Otherwise the phone reads aloud.
-  // 2026-11-20.1: staff who leave (staff onboarding step 4, migrations/180)
+  // 2026-11-20.1: Can we cook it? (Kakak on top; migrations/174 only lets
+  // the request record name the new tool) — each Kakak request now also
+  // carries the household's saved recipe names and, per recipe, the names
+  // of the ingredients it is missing or that can't be checked (worked out
+  // by the app from the items' status, and their amounts while Kitchen
+  // amounts is on; amounts and steps are never sent), and the dishes on the
+  // menu for the coming week. Kakak may suggest a dish for the menu, and
+  // the missing items for the shopping list, saved only when the admin
+  // confirms. No new kind of personal data stored, no new service or
+  // region; Anthropic's retention is unchanged.
+  // 2026-11-21.1: two questions when asking for access (owner, 2026-11-20;
+  // migrations/175) — what Miamus can help with at home (required on the
+  // screen, but one tap on a suggestion answers it; up to 300 characters)
+  // and, optionally, who introduced them to Miamus (up to 100; may be
+  // another person's name). Used to understand what people want
+  // and how they hear about Miamus; only Poofy Labs sees them (the approvals
+  // page); never in a notification. Cleared 12 months after the request by
+  // the nightly prune, or deleted sooner with the request (a rejected one
+  // after 30 days, an account that is deleted). Short anonymous summaries
+  // of the answers (no names or contact details) may be kept to decide what
+  // to improve (owner, 2026-11-20). No new service.
+  // 2026-11-21.2: who at Poofy Labs can see household data (security audit,
+  // 20 Nov 2026, finding S7) — section 5 now says that the operator can
+  // technically open a household's data and photos through Supabase and
+  // Vercel, that today this is one person signed in with two-step
+  // verification, when we look, and that the full-access keys never leave
+  // the database provider. The Indonesian photo line now also says the
+  // photo's own location data is removed on the phone (the English already
+  // did; PR #161 makes that true when compression fails, too). Nothing
+  // stored, collected or shared changes. Set effectiveDate to the merge day.
+  // 2026-11-21.4: staff who leave (staff onboarding step 4, migrations/180)
   // — an archived staff profile keeps its name on past work for 12 months,
   // then the name is replaced with "Former staff" ("Mantan staf") and the
   // rest of the row is cleared, automatically every night; an admin can do
@@ -239,14 +269,14 @@ export const LEGAL = {
   // and the date the name was removed. When someone leaves, their chores and
   // pet routines can go to another staff member (data that was already
   // stored). No new service or region; nothing new sent to Kakak.
-  // 2026-11-20.2: Kakak suggests adding or removing a staff member (staff
+  // 2026-11-21.5: Kakak suggests adding or removing a staff member (staff
   // onboarding step 5, migrations/181 only lets the request record name the
   // two tools) — the new person's name reaches Anthropic only as the admin
   // types it; former staff are never sent (the phone matches a returning
   // name itself). Saved only when the admin confirms, through the same paths
   // as by hand. No new kind of personal data, service or region.
-  policyVersion: "2026-11-20.2",
-  effectiveDate: { en: "20 November 2026", id: "20 November 2026" },
+  policyVersion: "2026-11-21.5",
+  effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
    * project is in AWS ap-southeast-1 (moved from ap-northeast-1, Tokyo, on

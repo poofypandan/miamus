@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleAlert,
+  CircleHelp,
+  CookingPot,
   Eye,
   UserMinus,
   UserPlus,
@@ -20,6 +22,7 @@ import {
   Refrigerator,
   RotateCcw,
   Send,
+  ShoppingBasket,
   ShoppingCart,
   Undo2,
   WifiOff,
@@ -572,8 +575,11 @@ function Conversation({
         </Button>
       )}
 
-      {/* Kakak's card, short by default (19 Nov): the newest card first, under the one-a-week rule. */}
+      {/* Can we cook it? (20 Nov): the newest card first, under the one-a-week rule. */}
+      {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-cook-2026-11" />}
+      {/* Telling Kakak about staff (staff onboarding step 5, 20 Nov), under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-staff-2026-11" />}
+      {/* Kakak's card, short by default (19 Nov), under the one-a-week rule. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-short-card-2026-11" />}
       {/* Kakak's new look (the warm seal, 20 Nov): after the short card, in its own week. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-warm-seal-2026-11" />}
@@ -899,6 +905,26 @@ function SuggestionCard({
                   );
                 })}
               </dl>
+              {/* The app's own answer (Fable S0): it stays when her sentence is dropped. */}
+              {card.checks?.map((check, c) => (
+                <p
+                  key={c}
+                  data-kakak-check={check.tone}
+                  className={cn(
+                    "flex items-start gap-1.5 text-sm font-medium",
+                    check.tone === "ready" ? "text-emerald-700" : check.tone === "missing" ? "text-amber-700" : "text-muted-foreground"
+                  )}
+                >
+                  {check.tone === "ready" ? (
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+                  ) : check.tone === "muted" ? (
+                    <CircleHelp className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+                  ) : (
+                    <ShoppingBasket className="mt-0.5 size-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+                  )}
+                  <span>{check.text}</span>
+                </p>
+              ))}
               {card.note && <p className="text-xs text-muted-foreground">{card.note}</p>}
               {item.kind === "chore" && open && (
                 <>
@@ -1180,6 +1206,7 @@ const KIND_ICONS: Record<KakakSuggestion["kind"], LucideIcon> = {
   ingredient: Carrot,
   new_ingredient: Carrot,
   staff_areas: Eye,
+  menu_dish: CookingPot,
   add_staff: UserPlus,
   remove_staff: UserMinus,
 };

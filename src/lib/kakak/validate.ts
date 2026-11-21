@@ -23,6 +23,8 @@ import {
   INGREDIENT_EXPIRY,
   INGREDIENT_SHELVES,
   INGREDIENT_UNITS,
+  DISH_MEALS,
+  NONE,
   PET_ROUTINE_TOOL_KINDS,
   TOOL_WEEKDAYS,
   TRIAL_DAYS,
@@ -168,6 +170,7 @@ export function sameStaffName(a: string, b: string): boolean {
       .trim();
   return key(a) === key(b);
 }
+const DISH_FIELDS = ["recipe", "dish_name", "day", "meal", "servings", "add_missing", "put_on_menu"] as const;
 
 /** set_staff_areas' show or hide: a list of areas, each once. Null when it isn't one. */
 function areaList(errors: string[], field: string, value: unknown): StaffArea[] | null {
@@ -391,6 +394,50 @@ export function validateToolCall(
           errors.push(`nothing would change: ${person.ref} already sees it that way; say so in one line instead`);
         }
       }
+      break;
+    }
+    case "plan_dish": {
+      // Not strict (tools.ts): the shape is checked here. No field is null.
+      shape(errors, "input", input, DISH_FIELDS);
+      const byRecipe = input.recipe !== NONE;
+      if (byRecipe) ref(errors, "recipe", input.recipe, refs.recipes, false);
+      if (byRecipe && input.dish_name !== NONE) errors.push('dish_name must be "none" when recipe is set');
+      if (!byRecipe) {
+        if (input.dish_name === NONE || typeof input.dish_name !== "string") errors.push('recipe and dish_name are both "none": name the dish, or use a saved recipe');
+        else text(errors, "dish_name", input.dish_name, { max: 80, required: true });
+        if (input.add_missing === true) {
+          errors.push("add_missing needs a saved recipe: with no recipe nothing can be checked; set it false and say there is no saved recipe");
+        }
+        // Paid run 44723348875, K167: "Gulai kambing malam ini, bahannya
+        // ada?" became a menu card nobody asked for. Her own put_on_menu
+        // says whether the owner asked to plan it; only then does a dish
+        // with no recipe get a card.
+        if (input.put_on_menu === false) {
+          errors.push("with no saved recipe, a dish goes on the menu only when the owner asked to cook or plan it: reply in one line that there is no saved recipe for it, and where to add one, with no card");
+        }
+      }
+      bool(errors, "put_on_menu", input.put_on_menu);
+      dayInRange(errors, "day", input.day, today, inAYear);
+      oneOf(errors, "meal", input.meal, DISH_MEALS);
+      if (!Number.isInteger(input.servings) || (input.servings as number) < 0 || (input.servings as number) > 50) {
+        errors.push("servings must be a whole number from 1 to 50, or 0 for the recipe's own");
+      }
+      bool(errors, "add_missing", input.add_missing);
+      const recipe = (household.recipes ?? []).find((r) => r.ref === input.recipe);
+      // With amounts on, another number of servings is checked again on the
+      // server (suggestions.ts), so only the recipe's own servings can be
+      // known to need nothing.
+      const recheck = !household.kitchenOff && input.servings !== 0;
+      if (recipe && input.add_missing === true && recipe.missing.length === 0 && !recheck) {
+        errors.push(`${recipe.ref} is missing nothing: set add_missing false`);
+      }
+      const planned = (household.menu ?? []).find(
+        (dish) =>
+          dish.day === input.day &&
+          dish.meal === input.meal &&
+          (byRecipe ? dish.recipe === input.recipe : typeof input.dish_name === "string" && sameName(dish.title, input.dish_name)),
+      );
+      if (planned) errors.push(`${planned.title} is already on the menu for ${planned.day} ${planned.meal}: say so in one line instead`);
       break;
     }
     case "add_staff": {
