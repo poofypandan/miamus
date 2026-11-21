@@ -30,11 +30,11 @@ export function KakakThinking() {
 
   return (
     <div className="flex flex-col gap-3" role="status" aria-live="polite">
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-2.5">
         {/* Her heart beats slowly while she reads (the warm seal, 20 Nov). */}
-        <KakakAvatar className="size-7" beat="think" />
+        <KakakAvatar className="mt-2 size-7 shrink-0" beat="think" />
         {/* On her own blush, like her replies: a glance tells who is speaking. */}
-        <div className="flex items-center gap-2 rounded-2xl rounded-tl-md border border-kakak-line bg-kakak-tint px-3 py-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2 rounded-[20px] rounded-bl-md bg-kakak-tint px-4 py-2.5 text-base text-muted-foreground">
           <span className="flex gap-1" aria-hidden="true">
             {[0, 1, 2].map((dot) => (
               <span
@@ -47,8 +47,9 @@ export function KakakThinking() {
           {line}
         </div>
       </div>
-      {/* The card's outline, so the answer lands where the eye already is. */}
-      <div aria-hidden="true" className="ml-9 flex flex-col gap-2 rounded-xl border border-dashed px-4 py-3 motion-safe:animate-pulse">
+      {/* The card's place, a paper inset like the card itself (04, PR 5), so
+          the answer lands where the eye already is. */}
+      <div aria-hidden="true" className="flex flex-col gap-2.5 rounded-[22px] bg-background px-[18px] py-4 motion-safe:animate-pulse">
         <span className="h-2.5 w-16 rounded-full bg-muted" />
         <span className="h-3 w-3/4 rounded-full bg-muted" />
         <span className="h-3 w-1/2 rounded-full bg-muted" />

@@ -78,7 +78,7 @@ test("Kitchen (Bahasa Indonesia): the admin adds food and may delete it", async 
   await expect(page.getByRole("tab", { name: "Makanan" })).toHaveAttribute("aria-selected", "true", {
     timeout: 20_000,
   });
-  await expect(page.getByText("Belum ada makanan")).toBeVisible();
+  await expect(page.getByText("Dapur masih kosong")).toBeVisible();
 
   await page.getByRole("button", { name: "Tambah makanan" }).click();
   await page.getByLabel(/Makanan apa\?/).fill("Rendang");

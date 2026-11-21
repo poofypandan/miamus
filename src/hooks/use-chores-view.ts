@@ -9,12 +9,12 @@ import { choresViewFor } from "@/lib/features";
 export type ChoresView = "today" | "rooms" | "repairs";
 
 /**
- * The Chores tab's pill (Today · Rooms) and the Rooms view's job filter, read
- * from the URL (Phase 158): `?chores=rooms` and `&job=vacuum`. The pill, the
+ * Home's pill (Rooms · Chores · Repairs) and the Rooms view's job filter,
+ * read from the URL (Phase 158): `?chores=today` and `&job=vacuum`. The pill, the
  * chips and what they show all come from here, so they can't disagree after
  * a remount (CLAUDE.md, State Persistence).
  *
- * Switching views is a push, so Back returns to Today; changing the job is a
+ * Switching views is a push, so Back returns to the house; changing the job is a
  * replace, so Back doesn't step through every chip that was tapped. Both in
  * place, with no server round trip (Phase 121).
  */
@@ -27,10 +27,11 @@ export function useChoresView(): {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const raw = searchParams.get("chores");
-  // Today · Rooms · Repairs (Phase 159 adds the third, `?chores=repairs`).
-  // Repairs switched off (Phase 171): ?chores=repairs falls back to Today.
+  // Rooms · Chores · Repairs (21 Nov: Home opens on the house, so no value
+  // is Rooms and Chores is `?chores=today`). Repairs switched off (Phase
+  // 171): ?chores=repairs falls back to Rooms.
   const { flags } = useHouseholdFeatures();
-  const view: ChoresView = choresViewFor(raw === "rooms" || raw === "repairs" ? raw : "today", flags);
+  const view: ChoresView = choresViewFor(raw, flags);
   const rawJob = searchParams.get("job");
   const job = view === "rooms" && isChoreJob(rawJob) ? rawJob : null;
 
@@ -48,7 +49,7 @@ export function useChoresView(): {
       if (next === view) return;
       pushInPlace(
         hrefWith((params) => {
-          if (next === "today") params.delete("chores");
+          if (next === "rooms") params.delete("chores");
           else params.set("chores", next);
           params.delete("job");
         })

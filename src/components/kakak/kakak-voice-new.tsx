@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import { AudioLines, Check, Keyboard, Loader2, Mic, Square, Volume2, VolumeX } from "lucide-react";
 import { useReadAloud } from "@/components/kakak/kakak-voice";
 import { VideoTip } from "@/components/shared/video-tip";
@@ -32,8 +32,13 @@ const VOICE_ON = process.env.NEXT_PUBLIC_KAKAK_VOICE !== "false";
  * even reading aloud) when voice is switched off.
  */
 export function KakakVoiceNew(props: Parameters<typeof Voice>[0]) {
-  return VOICE_ON ? <Voice {...props} /> : null;
+  // With voice switched off, the compact foot is still where the field lives.
+  return VOICE_ON ? <Voice {...props} /> : props.compact ? <>{props.field}</> : null;
 }
+
+/** The disc's size on the first screen and in the compact row, in px. */
+const BIG_DISC = 72;
+const ROW_DISC = 56;
 
 /**
  * Talk to Kakak: tap to talk, tap to end (owner, 20 Nov). A large mic in the
@@ -55,8 +60,21 @@ function Voice({
   listenHere,
   onSpoken,
   onSpeaking,
+  compact = false,
+  field,
+  hasWords = false,
 }: {
   screen: VoiceScreen;
+  /**
+   * Once a conversation exists (07, screen 9; Fable, 21 Nov): the foot is one
+   * row, the mic at 56 px and then the field, with Read replies aloud under
+   * it. Listening still opens the full panel, and folds back to the row.
+   */
+  compact?: boolean;
+  /** The typing field for the compact row (kakak-sheet.tsx's TypingBox). */
+  field?: ReactNode;
+  /** The field has words: Send is the solid shape, so the mic goes quiet. */
+  hasWords?: boolean;
   /** A reply starts or stops being read aloud: her heart follows it (the warm seal, 20 Nov). */
   onSpeaking?: (on: boolean) => void;
   /** Whether a spoken answer makes sense on this screen. */
@@ -179,9 +197,52 @@ function Voice({
     dispatch({ type: "stop" });
   }, [clearNotice]);
 
-  if (!ready) return null;
+  if (!ready) return compact ? <>{field}</> : null;
 
   const { phase } = state;
+  const chip = speaker.supported && (
+    <button
+      type="button"
+      aria-pressed={speaker.on}
+      onClick={() => speaker.toggle()}
+      className={cn(
+        // One quiet chip with no outline (04, PR 5); on, it takes her blush, since it is her voice.
+        "flex min-h-[38px] items-center gap-1.5 self-center rounded-full px-3.5 text-sm font-medium",
+        speaker.on ? "bg-kakak-tint text-foreground active:bg-kakak-line" : "bg-muted text-muted-foreground active:bg-muted/70"
+      )}
+    >
+      {speaker.on ? <Volume2 className="size-4" aria-hidden="true" /> : <VolumeX className="size-4" aria-hidden="true" />}
+      {t("Read replies aloud", "Bacakan jawaban Kakak")}
+    </button>
+  );
+
+  if (compact && phase !== "listening") {
+    return (
+      <section aria-label={t("Talk to Kakak", "Bicara dengan Kakak")} className="flex flex-col gap-2.5 pt-1">
+        {phase === "speaking" && (
+          <p role="status" aria-live="polite" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <AudioLines className="size-4 shrink-0 motion-safe:animate-pulse" aria-hidden="true" />
+            {t("Kakak is speaking", "Kakak sedang bicara")}
+          </p>
+        )}
+        {/* minmax(0, 1fr): a long typed line never pushes the row sideways. */}
+        {state.canListen || phase === "speaking" ? (
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-2.5">
+            <RowButton phase={phase} quiet={hasWords && phase === "idle"} disabled={!listenHere && phase !== "speaking"} onListen={start} onStop={stop} />
+            <div className="min-w-0">{field}</div>
+          </div>
+        ) : (
+          // No mic in this browser: the field alone, full width.
+          <div className="min-w-0">{field}</div>
+        )}
+        {state.problem && phase === "idle" && state.canListen && (
+          <p className="text-center text-sm text-muted-foreground">{problemText(state.problem, t)}</p>
+        )}
+        {chip}
+      </section>
+    );
+  }
+
   const showMic = state.canListen && (listenHere || phase === "listening");
   const showBig = showMic || phase === "speaking";
   const showTip = !state.canListen && listenHere;
@@ -195,15 +256,16 @@ function Voice({
         aria-label={t("Talk to Kakak", "Bicara dengan Kakak")}
         className={cn(
           "flex flex-col items-center gap-2",
-          // A soft panel around the mic or the tip; just the speaker switch otherwise.
-          (showBig || showTip) && "rounded-2xl border bg-background/70",
-          showBig ? "px-4 pb-3 pt-5" : showTip ? "px-3 py-2" : "py-0"
+          // The mic in the open, with air around it (07, decision 7): the disc
+          // is the screen's one solid shape. The keyboard tip keeps a quiet inset.
+          showTip && "rounded-[22px] bg-background",
+          showBig ? "pb-2 pt-4" : showTip ? "px-3 py-2" : "py-0"
         )}
       >
         {showBig && (
           <>
             <BigButton phase={phase} onListen={start} onStop={stop} />
-            <p role="status" aria-live="polite" className="min-h-5 text-center text-sm font-medium text-gray-900">
+            <p role="status" aria-live="polite" className="min-h-5 text-center text-base font-medium text-foreground">
               {phaseLabel(phase, kept, t)}
             </p>
             {phase === "listening" && (
@@ -211,17 +273,19 @@ function Voice({
               // in the typing box yet: that waits for Done.
               <div
                 data-testid="kakak-live-words"
-                className="flex w-full items-start gap-2 rounded-2xl border border-primary/20 bg-card px-3 py-2 text-sm"
+                // A quiet paper inset, full width, starting from the left so the
+                // words don't shift as they grow (Fable, #187).
+                className="flex w-full items-start gap-2 rounded-2xl bg-background px-4 py-3 text-base"
               >
-                <AudioLines className="mt-0.5 size-4 shrink-0 text-primary motion-safe:animate-pulse" aria-hidden="true" />
-                <p className={cn("min-w-0 flex-1 break-words", state.transcript ? "text-gray-900" : "text-muted-foreground")}>
+                <AudioLines className="mt-0.5 size-5 shrink-0 text-foreground motion-safe:animate-pulse" aria-hidden="true" />
+                <p className={cn("min-w-0 flex-1 break-words", state.transcript ? "text-foreground" : "text-muted-foreground")}>
                   {state.transcript || t("Say what you need. Pauses are fine.", "Sebutkan yang Anda perlukan. Boleh sambil berpikir.")}
                 </p>
               </div>
             )}
             {phase === "listening" && secondsLeft !== null && (
               // Quiet, from 1:45: the two-minute limit is close.
-              <p data-testid="kakak-limit-notice" className="text-center text-xs text-muted-foreground">
+              <p data-testid="kakak-limit-notice" className="text-center text-sm text-muted-foreground">
                 {t(
                   `Listening stops in ${secondsLeft} s. Tap Done to send.`,
                   `Kakak berhenti mendengarkan dalam ${secondsLeft} detik. Ketuk Selesai untuk mengirim.`
@@ -232,19 +296,19 @@ function Voice({
               <button
                 type="button"
                 onClick={cancel}
-                className="min-h-9 text-xs font-medium text-muted-foreground underline-offset-4 active:underline"
+                className="min-h-11 text-sm font-medium text-muted-foreground underline-offset-4 active:underline"
               >
                 {t("Cancel", "Batalkan")}
               </button>
             )}
             {state.problem && phase === "idle" && state.canListen && (
-              <p className="text-center text-xs text-muted-foreground">{problemText(state.problem, t)}</p>
+              <p className="text-center text-sm text-muted-foreground">{problemText(state.problem, t)}</p>
             )}
           </>
         )}
 
         {showTip && (
-          <p className="flex items-start gap-2 text-xs text-muted-foreground">
+          <p className="flex items-start gap-2 text-sm text-muted-foreground">
             <Keyboard className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>
               {t("Tap the mic on your keyboard and speak.", "Ketuk mic di keyboard, lalu bicara.")}
@@ -255,20 +319,8 @@ function Voice({
           <VideoTip id="owner-kakak-voice" locale={locale} />
         )}
 
-        {speaker.supported && (
-          <button
-            type="button"
-            aria-pressed={speaker.on}
-            onClick={() => speaker.toggle()}
-            className={cn(
-              "flex min-h-9 items-center gap-1.5 self-center rounded-full border px-3 text-xs font-medium active:bg-muted",
-              speaker.on ? "border-primary/30 bg-primary/10 text-gray-900" : "bg-card text-muted-foreground"
-            )}
-          >
-            {speaker.on ? <Volume2 className="size-4" aria-hidden="true" /> : <VolumeX className="size-4" aria-hidden="true" />}
-            {t("Read replies aloud", "Bacakan jawaban Kakak")}
-          </button>
-        )}
+        {/* Hidden while listening in the compact foot (Fable, 21 Nov). */}
+        {!compact && chip}
       </section>
     </>
   );
@@ -276,6 +328,19 @@ function Voice({
 
 function BigButton({ phase, onListen, onStop }: { phase: string; onListen: () => void; onStop: () => void }) {
   const t = useT();
+  const disc = useRef<HTMLButtonElement>(null);
+  // Its place on screen, kept for the compact row's disc to travel from (only
+  // when idle on the first screen; after listening the panel folds back in place).
+  useLayoutEffect(() => {
+    const el = disc.current;
+    if (!el || phase !== "idle") return;
+    lastBigDisc.rect = el.getBoundingClientRect();
+    // Again once her sheet has come to rest (420 ms), in case nothing renders before a send.
+    const settled = setTimeout(() => {
+      if (el.isConnected) lastBigDisc.rect = el.getBoundingClientRect();
+    }, 450);
+    return () => clearTimeout(settled);
+  });
   const active = phase === "listening" || phase === "speaking";
   const done = t("Done", "Selesai");
   return (
@@ -294,6 +359,7 @@ function BigButton({ phase, onListen, onStop }: { phase: string; onListen: () =>
         </>
       )}
       <button
+        ref={disc}
         type="button"
         disabled={phase === "thinking"}
         onClick={active ? onStop : onListen}
@@ -372,3 +438,72 @@ function problemText(problem: VoiceProblem, t: (en: string, id: string) => strin
       return t("That didn't work. Tap the mic and try again, or type.", "Belum berhasil. Ketuk mikrofon dan coba lagi, atau ketik saja.");
   }
 }
+
+/**
+ * The compact row's mic (Fable, 21 Nov): the same three jobs as the big disc
+ * at 56 px. Solid, unless the field has words: then Send is the solid shape
+ * and the mic goes quiet. When it first appears, it travels from where the
+ * big disc was and settles from 72 to 56 px on ease-travel (at once under
+ * reduced motion).
+ */
+function RowButton({
+  phase,
+  quiet,
+  disabled,
+  onListen,
+  onStop,
+}: {
+  phase: string;
+  quiet: boolean;
+  disabled: boolean;
+  onListen: () => void;
+  onStop: () => void;
+}) {
+  const t = useT();
+  const ref = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const from = lastBigDisc.rect;
+    lastBigDisc.rect = null;
+    if (!el || !from || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Never fly in from off the screen.
+    if (from.bottom < 0 || from.top > innerHeight) return;
+    const to = el.getBoundingClientRect();
+    const dx = from.left + from.width / 2 - (to.left + to.width / 2);
+    const dy = from.top + from.height / 2 - (to.top + to.height / 2);
+    el.animate(
+      [{ transform: `translate(${dx}px, ${dy}px) scale(${BIG_DISC / ROW_DISC})` }, { transform: "none" }],
+      { duration: 320, easing: "cubic-bezier(0.65, 0, 0.35, 1)" }
+    );
+  }, []);
+  const speaking = phase === "speaking";
+  return (
+    <button
+      ref={ref}
+      type="button"
+      disabled={disabled || phase === "thinking"}
+      onClick={speaking ? onStop : onListen}
+      aria-label={
+        speaking ? t("Stop", "Berhenti") : phase === "thinking" ? t("Kakak is thinking", "Kakak sedang berpikir") : t("Talk to Kakak", "Bicara dengan Kakak")
+      }
+      className={cn(
+        "flex size-14 shrink-0 items-center justify-center rounded-full transition-colors duration-200",
+        // While she thinks, her dots are the one sign: the disc goes quiet and its mic dims (Fable, #192).
+        phase === "thinking"
+          ? "bg-muted text-subtle-foreground"
+          : quiet
+            ? "bg-muted text-foreground"
+            : "bg-primary text-primary-foreground shadow-sm disabled:opacity-60"
+      )}
+    >
+      {speaking ? (
+        <Square className="size-5 fill-current" aria-hidden="true" />
+      ) : (
+        <Mic className="size-6" aria-hidden="true" />
+      )}
+    </button>
+  );
+}
+
+/** Where the big disc last sat on screen, so the row's disc can travel from it. */
+const lastBigDisc: { rect: DOMRect | null } = { rect: null };

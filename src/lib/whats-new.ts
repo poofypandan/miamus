@@ -28,6 +28,48 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 21 Nov (Fable's tab redesigns, the owners' kitchen inventory): shown
+    // on Kitchen → Food, under the calm-start rules.
+    id: "kitchen-shelves-2026-11",
+    date: "2026-11-21",
+    audience: "owner",
+    title: { en: "New: the kitchen on shelves", id: "Baru: dapur dalam rak" },
+    steps: {
+      en: [
+        "Kitchen → Food now shows each place as a shelf: Fridge, Freezer, Counter and Cupboard, one tile for each thing. Food and ingredients sit together.",
+        "Use soon comes first. Amber means eat it today or tomorrow, or it is running low; a word always says which.",
+        "Tap a tile for what you could do before: Eaten, Given away, Thrown out, or Enough, Running low, Out. To buy shows what is running low or out.",
+      ],
+      id: [
+        "Dapur → Makanan sekarang menampilkan tiap tempat sebagai rak: Kulkas, Freezer, Meja, dan Lemari, satu kotak untuk tiap barang. Makanan dan bahan masakan ada bersama.",
+        "Segera dipakai ada di paling atas. Kuning berarti perlu dimakan hari ini atau besok, atau hampir habis; selalu ada kata yang menjelaskannya.",
+        "Ketuk kotaknya untuk pilihan yang sama seperti sebelumnya: Dimakan, Diberikan, Dibuang, atau Masih ada, Hampir habis, Habis. Perlu dibeli menunjukkan yang hampir habis atau habis.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
+    // 21 Nov (Fable's tab redesigns, PR 1): the tabs reordered and Home
+    // opening on the house. Shown on Home, under the calm-start rules.
+    id: "home-centre-2026-11",
+    date: "2026-11-21",
+    audience: "owner",
+    title: { en: "New: Home is in the middle", id: "Baru: Rumah ada di tengah" },
+    steps: {
+      en: [
+        "Home is now the middle tab, with Pets next to Today. Kitchen and Settings stay where they were.",
+        "Home opens on Rooms, drawn as your house: one band a floor, the top floor first. Tap a room to see what is set up there, or a floor's name for its list.",
+        "A room in amber, with a warning mark, has an open repair or a chore left from an earlier day. The reason is written under the house. Chores and Repairs are next to Rooms.",
+      ],
+      id: [
+        "Rumah sekarang ada di tab tengah, dengan Hewan di samping Hari ini. Dapur dan Pengaturan tetap di tempatnya.",
+        "Rumah dibuka di Ruangan, digambar seperti rumah Anda: satu baris per lantai, lantai teratas paling atas. Ketuk ruangan untuk melihat tugasnya, atau nama lantai untuk daftarnya.",
+        "Ruangan berwarna kuning dengan tanda peringatan punya perbaikan yang belum selesai atau tugas yang tertinggal dari hari sebelumnya. Alasannya tertulis di bawah gambar rumah. Tugas dan Perbaikan ada di samping Ruangan.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 20 Nov (staff onboarding, step 2): Add staff in one sheet. A card on
     // Settings → Staff, where the button is, under the calm-start rules.
     // Staff screens don't change, so there is no staff card.
@@ -100,11 +142,11 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: Kakak's new look", id: "Baru: tampilan baru Kakak" },
     steps: {
       en: [
-        "Kakak has a new mark: the Miamus roof and a heart on a terracotta circle. Her replies sit on her own soft colour, so you can tell at a glance who is speaking.",
+        "Kakak has a new mark: the Miamus roof and a heart in terracotta on a warm white circle. Her replies sit on her own soft colour, so you can tell at a glance who is speaking.",
         "Her heart moves a little: it beats while she thinks, follows her voice when Read replies aloud is on, and settles once when something is saved. It stays still if your phone is set to reduce motion.",
       ],
       id: [
-        "Kakak punya tanda baru: atap Miamus dan hati di lingkaran terakota. Jawabannya ada di warna lembutnya sendiri, jadi langsung terlihat siapa yang bicara.",
+        "Kakak punya tanda baru: atap Miamus dan hati berwarna terakota di lingkaran putih hangat. Jawabannya ada di warna lembutnya sendiri, jadi langsung terlihat siapa yang bicara.",
         "Hatinya sedikit bergerak: berdetak saat Kakak berpikir, mengikuti suaranya saat Bacakan jawaban Kakak menyala, dan bergerak sekali saat ada yang tersimpan. Tetap diam kalau HP Anda diatur untuk mengurangi gerakan.",
       ],
     },

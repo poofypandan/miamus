@@ -18,7 +18,8 @@ export function FilterPill({
 }: {
   label: string;
   icon?: LucideIcon;
-  count: number;
+  /** Left out where a count would only be another number (the Kitchen's shelves). */
+  count?: number;
   active: boolean;
   onClick: () => void;
 }) {
@@ -30,7 +31,7 @@ export function FilterPill({
       className={cn(
         // Lifted paper when chosen, the warm track colour when not (21 Nov,
         // the visual direction's PR 2): black is for the action only.
-        "flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold",
+        "press flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full px-3.5 text-sm font-semibold",
         active
           ? "bg-card text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)]"
           : "bg-muted text-muted-foreground active:bg-muted/70"
@@ -38,9 +39,11 @@ export function FilterPill({
     >
       {Icon && <Icon className="size-3.5 shrink-0" />}
       {label}
-      <span className={cn("text-xs tabular-nums", active ? "text-muted-foreground" : "text-subtle-foreground")}>
-        {count}
-      </span>
+      {count !== undefined && (
+        <span className={cn("text-xs tabular-nums", active ? "text-muted-foreground" : "text-subtle-foreground")}>
+          {count}
+        </span>
+      )}
     </button>
   );
 }
