@@ -16,7 +16,7 @@ import {
   runKakakTurn,
   type TurnDeps,
 } from "@/lib/kakak/engine";
-import { kakakExamples } from "@/lib/kakak/examples";
+import { idleExamples, kakakExamples } from "@/lib/kakak/examples";
 import { practiceClient } from "@/lib/kakak/practice";
 import { MAX_REFINEMENT_NOTE, REPEAT_CHOICES, refineChore, refinementNote, repeatLabel, splitRefinementNote } from "@/lib/kakak/refine";
 import { MAX_CALLS_PER_CONVERSATION, MAX_TYPED, type TurnResult } from "@/lib/kakak/engine";
@@ -188,6 +188,15 @@ describe("kakakExamples", () => {
     expect(id[0].text).toBe("Ari siram tanaman setiap Senin jam 8");
     expect(id[2].text).toMatch(/^Ingatkan saya/);
     expect(id[5].text).toBe("Apa bedanya tugas dan rutinitas?");
+  });
+
+  it("shows three on the idle sheet: a chore, the pets or shopping, and a question (07, decision 7)", () => {
+    const withPets = idleExamples(kakakExamples({ locale: "en", staffNames: ["Ari"], petNames: ["Mochi", "Bento"] }));
+    expect(withPets.map((e) => e.kind)).toEqual(["chore", "pet", "question"]);
+    expect(withPets[1].text).toBe("Lights off for Mochi and Bento every day at 9:30 pm");
+    const noPets = idleExamples(kakakExamples({ locale: "id", staffNames: [], petNames: [] }));
+    expect(noPets.map((e) => e.kind)).toEqual(["chore", "shopping", "question"]);
+    expect(noPets[1].text).toBe("Beli beras dan telur");
   });
 
   it("keeps a pet's whole name, as the household block does", () => {

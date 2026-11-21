@@ -1169,7 +1169,7 @@ export function AgendaTab() {
         {range === "day" && (
           <WhatsNewCard
             id="bills-2026-11"
-            onTry={() => startTransition(() => pushInPlace(`${moduleHref("chores")}&bills=open`))}
+            onTry={() => startTransition(() => pushInPlace(`${moduleHref("chores")}&chores=today&bills=open`))}
           />
         )}
       </div>

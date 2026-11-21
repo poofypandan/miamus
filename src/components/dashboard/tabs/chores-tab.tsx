@@ -48,20 +48,21 @@ export function ChoresTab() {
 
   return (
     <div className="flex flex-col gap-4 px-4 pb-6">
-      {/* Chores · Rooms · Repairs (Phase 158, 159; renamed in Phase 175, when
-          this tab became Home): the same chores, by day or by room. The pill
-          reads ?chores= from the URL, like the Kitchen's; "today" stays the
-          first segment's value so old links keep working. */}
+      {/* Rooms · Chores · Repairs (Phase 158, 159; renamed in Phase 175, when
+          this tab became Home; Rooms first on 21 Nov, when Home moved to the
+          centre and opens on the house). The pill reads ?chores= from the
+          URL, like the Kitchen's: none is Rooms, `today` is Chores. */}
       <SegmentedControl
         ariaLabel={t("Home", "Rumah")}
         segments={[
-          { value: "today", label: t("Chores", "Tugas") },
           { value: "rooms", label: t("Rooms", "Ruangan") },
+          { value: "today", label: t("Chores", "Tugas") },
           ...(repairsOn ? [{ value: "repairs" as const, label: t("Repairs", "Perbaikan") }] : []),
         ]}
         value={view}
         onChange={setView}
       />
+      <WhatsNewCard id="home-centre-2026-11" onTry={view === "rooms" ? undefined : () => setView("rooms")} />
       <WhatsNewCard id="rooms-2026-11" onTry={view === "rooms" ? undefined : () => setView("rooms")} />
       <WhatsNewCard id="room-picker-2026-11" />
       {repairsOn && (

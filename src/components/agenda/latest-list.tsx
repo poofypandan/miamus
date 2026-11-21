@@ -76,7 +76,7 @@ export function LatestList({ rows, onOpen }: { rows: LatestRow[]; onOpen: (row: 
           <button
             type="button"
             onClick={() => onOpen(row)}
-            className="flex min-h-[4.25rem] w-full items-center gap-3 px-3.5 py-2.5 text-left active:bg-muted/60"
+            className="flex min-h-[4.25rem] w-full items-center gap-3 px-3.5 py-2.5 text-left press-row"
           >
             {row.photo ? (
               <SyncedImg url={row.photo} size={160} alt="" className="size-11 shrink-0 rounded-xl bg-muted object-cover" />

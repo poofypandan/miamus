@@ -175,9 +175,10 @@ function Voice({
         aria-label={t("Talk to Kakak", "Bicara dengan Kakak")}
         className={cn(
           "flex flex-col items-center gap-2",
-          // A paper inset around the mic or the tip, as her card is (04, PR 5); just the speaker switch otherwise.
-          (showBig || showTip) && "rounded-[22px] bg-background",
-          showBig ? "px-4 pb-3 pt-5" : showTip ? "px-3 py-2" : "py-0"
+          // The mic in the open, with air around it (07, decision 7): the disc
+          // is the screen's one solid shape. The keyboard tip keeps a quiet inset.
+          showTip && "rounded-[22px] bg-background",
+          showBig ? "pb-2 pt-4" : showTip ? "px-3 py-2" : "py-0"
         )}
       >
         {showBig && (

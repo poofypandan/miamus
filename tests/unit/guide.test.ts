@@ -124,7 +124,7 @@ describe("the guide's links (the How Miamus works screen, Phase 180 H2)", () => 
       const page = url.searchParams.get("page");
       if (tab === "access") expect(SETTINGS_PAGES, key).toContain(page);
       const chores = url.searchParams.get("chores");
-      if (chores !== null) expect(["rooms", "repairs"], key).toContain(chores);
+      if (chores !== null) expect(["today", "repairs"], key).toContain(chores);
       if (url.searchParams.has("bills")) expect(url.searchParams.get("bills"), key).toBe("open");
       const kitchen = url.searchParams.get("kitchen");
       if (kitchen !== null) expect(kitchenViews(ALL_ON), key).toContain(kitchen);
