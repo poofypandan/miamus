@@ -44,6 +44,7 @@ import { KAKAK_CHIP, KAKAK_CHIP_OFF, KAKAK_CHIP_ON, KakakRemindChips } from "@/c
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useDragToClose } from "@/hooks/use-drag-to-close";
 import { askKakak, historyForNextTurn, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
 import { addsSomething, choreGlance, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
@@ -121,48 +122,55 @@ export function KakakSheet({
     setWasOpen(open);
     if (open) setScrolled(false);
   }
+  // The grabber means it: pull her sheet down by the grabber or her header to close it.
+  const { sheet, handle } = useDragToClose<HTMLDivElement>(onClose);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       {/* The sheet as one warm object (04, PR 5): a softer corner, a grabber,
           a warm scrim, and light above it in place of a line. */}
       <SheetContent
+        ref={sheet}
         side="bottom"
         showCloseButton={false}
         overlayClassName="bg-[rgb(20_16_14/0.4)]"
         className="max-h-[92dvh] gap-0 overflow-hidden rounded-t-[30px] border-t-0 pb-safe shadow-[0_-12px_44px_rgb(31_26_23/0.2)]"
       >
-        <div aria-hidden className="mx-auto mt-2.5 h-[5px] w-9 shrink-0 rounded-full bg-muted" />
-        {/* Her lock-up (the warm seal, 20 Nov): the mark on the left, her name
-            beside it at the headline size, and Close in the same row. */}
-        {/* The grabber and her header stay put; only the conversation scrolls,
-            under a hairline once it has (Fable, PR 5), so Close is always in reach. */}
-        <SheetHeader
-          className={cn(
-            "shrink-0 flex-row items-center gap-3 border-b pb-3 pl-5 pr-2.5 pt-2 text-left transition-colors",
-            scrolled ? "border-border" : "border-transparent"
-          )}
-        >
-          <KakakAvatar className="size-11" beat={open ? beat : null} />
-          <div className="min-w-0 flex-1">
-            {/* Its own span: cn() reads text-headline as a colour and would drop the title's. */}
-            <SheetTitle className="leading-none">
-              <span className="block text-headline">Kakak</span>
-            </SheetTitle>
-            <SheetDescription>
-              {t("Nothing is saved until you confirm.", "Tidak ada yang disimpan sebelum Anda konfirmasi.")}
-            </SheetDescription>
-          </div>
-          <SheetClose asChild>
-            {/* On her name's row in both languages, however the line under it wraps. */}
-            <button
-              type="button"
-              aria-label={closeLabel}
-              className="-mt-2 flex size-11 shrink-0 items-center justify-center self-start rounded-full text-muted-foreground active:bg-muted"
-            >
-              <X className="size-5" aria-hidden="true" />
-            </button>
-          </SheetClose>
-        </SheetHeader>
+        {/* The handle: the grabber and her header drag the sheet down (the
+            conversation below scrolls on its own). Tap outside and Close still work. */}
+        <div data-testid="kakak-handle" className="flex shrink-0 cursor-grab flex-col active:cursor-grabbing" {...handle}>
+          <div aria-hidden className="mx-auto mt-2.5 h-[5px] w-9 shrink-0 rounded-full bg-muted" />
+          {/* Her lock-up (the warm seal, 20 Nov): the mark on the left, her name
+              beside it at the headline size, and Close in the same row. */}
+          {/* The grabber and her header stay put; only the conversation scrolls,
+              under a hairline once it has (Fable, PR 5), so Close is always in reach. */}
+          <SheetHeader
+            className={cn(
+              "shrink-0 flex-row items-center gap-3 border-b pb-3 pl-5 pr-2.5 pt-2 text-left transition-colors",
+              scrolled ? "border-border" : "border-transparent"
+            )}
+          >
+            <KakakAvatar large className="size-11" beat={open ? beat : null} />
+            <div className="min-w-0 flex-1">
+              {/* Its own span: cn() reads text-headline as a colour and would drop the title's. */}
+              <SheetTitle className="leading-none">
+                <span className="block text-headline">Kakak</span>
+              </SheetTitle>
+              <SheetDescription>
+                {t("Nothing is saved until you confirm.", "Tidak ada yang disimpan sebelum Anda konfirmasi.")}
+              </SheetDescription>
+            </div>
+            <SheetClose asChild>
+              {/* On her name's row in both languages, however the line under it wraps. */}
+              <button
+                type="button"
+                aria-label={closeLabel}
+                className="-mt-2 flex size-11 shrink-0 items-center justify-center self-start rounded-full text-muted-foreground active:bg-muted"
+              >
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            </SheetClose>
+          </SheetHeader>
+        </div>
         <div
           data-testid="kakak-scroll"
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
@@ -424,6 +432,31 @@ function Conversation({
     screen.kind === "typing" ||
     (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||
     ((screen.kind === "question" || screen.kind === "card") && typingAnswer);
+  /**
+   * Once a conversation exists, the foot is one row: the mic at 56 px, then
+   * the field (07, screen 9; Fable, 21 Nov). Also while she thinks, so the
+   * foot stays put. Not with a card on screen (Looks right, Change, Cancel),
+   * nor where there is nothing to type (a question with fixed answers, a
+   * problem that ends the conversation). The first screen stays as it is.
+   */
+  const compact =
+    newVoice &&
+    said.length > 0 &&
+    (showTyping || screen.kind === "waiting" || (screen.kind === "question" && screen.allowTyping)) &&
+    screen.kind !== "card";
+  const placeholder =
+    screen.kind === "card"
+      ? t("What should change?", "Apa yang perlu diubah?")
+      : screen.kind === "question"
+        ? compact
+          ? t("Or type an answer", "Atau ketik jawaban")
+          : t("Type your answer", "Ketik jawaban Anda")
+        : screen.kind === "message" && !screen.problem
+          ? // After her answer, the conversation goes on (2026-11-14).
+            t("Anything else?", "Ada lagi?")
+          : screen.kind === "waiting"
+            ? t("Anything else?", "Ada lagi?")
+            : t("What should I set up?", "Mau Kakak atur apa?");
 
   return (
     <div className="flex flex-col gap-3 px-5 pb-5">
@@ -463,8 +496,9 @@ function Conversation({
               </div>
             ) : (
               // Her earlier lines: the same bubble, a little quieter than her latest.
-              <div key={index} className="opacity-80" data-testid="kakak-earlier">
-                <KakakBubble>{line.text}</KakakBubble>
+              // Only the words dim: her light disc keeps its edge (mark D).
+              <div key={index} data-testid="kakak-earlier">
+                <KakakBubble quiet>{line.text}</KakakBubble>
               </div>
             )
           )}
@@ -489,7 +523,8 @@ function Conversation({
               </Button>
             ))}
           </div>
-          {screen.allowTyping && !typingAnswer && (
+          {/* In the compact foot the field is already there, its placeholder saying this. */}
+          {screen.allowTyping && !typingAnswer && !compact && (
             <button
               type="button"
               className="min-h-11 self-start text-sm font-medium text-muted-foreground underline-offset-4 active:underline"
@@ -580,7 +615,22 @@ function Conversation({
         <KakakVoiceNew
           screen={screen}
           onSpeaking={setSpeaking}
-          listenHere={showTyping || screen.kind === "question"}
+          listenHere={compact ? screen.kind !== "waiting" : showTyping || screen.kind === "question"}
+          compact={compact}
+          hasWords={!!draft.trim()}
+          field={
+            compact ? (
+              <TypingBox
+                compact
+                draft={draft}
+                setDraft={setDraft}
+                onSend={(text) => void send(text)}
+                placeholder={placeholder}
+                disabled={screen.kind === "waiting"}
+                showExamples={false}
+              />
+            ) : null
+          }
           onSpoken={(text, by) => {
             const words = (draft.trim() ? `${draft.trim()} ${text}` : text).slice(0, MAX_TYPED);
             if (by === "owner") {
@@ -603,32 +653,16 @@ function Conversation({
         />
       )}
 
-      {(screen.kind === "typing" ||
-        (screen.kind === "message" && (!screen.problem || screen.problem.next === "rephrase")) ||
-        ((screen.kind === "question" || screen.kind === "card") && typingAnswer)) && (
+      {showTyping && !compact && (
         <TypingBox
           draft={draft}
           setDraft={setDraft}
           onSend={(text) => void send(text)}
-          placeholder={
-            screen.kind === "card"
-              ? t("What should change?", "Apa yang perlu diubah?")
-              : screen.kind === "question"
-                ? t("Type your answer", "Ketik jawaban Anda")
-                : screen.kind === "message" && !screen.problem
-                  ? // After her answer, the conversation goes on (2026-11-14).
-                    t("Anything else?", "Ada lagi?")
-                  : t("What should I set up?", "Mau Kakak atur apa?")
-          }
+          placeholder={placeholder}
           showExamples={screen.kind === "typing" && said.length === 0}
         />
       )}
-
-      {screen.kind === "message" && (
-        <Button type="button" variant="ghost" className="self-center rounded-xl" onClick={onClose}>
-          {t("Close", "Tutup")}
-        </Button>
-      )}
+      {/* No Close at the foot: the cross in her pinned header closes the sheet (Fable, 21 Nov). */}
     </div>
   );
 }
@@ -676,11 +710,11 @@ function kakakLine(screen: Screen, cardIntro: string): string | null {
  */
 const KAKAK_BUBBLE = "max-w-[85%] rounded-[20px] rounded-bl-md bg-kakak-tint px-4 py-2.5 text-base text-foreground";
 
-function KakakBubble({ children }: { children: React.ReactNode }) {
+function KakakBubble({ children, quiet = false }: { children: React.ReactNode; quiet?: boolean }) {
   return (
     <div className="flex items-start gap-2.5">
       <KakakAvatar className="mt-2 size-7 shrink-0" />
-      <p className={KAKAK_BUBBLE}>{children}</p>
+      <p className={cn(KAKAK_BUBBLE, quiet && "opacity-80")}>{children}</p>
     </div>
   );
 }
@@ -698,24 +732,77 @@ function ProblemBubble({ icon: Icon, children }: { icon: LucideIcon; children: R
   );
 }
 
+/** Whether the typing field had the focus, so the compact one takes it back only after typing. */
+const fieldFocus = { had: false };
+
 function TypingBox({
   draft,
   setDraft,
   onSend,
   placeholder,
   showExamples,
+  compact = false,
+  disabled = false,
 }: {
   draft: string;
   setDraft: (value: string) => void;
   onSend: (text: string) => void;
   placeholder: string;
   showExamples: boolean;
+  /** The field in the compact row: one line growing to three; Send only when there are words. */
+  compact?: boolean;
+  /** She is thinking: nothing to send yet. */
+  disabled?: boolean;
 }) {
   const t = useT();
   const box = useRef<HTMLTextAreaElement>(null);
   function submit(event: FormEvent) {
     event.preventDefault();
     onSend(draft);
+  }
+  if (compact) {
+    const words = !!draft.trim();
+    return (
+      <form onSubmit={submit} className={cn("grid items-end gap-2.5", words ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)]")}>
+        <Textarea
+          ref={box}
+          // Only if the field had the focus when it went (a typed send): never
+          // after the mic, so the keyboard doesn't jump up over a spoken turn.
+          autoFocus={fieldFocus.had}
+          value={draft}
+          maxLength={MAX_TYPED}
+          rows={1}
+          disabled={disabled}
+          enterKeyHint="send"
+          aria-label={placeholder}
+          placeholder={placeholder}
+          // Focused for as long as anyone types, so no halo here: the ink edge
+          // alone, about 1.5 px (Fable, #192).
+          className="max-h-[7.5rem] min-h-[52px] w-full min-w-0 resize-none overflow-y-auto rounded-2xl py-3.5 text-base focus-visible:border-foreground focus-visible:shadow-[inset_0_0_0_0.5px_var(--foreground)] focus-visible:ring-0"
+          onChange={(event) => setDraft(event.target.value)}
+          onFocus={() => (fieldFocus.had = true)}
+          onBlur={() => (fieldFocus.had = false)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              onSend(draft);
+            }
+          }}
+        />
+        {/* Only with words to send, and then the one solid shape (the mic goes quiet). */}
+        {words && (
+          <Button
+            type="submit"
+            size="icon"
+            className="size-12 shrink-0 animate-[view-fade_200ms_var(--ease-arrive)] rounded-2xl motion-reduce:animate-none"
+            disabled={disabled}
+            aria-label={t("Send", "Kirim")}
+          >
+            <Send className="size-5" />
+          </Button>
+        )}
+      </form>
+    );
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
@@ -731,6 +818,8 @@ function TypingBox({
           placeholder={placeholder}
           className="min-h-[52px] flex-1 resize-none rounded-xl text-base"
           onChange={(event) => setDraft(event.target.value)}
+          onFocus={() => (fieldFocus.had = true)}
+          onBlur={() => (fieldFocus.had = false)}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();

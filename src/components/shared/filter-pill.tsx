@@ -18,7 +18,8 @@ export function FilterPill({
 }: {
   label: string;
   icon?: LucideIcon;
-  count: number;
+  /** Left out where a count would only be another number (the Kitchen's shelves). */
+  count?: number;
   active: boolean;
   onClick: () => void;
 }) {
@@ -38,9 +39,11 @@ export function FilterPill({
     >
       {Icon && <Icon className="size-3.5 shrink-0" />}
       {label}
-      <span className={cn("text-xs tabular-nums", active ? "text-muted-foreground" : "text-subtle-foreground")}>
-        {count}
-      </span>
+      {count !== undefined && (
+        <span className={cn("text-xs tabular-nums", active ? "text-muted-foreground" : "text-subtle-foreground")}>
+          {count}
+        </span>
+      )}
     </button>
   );
 }
