@@ -19,6 +19,7 @@ import {
   Loader2,
   Lock,
   LogOut,
+  MessageCircle,
   PackageX,
   RotateCcw,
   Send,
@@ -83,6 +84,7 @@ import { FeaturesPanel } from "@/components/dashboard/features-panel";
 import { StaffAreasDialog, StaffAreasLine } from "@/components/dashboard/staff-areas-dialog";
 import { SendStaffMessageButton } from "@/components/setup/send-staff-message";
 import { AddStaffSheet } from "@/components/dashboard/add-staff-sheet";
+import { StaffWelcome } from "@/components/dashboard/staff-welcome";
 import { useHouseholdFeatures } from "@/hooks/use-household-features";
 import { featuresOnCount } from "@/lib/features";
 import { useHouseholdProfile } from "@/hooks/use-household-profile";
@@ -482,6 +484,8 @@ function StaffRoster({
   const locale = useOwnerLocale();
   // Add staff (staff onboarding step 2): a sheet, in place of the name field.
   const [adding, setAdding] = useState(false);
+  // Whose personal welcome is open (staff onboarding step 3).
+  const [welcomeTarget, setWelcomeTarget] = useState<StaffProfile | null>(null);
   const [resetting, setResetting] = useState<string | null>(null);
   const [pinTarget, setPinTarget] = useState<StaffProfile | null>(null);
   // Who the owner is about to take off the roster, held until they confirm.
@@ -606,6 +610,21 @@ function StaffRoster({
         onSubmit={(pin) => pinTarget && applyPin(pinTarget, pin)}
       />
 
+      <Dialog open={!!welcomeTarget} onOpenChange={(open) => !open && setWelcomeTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t(`Welcome ${welcomeTarget?.name ?? ""}`, `Sambut ${welcomeTarget?.name ?? ""}`)}</DialogTitle>
+            <DialogDescription>
+              {t(
+                `${welcomeTarget?.name ?? ""} opens the link or scans the code, taps Ya and makes a 4-digit PIN.`,
+                `${welcomeTarget?.name ?? ""} membuka link atau memindai kodenya, mengetuk Ya, lalu membuat PIN 4 angka.`
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {welcomeTarget && <StaffWelcome person={{ id: welcomeTarget.id, name: welcomeTarget.name }} />}
+        </DialogContent>
+      </Dialog>
+
       <StaffAreasDialog
         profile={areasTarget}
         staff={profiles ?? []}
@@ -661,6 +680,18 @@ function StaffRoster({
                         </>
                       )}
                     </span>
+                    {/* Not signed in yet and still inside the claim window: her
+                        own welcome, as a message or a QR code (step 3). */}
+                    {!profile.has_pin && isClaimable(profile.created_at) && (
+                      <button
+                        type="button"
+                        onClick={() => setWelcomeTarget(profile)}
+                        className="-ml-1 flex min-h-9 items-center gap-1 self-start rounded-md px-1 text-xs font-medium text-gray-900 underline-offset-2 active:bg-muted"
+                      >
+                        <MessageCircle className="size-3.5" aria-hidden />
+                        {t("Send welcome", "Kirim sambutan")}
+                      </button>
+                    )}
                   </span>
                   <>
                       <Button

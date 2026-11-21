@@ -13,18 +13,14 @@ import { whatsAppShareUrl } from "@/lib/share-text";
 import { videoTip } from "@/lib/video-tips";
 
 /**
- * Staff in one go (Phase 172 PR A2, D10): one WhatsApp message with the
- * house link and the claim code (audit L5) for everyone who still has to
- * pick their name and make a PIN.
- * The message is Indonesian (staff read it); the button is the owner's
- * language.
- *
- * The house code is read before the tap, so WhatsApp opens inside the tap
- * itself: iPhone Safari blocks a window opened after waiting on the network
- * (Codex, PR #90), as the house-code and invite panels already avoid.
+ * The house code and the claim code the staff messages carry, read before
+ * any tap (see below), and read again when the roster changes.
  */
-export function SendStaffMessageButton({ variant = "default" }: { variant?: "default" | "outline" }) {
-  const t = useT();
+export function useStaffJoinCodes(): {
+  code: { house: string; claim: string } | null;
+  failed: boolean;
+  retry: () => void;
+} {
   const { activeHouseholdId } = useHousehold();
   // Archiving someone rotates the house code (146): when the roster changes,
   // read the codes again so the next message carries the new one (Codex, PR #90).
@@ -56,9 +52,27 @@ export function SendStaffMessageButton({ variant = "default" }: { variant?: "def
     };
   }, [attempt, activeHouseholdId, rosterKey]);
 
+  return { code, failed, retry: () => setAttempt((n) => n + 1) };
+}
+
+/**
+ * Staff in one go (Phase 172 PR A2, D10): one WhatsApp message with the
+ * house link and the claim code (audit L5) for everyone who still has to
+ * pick their name and make a PIN.
+ * The message is Indonesian (staff read it); the button is the owner's
+ * language.
+ *
+ * The house code is read before the tap, so WhatsApp opens inside the tap
+ * itself: iPhone Safari blocks a window opened after waiting on the network
+ * (Codex, PR #90), as the house-code and invite panels already avoid.
+ */
+export function SendStaffMessageButton({ variant = "default" }: { variant?: "default" | "outline" }) {
+  const t = useT();
+  const { code, failed, retry } = useStaffJoinCodes();
+
   function send() {
     if (!code) {
-      if (failed) setAttempt((n) => n + 1);
+      if (failed) retry();
       toast.error(t("Couldn't get the house code. Try again.", "Kode rumah gagal diambil. Coba lagi."));
       return;
     }

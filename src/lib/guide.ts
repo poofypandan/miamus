@@ -146,8 +146,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "Adding a new staff member", id: "Menambah staf baru" },
     body: {
-      en: "Settings → Staff → Add staff: their name, and what they do (Kitchen, Chores, Pets, Repairs), which sets what they see. With Kitchen, the usual kitchen chores come ticked. Then send the WhatsApp message. Staff under 18 need a parent's or guardian's consent first.",
-      id: "Pengaturan → Staf → Tambah staf: namanya, dan apa yang dikerjakan (Dapur, Tugas rumah, Hewan, Perbaikan), yang mengatur yang dia lihat. Dengan Dapur, tugas dapur yang biasa sudah dicentang. Lalu kirim pesan WhatsApp-nya. Staf di bawah 18 tahun perlu izin orang tua atau wali dulu.",
+      en: "Settings → Staff → Add staff: their name, and what they do (Kitchen, Chores, Pets, Repairs), which sets what they see. Kitchen ticks the usual kitchen chores. Then send the welcome on WhatsApp or show the QR code. Staff under 18 need a parent's or guardian's consent.",
+      id: "Pengaturan → Staf → Tambah staf: namanya, dan apa yang dikerjakan (Dapur, Tugas rumah, Hewan, Perbaikan), yang mengatur yang dia lihat. Dapur mencentang tugas dapur yang biasa. Lalu kirim sambutan atau tunjukkan kode QR. Staf di bawah 18 tahun perlu izin orang tua atau wali.",
     },
     where: "settings_staff",
     covers: ["add-staff-2026-11"],
@@ -167,8 +167,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "A new staff member's first day", id: "Hari pertama staf baru" },
     body: {
-      en: "They open the link in your WhatsApp message, tap their name and choose a 4-digit PIN. Their tasks for the day are on the first screen. On each one they take a Sebelum photo, take a Sesudah photo, then tap Selesai. Their screens are in Bahasa Indonesia.",
-      id: "Staf membuka link di pesan WhatsApp Anda, mengetuk namanya, dan membuat PIN 4 angka. Tugas hari itu langsung tampil di layar pertama. Di tiap tugas, mereka ambil foto Sebelum, ambil foto Sesudah, lalu ketuk Selesai. Layarnya berbahasa Indonesia.",
+      en: "They open the link in your welcome, or scan the QR code, tap Ya and choose a 4-digit PIN. Their tasks for the day are on the first screen. On each one they take a Sebelum photo, take a Sesudah photo, then tap Selesai. Their screens are in Bahasa Indonesia.",
+      id: "Staf membuka link di sambutan Anda, atau memindai kode QR, mengetuk Ya, dan membuat PIN 4 angka. Tugas hari itu langsung tampil di layar pertama. Di tiap tugas, mereka ambil foto Sebelum, ambil foto Sesudah, lalu ketuk Selesai. Layarnya berbahasa Indonesia.",
     },
     where: "settings_staff",
   },

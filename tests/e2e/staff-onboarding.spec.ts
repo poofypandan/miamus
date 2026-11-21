@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { HOUSEHOLD_ID } from "../fixtures/household";
-import { OWNER, OWNER_PROFILE_ID, STAFF_ID, installStub } from "./stub-backend";
+import { OWNER, OWNER_PROFILE_ID, STAFF_ID, STUB_URL, freshSession, installStub } from "./stub-backend";
 
 // Staff onboarding (docs/private/staff-onboarding-plan.md), step 1: the
 // guide says how to add, explain to, remove and bring back a staff member,
@@ -187,7 +187,7 @@ test("en: Add staff with Kitchen: her areas, the kitchen's chores by name, one o
 
   await expect(sheet.getByText("Sri is added")).toBeVisible();
   await expect(sheet.getByText("3 chores are Sri's from today.")).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Send one WhatsApp message" })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Send welcome on WhatsApp" })).toBeVisible();
   await shot(page, "pr2-en-2-added");
 
   expect(sent).toHaveLength(1);
@@ -224,10 +224,129 @@ test("id: Tambah staf: a name already on the list is said, Tugas rumah and Hewan
   await shot(page, "pr2-id-1-add-staff-sheet");
   await sheet.getByRole("button", { name: "Tambah Wati" }).click();
   await expect(sheet.getByText("Wati sudah ditambahkan")).toBeVisible();
-  await expect(sheet.getByRole("button", { name: "Kirim satu pesan WhatsApp" })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Kirim sambutan lewat WhatsApp" })).toBeVisible();
   await shot(page, "pr2-id-2-added");
   expect((sent[0] as { chores: unknown[] }).chores).toEqual([]);
   await expect.poll(() => staff.find((p) => p.id === NEW_ID)?.hidden_areas).toEqual(["kitchen", "repairs"]);
+});
+
+// Step 3: the personal welcome. Her name in the message, her roster id in
+// the link's fragment so the names step asks "Anda Sri?", the privacy line
+// (decision 10), and the same link as a QR code drawn on the owner's phone.
+
+async function stubCodes(page: Page) {
+  await page.route("**/rest/v1/rpc/my_house_code*", (route) => route.fulfill({ json: "K7PM2Q" }));
+  await page.route("**/rest/v1/rpc/staff_claim_link*", (route) => route.fulfill({ json: "ABCDEFGHJK" }));
+  // WhatsApp opens in a new window: keep the address instead.
+  await page.addInitScript(() => {
+    (window as unknown as { opened: string[] }).opened = [];
+    window.open = ((url: string) => {
+      (window as unknown as { opened: string[] }).opened.push(url);
+      return null;
+    }) as typeof window.open;
+  });
+}
+const opened = (page: Page) => page.evaluate(() => (window as unknown as { opened: string[] }).opened);
+
+test("en: after Add, Sri's own welcome: her name, her link, the privacy line, and a QR code", async ({ context, page }) => {
+  const staff = roster();
+  await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true } });
+  await stubApply(page, staff);
+  await stubCodes(page);
+
+  await page.goto("/dashboard?module=access&page=staff");
+  await page.getByRole("button", { name: "Add staff" }).click({ timeout: 20_000 });
+  const sheet = page.getByTestId("add-staff-sheet");
+  await sheet.getByLabel("Name").fill("Sri");
+  await sheet.getByRole("button", { name: "Chores" }).click();
+  await sheet.getByRole("button", { name: "Add Sri" }).click();
+  await expect(sheet.getByText("Sri is added")).toBeVisible();
+
+  await sheet.getByRole("button", { name: "Show QR code" }).click();
+  await expect(sheet.getByRole("img", { name: "QR code for Sri" })).toBeVisible();
+  await shot(page, "pr3-en-1-welcome-qr");
+
+  await sheet.getByRole("button", { name: "Send welcome on WhatsApp" }).click();
+  const [url] = await opened(page);
+  const text = new URL(url).searchParams.get("text") ?? "";
+  const origin = new URL(page.url()).origin;
+  expect(text).toBe(
+    `Halo Sri, selamat datang. Ini Miamus, aplikasi rumah kita. Buka link ini lalu buat PIN 4 angka: ${origin}/join/code#c=K7P-M2Q&k=ABCDEFGHJK&s=${NEW_ID}\n` +
+      `Miamus mencatat tugas, foto, dan cuti Anda. Info: ${origin}/privasi`
+  );
+});
+
+test("id: a person added this week who hasn't signed in has Kirim sambutan on their row", async ({ context, page }) => {
+  const staff = [...roster(), person(NEW_ID, "Sri", { has_pin: false, created_at: new Date().toISOString() })];
+  await installStub(context, { owner: { locale: "id" }, staff, household: { hasPets: true } });
+  await stubCodes(page);
+  await page.goto("/dashboard?module=access&page=staff");
+  // Only Sri: Ari and Syam have PINs.
+  await expect(page.getByRole("button", { name: "Kirim sambutan" })).toHaveCount(1, { timeout: 20_000 });
+  await page.getByRole("button", { name: "Kirim sambutan" }).click();
+  const dialog = page.getByRole("dialog", { name: "Sambut Sri" });
+  await expect(dialog.getByRole("button", { name: "Kirim sambutan lewat WhatsApp" })).toBeEnabled();
+  await dialog.getByRole("button", { name: "Tampilkan kode QR" }).click();
+  await expect(dialog.getByRole("img", { name: "Kode QR untuk Sri" })).toBeVisible();
+  await shot(page, "pr3-id-1-row-welcome-qr");
+});
+
+test("staff: her own link asks Anda Sri?; Ya goes to Buat PIN for her, Bukan shows everyone", async ({ context, page }) => {
+  const SRI = "00000000-0000-4000-8000-00000000c102";
+  await installStub(context, { stored: freshSession() });
+  const claims: Record<string, unknown>[] = [];
+  await context.route(`${STUB_URL}/rest/v1/rpc/**`, async (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").pop() ?? "";
+    if (name === "house_code_roster") {
+      return route.fulfill({
+        json: [
+          { id: "00000000-0000-4000-8000-00000000c101", name: "Ari", has_pin: true, claimable: false },
+          { id: SRI, name: "Sri", has_pin: false, claimable: true },
+          { id: "00000000-0000-4000-8000-00000000c103", name: "Sari", has_pin: false, claimable: true },
+        ],
+      });
+    }
+    if (name === "claim_staff_with_house_code") {
+      claims.push(route.request().postDataJSON());
+      return route.fulfill({ json: { status: "ok", household_id: HOUSEHOLD_ID } });
+    }
+    return route.fallback();
+  });
+
+  await page.goto(`/join/code#c=K7P-M2Q&k=ABCDEFGHJK&s=${SRI}`);
+  await expect(page.getByRole("heading", { name: "Anda Sri?" })).toBeVisible({ timeout: 20_000 });
+  expect(new URL(page.url()).hash).toBe("");
+  await shot(page, "pr3-staff-id-1-anda-sri");
+  await page.getByRole("button", { name: "Bukan" }).click();
+  await expect(page.getByRole("heading", { name: "Siapa yang bertugas?" })).toBeVisible();
+  await shot(page, "pr3-staff-id-2-bukan-names");
+
+  // A fresh load (the same address with a new hash would not reload).
+  await page.goto("about:blank");
+  await page.goto(`/join/code#c=K7P-M2Q&k=ABCDEFGHJK&s=${SRI}`);
+  await page.getByRole("button", { name: "Ya" }).click({ timeout: 20_000 });
+  await expect(page.getByText("Buat PIN", { exact: true })).toBeVisible();
+  await shot(page, "pr3-staff-id-3-buat-pin");
+  for (const d of "2468") await page.getByRole("button", { name: d, exact: true }).click();
+  await expect(page.getByText("Ulangi PIN")).toBeVisible();
+  const linked = page.waitForURL(/\/staff/);
+  for (const d of "2468") await page.getByRole("button", { name: d, exact: true }).click();
+  await linked;
+  expect(claims).toEqual([{ p_code: "K7P-M2Q", p_staff_id: SRI, p_new_pin: "2468", p_claim: "ABCDEFGHJK" }]);
+});
+
+test("staff: a link naming someone not on the list just shows the names", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession() });
+  await context.route(`${STUB_URL}/rest/v1/rpc/**`, async (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").pop() ?? "";
+    if (name === "house_code_roster") {
+      return route.fulfill({ json: [{ id: "00000000-0000-4000-8000-00000000c103", name: "Sari", has_pin: false, claimable: true }] });
+    }
+    return route.fallback();
+  });
+  await page.goto("/join/code#c=K7P-M2Q&k=ABCDEFGHJK&s=00000000-0000-4000-8000-00000000c999");
+  await expect(page.getByRole("heading", { name: "Siapa yang bertugas?" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /^Anda / })).toHaveCount(0);
 });
 
 test("en: rooms that fail to load offer Try again, instead of a spinner that never ends (Codex, PR #170)", async ({ context, page }) => {

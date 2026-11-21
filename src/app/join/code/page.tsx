@@ -15,7 +15,7 @@ import { dataProvider } from "@/lib/data";
 import type { HouseCodePerson } from "@/lib/data/types";
 import { storeTenantId } from "@/lib/tenant";
 import { markStaffTipsSeenOnJoin } from "@/lib/whats-new";
-import { claimFromFragment, codeFromFragment, typedHouseCode } from "@/lib/setup-apply";
+import { claimFromFragment, codeFromFragment, staffFromFragment, typedHouseCode } from "@/lib/setup-apply";
 import { VideoTip } from "@/components/shared/video-tip";
 
 /**
@@ -39,6 +39,7 @@ export default function JoinWithCodePage() {
 type Step =
   | { kind: "code" }
   | { kind: "names"; code: string; people: HouseCodePerson[] }
+  | { kind: "confirm"; code: string; people: HouseCodePerson[]; person: HouseCodePerson }
   | { kind: "pin"; code: string; people: HouseCodePerson[]; person: HouseCodePerson }
   | { kind: "claim"; code: string; people: HouseCodePerson[]; person: HouseCodePerson };
 
@@ -47,6 +48,14 @@ function JoinWithCode() {
   // The claim code from the owner's link (audit L5): without it, a name
   // without a PIN can't be picked here, only signed into with a PIN.
   const [claim, setClaim] = useState<string | null>(null);
+  function pick(code: string, people: HouseCodePerson[], person: HouseCodePerson) {
+    if (person.has_pin) setStep({ kind: "pin", code, people, person });
+    else if (person.claimable && claim) setStep({ kind: "claim", code, people, person });
+    // The code typed by hand: the link from the owner's WhatsApp has the claim code.
+    else if (person.claimable) toast.info("Buka link dari WhatsApp pemilik rumah untuk membuat PIN.");
+    // Added more than a week ago without a PIN: an invite link, as before.
+    else toast.info("Belum punya PIN. Minta link undangan ke admin rumah untuk membuat PIN.");
+  }
 
   if (step.kind === "claim") {
     return (
@@ -67,24 +76,36 @@ function JoinWithCode() {
       />
     );
   }
+  if (step.kind === "confirm") {
+    return (
+      <ConfirmStep
+        person={step.person}
+        onYes={() => pick(step.code, step.people, step.person)}
+        onNo={() => setStep({ kind: "names", code: step.code, people: step.people })}
+      />
+    );
+  }
   if (step.kind === "names") {
     return (
       <NamesStep
         people={step.people}
         canClaim={!!claim}
-        onPick={(person) => {
-          if (person.has_pin) setStep({ ...step, kind: "pin", person });
-          else if (person.claimable && claim) setStep({ ...step, kind: "claim", person });
-          // The code typed by hand: the link from the owner's WhatsApp has the claim code.
-          else if (person.claimable) toast.info("Buka link dari WhatsApp pemilik rumah untuk membuat PIN.");
-          // Added more than a week ago without a PIN: an invite link, as before.
-          else toast.info("Belum punya PIN. Minta link undangan ke admin rumah untuk membuat PIN.");
-        }}
+        onPick={(person) => pick(step.code, step.people, person)}
         onBack={() => setStep({ kind: "code" })}
       />
     );
   }
-  return <CodeStep onFound={(code, people) => setStep({ kind: "names", code, people })} onClaim={setClaim} />;
+  return (
+    <CodeStep
+      onFound={(code, people, forStaff) => {
+        // Her own welcome link (staff onboarding step 3, `&s=`): "Anda Sri?"
+        // first, instead of everyone's names.
+        const person = forStaff ? people.find((p) => p.id === forStaff) : undefined;
+        setStep(person ? { kind: "confirm", code, people, person } : { kind: "names", code, people });
+      }}
+      onClaim={setClaim}
+    />
+  );
 }
 
 function Screen({ children }: { children: React.ReactNode }) {
@@ -102,7 +123,8 @@ function CodeStep({
   onFound,
   onClaim,
 }: {
-  onFound: (code: string, people: HouseCodePerson[]) => void;
+  /** forStaff: the roster id from a personal welcome link, read once on arrival. */
+  onFound: (code: string, people: HouseCodePerson[], forStaff: string | null) => void;
   onClaim: (claim: string | null) => void;
 }) {
   const [code, setCode] = useState("");
@@ -114,12 +136,16 @@ function CodeStep({
   // the fragment, #c=K7P-M2Q, so it never reaches server logs. Fill it in,
   // take it out of the address bar, and go straight to the names.
   const prefilled = useRef(false);
+  // Passed with the roster, not set as state: the check below starts in the
+  // same effect, before any re-render could hand it a newer onFound.
+  const forStaff = useRef<string | null>(null);
   useEffect(() => {
     if (prefilled.current) return;
     prefilled.current = true;
     const fromLink = codeFromFragment(window.location.hash);
     if (!fromLink) return;
     onClaim(claimFromFragment(window.location.hash));
+    forStaff.current = staffFromFragment(window.location.hash);
     window.history.replaceState(window.history.state, "", window.location.pathname);
     setCode(typedHouseCode(fromLink));
     void check(fromLink);
@@ -144,7 +170,7 @@ function CodeStep({
         setProblem("Kode rumah salah. Periksa lagi, atau tanya admin rumah.");
         return;
       }
-      onFound(code, people);
+      onFound(code, people, forStaff.current);
     } catch (err) {
       const message = err instanceof Error ? err.message : String((err as { message?: string })?.message ?? "");
       if (message.includes("too_many_attempts")) {
@@ -195,6 +221,31 @@ function CodeStep({
         <ChevronLeft className="size-4" />
         Kembali
       </Link>
+    </Screen>
+  );
+}
+
+/**
+ * "Anda Sri?" (staff onboarding step 3): her own welcome link names her, so
+ * she confirms rather than finding herself in a list, and can't pick the
+ * wrong name on a shared phone. Bukan shows everyone, as before.
+ */
+function ConfirmStep({ person, onYes, onNo }: { person: HouseCodePerson; onYes: () => void; onNo: () => void }) {
+  return (
+    <Screen>
+      <span className="flex size-14 items-center justify-center rounded-full bg-muted">
+        <UserRound className="size-6 text-muted-foreground" />
+      </span>
+      <h1 className="mt-5 text-2xl font-semibold tracking-tight text-gray-900">Anda {person.name}?</h1>
+      <p className="mt-2 text-base leading-relaxed text-gray-700">Link ini untuk {person.name}.</p>
+      <div className="mt-8 flex flex-col gap-3">
+        <Button onClick={onYes} className="min-h-[52px] rounded-xl text-base">
+          Ya
+        </Button>
+        <Button variant="outline" onClick={onNo} className="min-h-[52px] rounded-xl text-base">
+          Bukan
+        </Button>
+      </div>
     </Screen>
   );
 }

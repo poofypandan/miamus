@@ -19,6 +19,8 @@ import {
 } from "@/lib/staff-onboarding";
 import type { HouseholdLocation, HouseholdTask, StaffProfile } from "@/types/database";
 
+import { claimFromFragment, codeFromFragment, personalWelcomeMessage, staffFromFragment, welcomeLink } from "@/lib/setup-apply";
+import { qrPath } from "@/lib/qr";
 const STAFF_ENTRIES = ["add-staff", "staff-first-day", "staff-leaves", "staff-back", "kitchen-chores"] as const;
 
 describe("the guide's staff entries", () => {
@@ -186,5 +188,60 @@ describe("Add staff: one save", () => {
     expect(payload.rooms).toEqual([]);
     expect(payload.floors).toEqual([]);
     expect(payload.chores).toEqual([expect.objectContaining({ title: "Bersihkan dapur dan kompor", place: null })]);
+  });
+});
+
+// Step 3: the personal welcome (lib/setup-apply.ts) and the QR code (lib/qr.ts).
+describe("the personal welcome", () => {
+  const SRI = "00000000-0000-4000-8000-00000000c0aa";
+  const args = { name: " Sri ", code: "K7PM2Q", origin: "https://miamus.app", claim: "ABCDEFGHJK", staffId: SRI };
+
+  it("names her, carries her own link, and says what Miamus records (decision 10)", () => {
+    const text = personalWelcomeMessage(args);
+    expect(text).toBe(
+      `Halo Sri, selamat datang. Ini Miamus, aplikasi rumah kita. Buka link ini lalu buat PIN 4 angka: https://miamus.app/join/code#c=K7P-M2Q&k=ABCDEFGHJK&s=${SRI}\n` +
+        "Miamus mencatat tugas, foto, dan cuti Anda. Info: https://miamus.app/privasi"
+    );
+    expect(personalWelcomeMessage({ ...args, videoUrl: "https://miamus.app/tips/x" })).toMatch(/\nVideo 15 detik: https:\/\/miamus\.app\/tips\/x$/);
+  });
+
+  it("is Bahasa Indonesia with no emoji, and never a price", () => {
+    const text = personalWelcomeMessage(args);
+    expect(text).not.toMatch(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/u);
+    expect(text).not.toMatch(/\b(Rp|IDR|harga)\b/i);
+    expect(text).not.toMatch(/\b(pembantu|ponsel|kamu)\b/i);
+  });
+
+  it("keeps every code in the fragment, which the old parsers still read", () => {
+    const link = welcomeLink("K7PM2Q", "https://miamus.app", "ABCDEFGHJK", SRI);
+    const hash = link.slice(link.indexOf("#"));
+    expect(link.split("#")[0]).toBe("https://miamus.app/join/code");
+    expect(codeFromFragment(hash)).toBe("K7P-M2Q");
+    expect(claimFromFragment(hash)).toBe("ABCDEFGHJK");
+    expect(staffFromFragment(hash)).toBe(SRI);
+  });
+
+  it("reads the roster id only when it is a whole id", () => {
+    expect(staffFromFragment("#c=K7P-M2Q&k=ABCDEFGHJK")).toBeNull();
+    expect(staffFromFragment(`#s=${SRI.toUpperCase()}&c=K7P-M2Q`)).toBe(SRI);
+    expect(staffFromFragment("#s=not-an-id")).toBeNull();
+    expect(staffFromFragment(`#s=${SRI}x`)).toBeNull();
+  });
+});
+
+describe("the QR code", () => {
+  it("is drawn here, square, with a quiet zone, the same every time", () => {
+    const link = welcomeLink("K7PM2Q", "https://miamus.app", "ABCDEFGHJK", "00000000-0000-4000-8000-00000000c0aa");
+    const a = qrPath(link);
+    expect(a).toEqual(qrPath(link));
+    // Version 1 is 21 modules; each version adds 4. Plus 4 modules of quiet zone on each side.
+    expect((a.size - 8 - 21) % 4).toBe(0);
+    expect(a.size).toBeGreaterThan(29);
+    expect(a.path).toMatch(/^(M\d+ \d+h1v1h-1z)+$/);
+    // Nothing is drawn in the quiet zone.
+    for (const [, x, y] of a.path.matchAll(/M(\d+) (\d+)/g)) {
+      expect(Number(x)).toBeGreaterThanOrEqual(4);
+      expect(Number(y)).toBeLessThan(a.size - 4);
+    }
   });
 });
