@@ -4,8 +4,11 @@ import {
   createHouseholdFailure,
   emailThemHref,
   formatWhatsApp,
+  hasSuggestion,
   normalizeWhatsApp,
   parseHouseholdAccess,
+  toggleSuggestion,
+  WANTS_HELP_MAX,
 } from "@/lib/household-access";
 
 describe("parseHouseholdAccess", () => {
@@ -86,5 +89,40 @@ describe("formatWhatsApp", () => {
   it("writes it the local way", () => {
     expect(formatWhatsApp("6281234567890")).toBe("0812-3456-7890");
     expect(formatWhatsApp("62812345678")).toBe("0812-3456-78");
+  });
+});
+
+describe("toggleSuggestion (Request access, migrations/175)", () => {
+  it("fills an empty answer, then adds after a comma", () => {
+    const one = toggleSuggestion("", "Pets");
+    expect(one).toBe("Pets");
+    expect(toggleSuggestion(one, "Kitchen and groceries")).toBe("Pets, Kitchen and groceries");
+  });
+
+  it("keeps what they typed and adds to the end", () => {
+    expect(toggleSuggestion("We just moved in ", "Repairs in a new house")).toBe("We just moved in, Repairs in a new house");
+  });
+
+  it("takes a suggestion out again on a second tap, whatever its case", () => {
+    expect(toggleSuggestion("Pets, Kitchen and groceries", "Pets")).toBe("Kitchen and groceries");
+    expect(toggleSuggestion("we have dogs, pets", "Pets")).toBe("we have dogs");
+  });
+
+  it("leaves the rest of what they typed exactly as it was", () => {
+    const typed = toggleSuggestion("Rumah 2,5 lantai", "Pets");
+    expect(typed).toBe("Rumah 2,5 lantai, Pets");
+    expect(toggleSuggestion(typed, "Pets")).toBe("Rumah 2,5 lantai");
+    expect(toggleSuggestion("A, Pets, B", "Pets")).toBe("A, B");
+  });
+
+  it("knows which suggestions are in the answer", () => {
+    expect(hasSuggestion("Pets, Kitchen and groceries", "pets")).toBe(true);
+    expect(hasSuggestion("Our pets and the kitchen", "Pets")).toBe(false);
+  });
+
+  it("never passes the limit", () => {
+    const full = "a".repeat(WANTS_HELP_MAX - 3);
+    expect(toggleSuggestion(full, "Pets")).toBe(full);
+    expect(toggleSuggestion("a".repeat(WANTS_HELP_MAX - 6), "Pets")).toHaveLength(WANTS_HELP_MAX);
   });
 });
