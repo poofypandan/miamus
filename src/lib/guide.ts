@@ -162,6 +162,18 @@ export const GUIDE: readonly GuideEntry[] = [
     },
     where: "settings_invite",
   },
+  // Request access (migrations/175): so Kakak can tell an owner how a friend
+  // gets their own home. Joining this home is Inviting family, above.
+  {
+    id: "asking-for-access",
+    group: "start",
+    title: { en: "A friend who wants Miamus", id: "Teman yang ingin memakai Miamus" },
+    body: {
+      en: "Miamus is invite-only while in beta. To set up a new home, a friend signs in with Google, answers What can Miamus help with at home? (one tap on a suggestion is enough) and taps Request access. Poofy Labs reviews each request and tells them by WhatsApp or email.",
+      id: "Miamus masih beta dan hanya dengan undangan. Untuk membuat rumah baru, teman masuk dengan Google, menjawab Miamus bisa bantu apa di rumah Anda? (cukup ketuk satu pilihan), lalu mengetuk Minta akses. Poofy Labs meninjau setiap permintaan dan mengabari lewat WhatsApp atau email.",
+    },
+    where: null,
+  },
   {
     id: "photos-as-proof",
     group: "start",
