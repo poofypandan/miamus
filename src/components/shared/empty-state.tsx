@@ -23,7 +23,9 @@ export function EmptyState({
   children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed bg-card px-4 py-8 text-center">
+    // No box (21 Nov, the visual direction's PR 3): a dashed outline read as
+    // "something is missing here", the wrong first word for a new home.
+    <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
       <span
         className="flex size-11 items-center justify-center rounded-full bg-muted text-muted-foreground"
         aria-hidden

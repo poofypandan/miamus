@@ -117,7 +117,7 @@ export function MyTasksCard({
   return (
     <section
       aria-label={t("My tasks", "Tugas saya")}
-      className="flex flex-col gap-0.5 rounded-xl border bg-card p-1.5"
+      className="flex flex-col gap-0.5 rounded-2xl bg-card shadow-card p-1.5"
     >
       <header className="flex items-baseline justify-between gap-2 px-1.5 py-1">
         <h3 className="text-sm font-semibold text-gray-900">

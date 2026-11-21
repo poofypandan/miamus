@@ -3,10 +3,10 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { syncNewVoice } from "@/lib/kakak/voice";
 
-// Kakak's new voice flow (tap Done, check, then Send) is opt-in per phone
-// while the owner tries it on production: ?newvoice=1 on any address turns it
-// on for this phone, ?newvoice=0 turns it off (src/lib/kakak/voice.ts). Off by
-// default, and then the current flow (kakak-voice.tsx) runs unchanged.
+// Kakak's new voice flow (tap to talk, tap Done to send) is the default since
+// 20 Nov. ?newvoice=0 on any address turns it off for this phone, back to the
+// older flow (kakak-voice.tsx), while it settles in; ?newvoice=1 turns it on
+// again (src/lib/kakak/voice.ts).
 
 let on: boolean | null = null;
 const listeners = new Set<() => void>();
@@ -39,9 +39,9 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-/** Whether the new voice flow is on for this phone. Always off on the server. */
+/** Whether the new voice flow is on for this phone. On, the default, on the server. */
 export function useNewVoice(): boolean {
-  return useSyncExternalStore(subscribe, snapshot, () => false);
+  return useSyncExternalStore(subscribe, snapshot, () => true);
 }
 
 /** Reads ?newvoice= from the address the app was opened at. Renders nothing. */

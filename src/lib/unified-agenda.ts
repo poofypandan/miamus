@@ -1,6 +1,8 @@
 import { startOfWeek } from "date-fns";
 import { compareOccurrences, type ChoreOccurrence } from "@/lib/chore-recurrence";
 import type { AgendaGroup } from "@/lib/scheduleEngine";
+import { vetVisitState } from "@/lib/staff-agenda";
+import type { TaskLog } from "@/types/database";
 
 /** How many days the Agenda's Week view shows. */
 export const AGENDA_WEEK_DAYS = 7;
@@ -96,6 +98,64 @@ export function isEntryDone(entry: UnifiedAgendaEntry): boolean {
   if (entry.kind === "chore") return entry.occurrence.status === "completed";
   const { items } = entry.group;
   return items.length > 0 && items.every((item) => item.status === "completed");
+}
+
+/** What decides a routine's items the way the status ring does (classifyDay). */
+export interface RoutineDayContext {
+  /** Pets at the clinic: their routines other than the vet visit are paused. */
+  admittedIds?: ReadonlySet<string>;
+  /** The day's logs: a vet visit checked in but not closed is still open. */
+  logs?: readonly TaskLog[];
+}
+
+/**
+ * The finished (or the unfinished) part of a routine, as the status ring
+ * counts it (classifyDay): a pet at the clinic's routines are on neither
+ * side, apart from the vet visit, and a visit checked in but not closed is
+ * still open. Its titles come from the items kept: a dog's noon medicines
+ * are one group named for the first scheduled, which may be one already
+ * given, or one still to give (Codex, PR #181). Null when nothing is left on
+ * that side.
+ */
+export function routinePart(
+  group: AgendaGroup,
+  finished: boolean,
+  { admittedIds, logs = [] }: RoutineDayContext = {}
+): AgendaGroup | null {
+  const visitOpen =
+    group.category === "vet" &&
+    (() => {
+      const visit = vetVisitState(group.items, logs as TaskLog[]);
+      return visit.checkedIn && !visit.closed;
+    })();
+  const items = group.items.filter((item) => {
+    if (admittedIds?.has(item.entityId) && group.category !== "vet") return false;
+    return (item.status === "completed" && !visitOpen) === finished;
+  });
+  if (items.length === 0) return null;
+  if (items.length === group.items.length) return group;
+  const titles = [...new Set(items.map((item) => item.title))];
+  return { ...group, items, titles, title: titles[0] ?? group.title };
+}
+
+/**
+ * What has been finished on the day, for Latest (Today v3): every completed
+ * chore, the admin's own among them (they count in the status ring too), and
+ * every pet a routine has been through, even while others in the same group
+ * are still waiting (each completion counts in the ring as it lands). A
+ * partly finished routine comes back narrowed to its finished pets and
+ * their titles, so its row names and shows only those (Codex, PR #181).
+ */
+export function finishedEntries(
+  params: { groups: AgendaGroup[]; chores: ChoreOccurrence[] } & RoutineDayContext
+): UnifiedAgendaEntry[] {
+  const { admittedIds, logs } = params;
+  const groups = params.groups.flatMap((group) => {
+    const part = routinePart(group, true, { admittedIds, logs });
+    return part ? [part] : [];
+  });
+  const chores = params.chores.filter((occurrence) => occurrence.status === "completed");
+  return buildUnifiedAgenda({ groups, chores });
 }
 
 /**

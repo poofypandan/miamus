@@ -365,7 +365,7 @@ test("Copy last week fills the empty days, with Undo", async ({ context, page })
 
 test("the owner's Today has one quiet menu line", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "en" }, features: { kitchen: true }, recipes: [soto], menu: week() });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
   await expect(page.getByTestId("menu-today-line")).toHaveText("Menu today: Bubur ayam, Chicken soto, Nasi goreng", { timeout: 20_000 });
 });
 

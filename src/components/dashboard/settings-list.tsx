@@ -11,7 +11,7 @@ import { ChevronRight } from "lucide-react";
 
 /** A rounded group of rows, like a section of iPhone Settings (Phase 155). */
 export function SettingsGroup({ children }: { children: ReactNode }) {
-  return <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">{children}</div>;
+  return <div className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card shadow-card">{children}</div>;
 }
 
 export function SettingsRow({
