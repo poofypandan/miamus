@@ -360,7 +360,11 @@ people are **staf** and **admin**.
 | See the first task done | **Lihat tugas pertama selesai** | Phase 175. Was "See it done / Lihat hasilnya". |
 | Ready for your staff today | **Siap untuk staf hari ini** | Phase 175: a new home, above the progress rows. |
 | Phone not linked yet | **HP belum terhubung** | Phase 175, on a person's row. |
-| Next up | **Berikutnya** | Phase 175, the folded day (later). |
+| Next up / Next | **Berikutnya** | Phase 175; Today v3 (21 Nov): the three rows after the circles. |
+| See all / Show less (Today's whole day) | **Lihat semua** / **Tampilkan lebih sedikit** | Today v3: the door beside Berikutnya. |
+| Latest (what has been finished today, behind Today's status) | **Terbaru** | Today v3: the sheet's title. "Finished today, the latest first." **Selesai hari ini, yang terbaru di atas.** |
+| Choose a day (the date pill's sheet) | **Pilih hari** | Today v3: "Sen 16" pill at the bottom left; while another day shows, **Hari ini** beside it. |
+| Nothing more today. | **Tidak ada lagi hari ini.** | Today v3: Next when the day has nothing left. |
 | How Miamus works here (Settings group) | **Cara Miamus bekerja di sini** | Phase 175: Features, Notifications, Kakak, Language, App lock. |
 | Activity and data (Settings group) | **Aktivitas dan data** | Phase 175. Not "Catatan", which already means Notes. |
 | Edit rooms | **Ubah ruangan** | Phase 175: the link on Rumah → Ruangan to the rooms editor. |
@@ -417,6 +421,9 @@ people are **staf** and **admin**.
 | Anything else? | **Ada lagi?** | 2026-11-14: the typing box after Kakak's answer or thanks; **Mau Kakak atur apa?** stays for the first line. |
 | I've just been updated. Please close Miamus, open it again, and tell me once more. | **Kakak baru saja diperbarui. Tutup Miamus, buka lagi, lalu bilang ke Kakak sekali lagi.** | 2026-11-14: said to a page left open across an update, instead of a card it can't show. |
 | Kakak sets up chores, shopping, pet routines, food, ingredients and what staff see from what you type or say, and answers questions about how Miamus works. | **Kakak mengatur tugas, belanja, rutinitas hewan, makanan, bahan masakan, dan yang dilihat staf dari yang Anda ketik atau ucapkan, dan menjawab pertanyaan tentang cara pakai Miamus.** | 2026-11-14: Settings → Kakak, the first line. |
+| Early access · By invitation | **Akses awal · Dengan undangan** | 2026-11-20, the One day landing page (Direction 3): replaces "beta" and "invite-only" as the idea, not an apology. Never "eksklusif", "VIP" or "terbatas". |
+| A day at home, without the asking. | **Sehari di rumah, tanpa bertanya-tanya.** | 2026-11-20, the One day page's headline; "bertanya-tanya" in Fraunces italic. |
+| Miamus, by Poofy Labs | **Miamus, oleh Poofy Labs** | 2026-11-20, the one endorsement line (landing footer, About Miamus, email sign-off). Replaces "Dibuat dengan sepenuh hati oleh Poofy Labs". |
 
 ## Formatting
 

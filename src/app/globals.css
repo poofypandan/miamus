@@ -680,13 +680,18 @@
 }
 
 /*
- * The launch mark on an installed Android app (20 Nov, Fable's look): the
- * phone's own splash, held. Android draws that splash from the maskable icon
- * cut to a 160dp circle, the glyph at 192dp (the icon's 80% safe zone on a
- * 240dp canvas); on a 160px mark that is this circle and the glyph at 1.2.
- * Nothing animates: the home icon and the splash are circles there, so the
- * mark stays one, the loop drawing inside it, until the cover lifts. The
- * circular clip also keeps the loop's ink strips inside the circle.
+ * The launch mark on an installed Android app (Fable's look, 20 Nov; sized
+ * from the owner's Pixel, 21 Nov): the phone's own splash, held. Android
+ * draws that splash from the maskable icon, cut to a 240dp circle, the glyph
+ * a 220dp box (launch-mark-size.ts). The mark's tile is LAUNCH_MARK_SIZE
+ * (144px), its glyph filling it: here the tile grows to the splash's 240px
+ * circle (240/144) and the glyph inside is held back to 220px (220/240), so
+ * both meet the splash exactly. `scale`, not `transform`, so nothing else
+ * that moves the mark is overridden. Nothing animates: the home icon and the
+ * splash are circles there, so the mark stays one, the loop drawing inside
+ * it, until the cover lifts. The circular clip also keeps the loop's ink
+ * strips inside the circle. The circle grows past its layout box, so the
+ * promise line under it moves down by the same half.
  *
  * Only where that splash exists: an installed app (display-mode: standalone)
  * that is not an iPhone (-webkit-touch-callout is iOS Safari's alone). iPhones
@@ -698,11 +703,28 @@
   @supports not (-webkit-touch-callout: none) {
     .mark-opening {
       border-radius: 50% !important;
+      scale: calc(240 / 144);
     }
     .mark-opening-glyph {
-      transform: scale(1.2);
+      scale: calc(220 / 240);
+    }
+    /* The promise line keeps its 24px under the circle, not under the
+       144px box the circle grew from: half the growth more (Codex, #182). */
+    .mark-opening ~ .launch-promise {
+      margin-top: calc(1.5rem + (240px - 144px) / 2);
     }
   }
+}
+
+/*
+ * The launch stage on the screen's true centre, where the phone's splash or
+ * our iPhone launch screen drew the mark (21 Nov): an installed app's page
+ * starts under the status bar, so its centre is lower than the screen's.
+ * --launch-lift is set before the first paint by lib/android-launch's inline
+ * script, on installed apps only; padding moves the centred picture up by it.
+ */
+.launch-stage {
+  padding-bottom: calc(2 * var(--launch-lift, 0px));
 }
 
 /*
@@ -725,6 +747,28 @@
     from {
       opacity: 0;
     }
+  }
+}
+
+/*
+ * Grouped rows' hairlines, inset to where the text starts (21 Nov, Fable's
+ * look at PR 3): a line from edge to edge reads as a table. Each row after
+ * the first draws one from --row-inset (the avatar's or icon's width plus
+ * the gaps) to the right edge; the first row has none.
+ */
+@utility inset-rows {
+  & > * + * {
+    position: relative;
+  }
+  & > * + *::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: var(--row-inset, 1rem);
+    right: 0;
+    height: 1px;
+    background: var(--border);
+    pointer-events: none;
   }
 }
 

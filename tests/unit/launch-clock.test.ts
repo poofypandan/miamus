@@ -57,9 +57,8 @@ describe("the iPhone launch screens", () => {
     );
   });
 
-  it("puts the mark at the launch stage's centre: below the status bar, halfway down the rest", () => {
-    // iPhone 15: a 59pt bar, then 793pt of page whose middle is 396.5pt down.
-    expect(markCentreY({ height: 852, statusBar: 59 })).toBe(455.5);
-    expect(markCentreY({ height: 667, statusBar: 20 })).toBe(343.5);
+  it("puts the mark on the screen's true centre (the launch stage lifts itself to meet it)", () => {
+    expect(markCentreY({ height: 852 })).toBe(426);
+    expect(markCentreY({ height: 667 })).toBe(333.5);
   });
 });

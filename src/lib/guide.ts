@@ -126,8 +126,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "Today", id: "Hari ini" },
     body: {
-      en: "The line at the top says whether everything is on track or something is late. Waiting for you lists what needs your decision, like a leave request. Below it, each person's tasks for the day, your own under My tasks, and Coming up.",
-      id: "Baris paling atas menunjukkan apakah semuanya lancar atau ada yang terlambat. Menunggu Anda berisi yang perlu keputusan Anda, misalnya permintaan cuti. Di bawahnya ada tugas tiap orang hari itu, tugas Anda di Tugas saya, dan Segera.",
+      en: "The top says if all is on track; tap it for what's been done, with photos. Each person is a circle: tap it for their day. Next shows what's coming; See all opens the whole day. The date pill at the bottom left picks another day.",
+      id: "Bagian atas menunjukkan apakah semua lancar; ketuk untuk melihat yang sudah selesai, dengan foto. Tiap orang tampil sebagai lingkaran: ketuk untuk harinya. Berikutnya menampilkan yang akan datang; Lihat semua membuka seluruh hari. Tanggal di kiri bawah memilih hari lain.",
     },
     where: "today",
     covers: ["my-tasks-2026-11", "first-run-2026-11"],

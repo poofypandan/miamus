@@ -1,15 +1,13 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-import { TodayButton } from "@/components/agenda/today-button";
 import { AppHeader, ViewSwitch } from "@/components/navigation/app-header";
-import { moduleFromParam } from "@/lib/dashboard-modules";
 import { useOwnerLocale } from "@/context/owner-locale-context";
-import { moduleFlagsFrom, useHouseholdProfile } from "@/hooks/use-household-profile";
 
 /**
- * The dashboard header: the household's name and the Overview | Staff switch —
- * and, on the Agenda, the Today button (Phase 115).
+ * The dashboard header: the Miamus mark and name, and the Overview | Staff
+ * switch. The Agenda's Today button (Phase 115) moved to the date pill at the
+ * bottom left in Today v3 (21 Nov), where it appears while another day is
+ * shown.
  *
  * It used to carry a second row of pills for whichever module had two panels —
  * Pets split into Daily Feed and Schedule, Household into Chores and
@@ -17,14 +15,11 @@ import { moduleFlagsFrom, useHouseholdProfile } from "@/hooks/use-household-prof
  * sub-navigation left to render and the header is back to what it is for.
  */
 export function TopNav() {
-  const flags = moduleFlagsFrom(useHouseholdProfile().hasPets);
-  const onAgenda = moduleFromParam(useSearchParams().get("module"), flags) === "agenda";
   const locale = useOwnerLocale();
   return (
     <AppHeader
       action={
         <div className="flex shrink-0 items-center gap-1">
-          {onAgenda && <TodayButton locale={locale} />}
           <ViewSwitch current="owner" locale={locale} />
         </div>
       }
