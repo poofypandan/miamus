@@ -144,7 +144,22 @@ function RepairSection({
   );
 }
 
-export function RepairRow({ repair, onOpen, first }: { repair: Repair; onOpen: (id: string) => void; first?: boolean }) {
+export function RepairRow({
+  repair,
+  onOpen,
+  first,
+  attention: needsAttention = false,
+}: {
+  repair: Repair;
+  onOpen: (id: string) => void;
+  first?: boolean;
+  /**
+   * Under the house's "Needs attention" (Fable's look, #186): the wrench in
+   * the small attention tile and the title in the rows' usual weight, so the
+   * row reads as amber by more than its heading.
+   */
+  attention?: boolean;
+}) {
   const locale = useOwnerLocale();
   const t = useT();
   const { visits, walkIns } = useRepairs();
@@ -167,11 +182,17 @@ export function RepairRow({ repair, onOpen, first }: { repair: Repair; onOpen: (
     >
       {repair.urgent && repair.status !== "fixed" ? (
         <Siren className="size-4 shrink-0 text-red-700" aria-label={t("Urgent", "Darurat")} />
+      ) : needsAttention ? (
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-attention-tint text-attention" aria-hidden>
+          <Wrench className="size-4" />
+        </span>
       ) : (
         <Wrench className="size-4 shrink-0 text-muted-foreground" />
       )}
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium text-gray-900">{repair.title}</span>
+        <span className={cn("truncate text-sm text-gray-900", needsAttention ? "font-semibold" : "font-medium")}>
+          {repair.title}
+        </span>
         {place && <span className="truncate text-xs text-muted-foreground">{place}</span>}
         <span className={cn("truncate text-xs", attention ? "font-medium text-amber-800" : "text-gray-600")}>
           {repairStageText(repair, stage, locale, formatTime, staffName)}

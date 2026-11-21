@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Wrench } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { RepairRow } from "@/components/repairs/repairs-view";
 import { RepairReportSheet } from "@/components/repairs/repair-report-sheet";
 import { RepairSheet } from "@/components/repairs/repair-sheet";
@@ -17,7 +16,14 @@ const HISTORY = 10;
  * its history ("Dinding retak · Fixed 3 Oct · Pak Budi"), and Report a
  * problem here. Owners only — the room sheet is in the owners' Rooms view.
  */
-export function RoomRepairs({ locationId }: { locationId: string }) {
+export function RoomRepairs({
+  locationId,
+  hideOpen = false,
+}: {
+  locationId: string;
+  /** Its open repairs already lead the sheet, under Needs attention (#196). */
+  hideOpen?: boolean;
+}) {
   const t = useT();
   const locale = useOwnerLocale();
   const { repairs } = useRepairs();
@@ -25,7 +31,7 @@ export function RoomRepairs({ locationId }: { locationId: string }) {
   const [reporting, setReporting] = useState(false);
 
   const here = repairs.filter((r) => r.location_id === locationId);
-  const open = here.filter((r) => r.status === "reported" || r.status === "open");
+  const open = hideOpen ? [] : here.filter((r) => r.status === "reported" || r.status === "open");
   const past = here
     .filter((r) => r.status === "fixed" || r.status === "dismissed")
     .sort((a, b) => (b.closed_at ?? "").localeCompare(a.closed_at ?? ""))
@@ -43,9 +49,14 @@ export function RoomRepairs({ locationId }: { locationId: string }) {
           ))}
         </div>
       )}
-      <Button variant="outline" className="min-h-[44px] rounded-xl" onClick={() => setReporting(true)}>
-        <Wrench /> {t("Report a problem here", "Lapor kerusakan di sini")}
-      </Button>
+      {/* A quiet row, not a boxed button (Fable's look, #196). */}
+      <button
+        type="button"
+        onClick={() => setReporting(true)}
+        className="flex min-h-11 items-center gap-2 self-start rounded-lg px-1 text-sm font-medium text-gray-700 active:bg-muted"
+      >
+        <Wrench className="size-4 text-muted-foreground" aria-hidden /> {t("Report a problem here", "Lapor kerusakan di sini")}
+      </button>
       <RepairReportSheet
         open={reporting}
         onClose={() => setReporting(false)}
