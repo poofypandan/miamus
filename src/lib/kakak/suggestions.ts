@@ -300,8 +300,8 @@ export type KakakSuggestion =
  * and save this suggestion: 2 (2026-11-14) for a new ingredient or an
  * amount, 3 for what a staff member sees (Phase 178 follow-up), 4 for a
  * dish on the menu (Can we cook it?), 5 for Bought on a shopping card
- * (E2), 6 for adding or removing a staff
- * member (staff onboarding step 5), else 1.
+ * (E2), 6 for adding or removing a staff member (staff onboarding step 5),
+ * else 1.
  */
 export function clientVersionFor(item: KakakSuggestion): number {
   // Staff cards (staff onboarding step 5): above E2's Bought.
