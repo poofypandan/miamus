@@ -100,7 +100,7 @@ export function DateRibbon({ value, onChange, locale = "id" }: DateRibbonProps) 
               className={cn(
                 "flex min-h-[48px] min-w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border px-3 py-2 text-xs",
                 isSelected
-                  ? "border-black bg-black text-white"
+                  ? "border-primary bg-primary text-primary-foreground"
                   : isToday
                     ? "border-primary text-primary"
                     : "border-border bg-card text-foreground hover:bg-muted"

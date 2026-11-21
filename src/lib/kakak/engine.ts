@@ -15,8 +15,9 @@ import { jakartaNow, type RefMap, type RefNames } from "./context";
 import { guideForKakak } from "@/lib/guide";
 import { renderHouseholdBlock, type KakakHousehold } from "./household";
 import { KAKAK_SYSTEM_PROMPT } from "./prompt";
-import { correctionFor, guardReplyText, replyProblems } from "./reply-guard";
-import { toSuggestion, type KakakSuggestion } from "./suggestions";
+import { correctionFor, guardReplyText, replyProblems, watchesAmounts } from "./reply-guard";
+import { dishAnswerLine } from "./dish-answer";
+import { toSuggestions, type KakakSuggestion } from "./suggestions";
 import { KAKAK_TOOLS, KAKAK_TOOL_NAMES } from "./tools";
 import { validateToolCall } from "./validate";
 
@@ -342,7 +343,7 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
     // wrong language, or no words): say why and let Kakak say it again, once.
     // She understood; "Sorry, I didn't catch that" would say she hadn't.
     if (calls.length === 0 && !retried) {
-      const wrong = replyProblems(text, deps.household.ownerLocale);
+      const wrong = replyProblems(text, deps.household.ownerLocale, { noAmounts: noAmountsIn(deps.household, text, false) });
       if (wrong.length > 0) {
         record.outcome = "message";
         await deps.record(begun.requestId, record);
@@ -374,9 +375,10 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
       };
     }
 
-    const items = calls
-      .map((call) => toSuggestion(deps.household, deps.refs, deps.names, call.name, (call.input ?? {}) as Record<string, unknown>))
-      .filter((item): item is KakakSuggestion => item !== null);
+    // plan_dish is two cards: the dish, and what its recipe is missing (Can we cook it?).
+    const items: KakakSuggestion[] = calls.flatMap((call) =>
+      toSuggestions(deps.household, deps.refs, deps.names, call.name, (call.input ?? {}) as Record<string, unknown>),
+    );
     if (calls.length === 0 || items.length === 0) {
       record.outcome = "message";
       await deps.record(begun.requestId, record);
@@ -386,7 +388,9 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
     await deps.record(begun.requestId, record);
     return {
       kind: "suggestions",
-      text: shownText("suggestions", text, deps.household),
+      text:
+        shownText("suggestions", text, deps.household, calls.some((call) => call.name === "plan_dish")) ||
+        dishAnswerLine(items, deps.household.ownerLocale),
       items,
       requestId: begun.requestId,
       history: out,
@@ -401,10 +405,16 @@ export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: st
  * unchanged, as the API requires. Logged without the text, so drops can be
  * counted.
  */
-function shownText(kind: "suggestions" | "message", text: string, household: KakakHousehold): string {
-  const guarded = guardReplyText(kind, text, household.ownerLocale);
+function shownText(kind: "suggestions" | "message", text: string, household: KakakHousehold, plansDish = false): string {
+  const guarded = guardReplyText(kind, text, household.ownerLocale, { noAmounts: noAmountsIn(household, text, plansDish) });
   if (guarded.tells.length > 0) console.warn("kakak: reply text dropped", kind, guarded.tells.join(","));
   return guarded.text;
+}
+
+/** Can we cook it? (20 Nov): the guard watches for a made-up amount beside a dish card or about a saved recipe. */
+function noAmountsIn(household: KakakHousehold, text: string, plansDish: boolean): boolean {
+  const names = (household.recipes ?? []).flatMap((r) => [r.name, r.nameId ?? ""]);
+  return watchesAmounts(text, names, plansDish);
 }
 
 function emptyRecord(model: string, latencyMs: number): CallRecord {

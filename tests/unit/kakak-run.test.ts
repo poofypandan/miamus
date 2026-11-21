@@ -113,6 +113,7 @@ describe("playConversation", () => {
       "add_food",
       "put_away_ingredient",
       "set_staff_areas",
+      "plan_dish",
       "add_staff",
       "remove_staff",
       "ask_question",

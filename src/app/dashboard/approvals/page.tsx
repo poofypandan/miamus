@@ -276,7 +276,37 @@ function RequestIdentity({ request }: { request: AccessRequest }) {
         {/* Approved at sign-up, reviewed afterwards (Phase 172, D1). */}
         {request.auto && <> · {t("Automatic", "Otomatis")}</>}
       </span>
+      <RequestAnswers request={request} />
     </div>
+  );
+}
+
+/**
+ * What they said on Request access (owner, 2026-11-20; migrations/175), under
+ * their name. Only platform admins get this far, and the answers are never in
+ * a notification. Requests from before 175, from an old app build, or older
+ * than 12 months (the nightly prune clears them) have none, and show nothing.
+ */
+function RequestAnswers({ request }: { request: AccessRequest }) {
+  const t = useT();
+  const help = request.wants_help_with?.trim();
+  const heard = request.heard_from?.trim();
+  if (!help && !heard) return null;
+  return (
+    <dl className="mt-2 flex flex-col gap-1.5 rounded-lg bg-slate-50 px-3 py-2 text-xs">
+      {help && (
+        <div className="flex flex-col">
+          <dt className="text-muted-foreground">{t("Wants help with", "Ingin dibantu")}</dt>
+          <dd className="break-words whitespace-pre-line text-gray-900">{help}</dd>
+        </div>
+      )}
+      {heard && (
+        <div className="flex flex-col">
+          <dt className="text-muted-foreground">{t("Heard about Miamus from", "Tahu Miamus dari")}</dt>
+          <dd className="break-words text-gray-900">{heard}</dd>
+        </div>
+      )}
+    </dl>
   );
 }
 
