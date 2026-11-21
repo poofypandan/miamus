@@ -63,7 +63,7 @@ test("a new household sees the first page, and its steps tick off from real data
     return route.fallback();
   });
   await context.route("https://wa.me/**", (route) => route.fulfill({ contentType: "text/html", body: "<html></html>" }));
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   // Brand new: how Miamus works, then only the name is done, and Set up is
   // open with its buttons.
@@ -127,7 +127,7 @@ test("a new household sees the first page, and its steps tick off from real data
 
   // Sari's phone opened the link: notifications are next, with one tap.
   linkedPhones.push({ id: "device-1", linked_at: "2026-11-10T01:00:00Z", last_seen_at: "2026-11-10T01:00:00Z" });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
   await expect(card).toContainText("3 of 5", { timeout: 20_000 });
   await expect(step(page, "phone")).toContainText("1 phone");
   await expect(step(page, "notify")).toContainText("Turn on notifications");
@@ -336,7 +336,7 @@ test("a household already past setup never sees it", async ({ context, page }) =
       },
     ],
   });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
   await expect(page.getByRole("heading", { name: "Today", exact: true })).toBeVisible({ timeout: 20_000 });
   await expect(checklist(page)).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Your home is set up" })).toHaveCount(0);
