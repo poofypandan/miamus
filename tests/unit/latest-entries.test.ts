@@ -7,12 +7,13 @@ import type { ChoreOccurrence } from "@/lib/chore-recurrence";
 // completed chore, the admin's own too, and every pet a routine has been
 // through, even while the rest of its group waits (Codex, PR #181).
 
-function item(entityId: string, status: AgendaItem["status"]): AgendaItem {
-  return { key: `k-${entityId}`, entityId, entityName: entityId, status, log: null } as AgendaItem;
+function item(entityId: string, status: AgendaItem["status"], title = "Feeding"): AgendaItem {
+  return { key: `k-${entityId}-${title}`, entityId, entityName: entityId, status, log: null, title } as AgendaItem;
 }
 
 function group(items: AgendaItem[]): AgendaGroup {
-  return { time: "08:00", title: "Feeding", items, kind: null } as unknown as AgendaGroup;
+  const titles = [...new Set(items.map((i) => i.title))];
+  return { time: "08:00", title: titles[0], titles, items, kind: null } as unknown as AgendaGroup;
 }
 
 function chore(key: string, status: ChoreOccurrence["status"]): ChoreOccurrence {
@@ -26,6 +27,14 @@ describe("finishedEntries (what Latest shows)", () => {
     const [only] = entries;
     if (only.kind !== "routine") throw new Error("expected a routine");
     expect(only.group.items.map((i) => i.entityName)).toEqual(["Mocha"]);
+  });
+
+  it("names a medicine group for the medicines given, not the first one scheduled", () => {
+    const noon = group([item("Mocha", "pending", "Antibiotic"), item("Mocha", "completed", "Eye drops")]);
+    const [only] = finishedEntries({ groups: [noon], chores: [] });
+    if (only.kind !== "routine") throw new Error("expected a routine");
+    expect(only.group.titles).toEqual(["Eye drops"]);
+    expect(only.group.title).toBe("Eye drops");
   });
 
   it("leaves out a routine nobody has started", () => {

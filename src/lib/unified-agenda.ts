@@ -103,8 +103,8 @@ export function isEntryDone(entry: UnifiedAgendaEntry): boolean {
  * chore, the admin's own among them (they count in the status ring too), and
  * every pet a routine has been through, even while others in the same group
  * are still waiting (each completion counts in the ring as it lands). A
- * partly finished routine comes back narrowed to its finished pets, so its
- * row names and shows only those (Codex, PR #181).
+ * partly finished routine comes back narrowed to its finished pets and
+ * their titles, so its row names and shows only those (Codex, PR #181).
  */
 export function finishedEntries(params: {
   groups: AgendaGroup[];
@@ -112,7 +112,11 @@ export function finishedEntries(params: {
 }): UnifiedAgendaEntry[] {
   const groups = params.groups.flatMap((group) => {
     const items = group.items.filter((item) => item.status === "completed");
-    return items.length > 0 ? [{ ...group, items }] : [];
+    if (items.length === 0) return [];
+    // Its titles from what was finished: a dog's noon medicines are one
+    // group named for the first, and that may be the one still to give.
+    const titles = [...new Set(items.map((item) => item.title))];
+    return [{ ...group, items, titles, title: titles[0] ?? group.title }];
   });
   const chores = params.chores.filter((occurrence) => occurrence.status === "completed");
   return buildUnifiedAgenda({ groups, chores });

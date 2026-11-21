@@ -4,6 +4,10 @@ import { useState } from "react";
 import { ImageOff } from "lucide-react";
 import { toast } from "sonner";
 import { ChoreReviewLightbox, hasChoreProof } from "@/components/chores/chore-proof-photos";
+import { logLightboxItem } from "@/components/dashboard/log-photo-thumbnail";
+import { PhotoLightbox, type LightboxItem } from "@/components/dashboard/photo-lightbox";
+import { useHousehold } from "@/context/household-context";
+import { distinct, groupByPhoto } from "@/lib/photos";
 import { SyncedImg } from "@/components/shared/synced-img";
 import { useFormatTime } from "@/components/ui/ui-labels";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -38,10 +42,12 @@ export function latestRows(entries: UnifiedAgendaEntry[], staffName: (id: string
     }
     const logs = entry.group.items.map((item) => item.log).filter((log) => log !== null);
     const last = logs.sort((a, b) => b.completed_at.localeCompare(a.completed_at))[0] ?? null;
-    const pets = entry.group.items.map((item) => item.entityName).join(", ");
+    const pets = [...new Set(entry.group.items.map((item) => item.entityName))].join(", ");
+    // Every finished title (a dog's noon medicines), never just the group's.
+    const what = entry.group.titles.length > 0 ? entry.group.titles.join(" · ") : entry.group.title;
     return {
       key: entry.key,
-      title: pets ? `${entry.group.title} · ${pets}` : entry.group.title,
+      title: pets ? `${what} · ${pets}` : what,
       photo: logs.find((log) => log.photo_url)?.photo_url ?? null,
       who: last?.staff_id ? staffName(last.staff_id) : null,
       at: last?.completed_at ?? null,
@@ -95,7 +101,9 @@ export function LatestList({ rows, onOpen }: { rows: LatestRow[]; onOpen: (row: 
  * with its photos, the latest first. Back closes it, as it does every sheet
  * (Codex, PR #181). A finished chore opens its proof, the before and after
  * full screen with their times, as it does in the day's list: never the
- * editor (Phase 129; Codex, PR #181). One saved with no photos says so.
+ * editor (Phase 129; Codex, PR #181). A finished routine opens its photos
+ * the same way its row in the day does, one frame per photo, named for what
+ * it covers. One saved with no photos says so.
  */
 export function LatestSheet({
   open,
@@ -108,11 +116,31 @@ export function LatestSheet({
 }) {
   const t = useT();
   const locale = useOwnerLocale();
+  const { schedules } = useHousehold();
   const [reviewing, setReviewing] = useState<ChoreOccurrence | null>(null);
+  const [gallery, setGallery] = useState<LightboxItem[] | null>(null);
   useBackToClose(open, onClose);
 
   function openRow(row: LatestRow) {
-    if (row.entry.kind !== "chore") return;
+    if (row.entry.kind === "routine") {
+      const frames = groupByPhoto(row.entry.group.items, (item) => item.log?.photo_url).map(({ rows }) =>
+        logLightboxItem({
+          log: rows[0].log!,
+          title: distinct(rows.map((item) => item.title)).join(" · "),
+          entityName: distinct(rows.map((item) => item.entityName)).join(", ") || undefined,
+          schedules,
+          lang: locale,
+        })
+      );
+      if (frames.length > 0) setGallery(frames);
+      else
+        toast(
+          row.who
+            ? t(`Done by ${row.who}, no photo`, `Diselesaikan ${row.who}, tanpa foto`)
+            : t("No photo was saved for this", "Tidak ada foto tersimpan untuk ini")
+        );
+      return;
+    }
     const occurrence = row.entry.occurrence;
     if (hasChoreProof(occurrence.row)) {
       setReviewing(occurrence);
@@ -141,6 +169,7 @@ export function LatestSheet({
           onClose={() => setReviewing(null)}
           locale={locale}
         />
+        {gallery && <PhotoLightbox open onClose={() => setGallery(null)} initialIndex={0} items={gallery} />}
       </SheetContent>
     </Sheet>
   );

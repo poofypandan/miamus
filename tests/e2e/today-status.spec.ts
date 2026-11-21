@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { HOUSEHOLD_ID } from "../fixtures/household";
+import { HOUSEHOLD_ID, MOCHI, schedule } from "../fixtures/household";
 import { STAFF_ID, installStub } from "./stub-backend";
 
 // Today's new order (Phase 175, S3; docs/phase-175-tabs-and-today-plan.md,
@@ -374,4 +374,36 @@ test("a finished chore in Latest opens its photos, never the editor (Codex, PR #
   await latest.getByTestId("latest-list").getByRole("button", { name: /Wash the car/ }).click();
   await expect(page.getByRole("dialog", { name: "Wash the car" })).toBeVisible();
   await expect(page.getByRole("dialog", { name: /Edit/ })).toHaveCount(0);
+});
+
+test("a finished routine in Latest opens its photo (Codex, PR #181)", async ({ context, page }) => {
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  const walk = schedule(MOCHI, "Jalan-jalan", ["07:00"], { kind: "walk", proof: "photo" });
+  await installStub(context, {
+    owner: { locale: "en" },
+    schedules: [walk],
+    logs: [
+      {
+        id: "00000000-0000-4000-8000-000000181a01",
+        schedule_id: walk.id,
+        entity_id: MOCHI.id,
+        module: "pet",
+        photo_url: "x/walk.jpg",
+        notes: null,
+        completed_at: `${day}T07:20:00+07:00`,
+        staff_id: STAFF_ID,
+        sub_type: "complete",
+        received_at: `${day}T00:20:01Z`,
+      },
+    ],
+  });
+  await page.clock.setFixedTime(new Date(`${day}T10:00:00+07:00`));
+  await page.goto("/dashboard?module=agenda");
+  await status(page).click({ timeout: 20_000 });
+  const latest = page.getByRole("dialog", { name: "Latest" });
+  await latest.getByTestId("latest-list").getByRole("button", { name: /Jalan-jalan/ }).click();
+  // The photo opens over Latest (hidden underneath while it is up).
+  await expect(page.getByRole("dialog", { name: "Mochi" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(latest).toBeVisible();
 });
