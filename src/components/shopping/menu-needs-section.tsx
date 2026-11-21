@@ -46,8 +46,8 @@ export function useMenuNeeds(owner: boolean): { needs: MenuNeed[]; today: string
   const notes = useMemo(() => inventoryAlerts.filter(isActiveAlert).flatMap((alert) => (alert.note ? [alert.note] : [])), [inventoryAlerts]);
   const enabled = recipesOn();
   const today = formatDateLocal(useToday());
-  const { dishes: thisWeek } = useMenuWeek(today, { enabled });
-  const { dishes: nextWeek } = useMenuWeek(addDays(today, 7), { enabled });
+  const { dishes: thisWeek, weekLoaded: thisLoaded } = useMenuWeek(today, { enabled });
+  const { dishes: nextWeek, weekLoaded: nextLoaded } = useMenuWeek(addDays(today, 7), { enabled });
   const { recipes, fresh: recipesFresh } = useRecipes({ enabled });
   const needs = useMemo(
     () =>
@@ -65,8 +65,10 @@ export function useMenuNeeds(owner: boolean): { needs: MenuNeed[]; today: string
     [enabled, thisWeek, nextWeek, recipes, inventoryItems, today, amounts, owner, notes]
   );
   // Read from the server in this session, not only the phone's copy: a
-  // cached absence is never proof (Codex, PR #195), so Add waits for it.
-  return { needs, today, fresh: listsFresh && recipesFresh };
+  // cached absence is never proof, and a dish cooked or removed on another
+  // phone mustn't be added for (Codex, PR #195). Add waits for the lists,
+  // the recipes and both menu weeks, as Add missing to Shopping does.
+  return { needs, today, fresh: listsFresh && recipesFresh && thisLoaded && nextLoaded };
 }
 
 export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boolean }) {
