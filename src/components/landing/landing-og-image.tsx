@@ -1,7 +1,9 @@
 import { ImageResponse } from "next/og";
 import { BRAND_INK, M_POINTS, ROOF_POINTS } from "@/components/brand/brand-mark";
 import type { OwnerLocale } from "@/lib/owner-locale";
+import { oneDayLanding } from "@/lib/landing-flag";
 import { LANDING_COPY } from "./landing-copy";
+import { ONE_DAY_COPY } from "./one-day/one-day-copy";
 
 /**
  * The link preview (1200 × 630) for one language of the landing page: the
@@ -11,6 +13,8 @@ export const OG_SIZE = { width: 1200, height: 630 };
 
 export function landingOgImage(locale: OwnerLocale) {
   const t = LANDING_COPY[locale];
+  // Once the One day page is on, the preview carries its headline.
+  const headline = oneDayLanding() === "on" ? ONE_DAY_COPY[locale].hero.headline.join("") : t.hero.headline;
   return new ImageResponse(
     (
       <div
@@ -54,7 +58,7 @@ export function landingOgImage(locale: OwnerLocale) {
           ))}
         </div>
         <div style={{ marginTop: 48, fontSize: 64, fontWeight: 600, lineHeight: 1.12, color: "#111827", letterSpacing: -1.5 }}>
-          {t.hero.headline}
+          {headline}
         </div>
         <div style={{ marginTop: 24, fontSize: 32, color: "#6b7280" }}>
           {`Miamus · ${t.hero.brandLine}`}

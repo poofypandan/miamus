@@ -151,9 +151,9 @@ export function ShoppingTab() {
   return (
     <div className="flex flex-col gap-6 px-4 pb-6">
       <section className="flex flex-col gap-2" aria-labelledby="to-buy-title">
-        <h2 id="to-buy-title" className="text-sm font-semibold text-gray-900">
+        <h2 id="to-buy-title" className="text-sm font-semibold text-muted-foreground">
           {t("To buy", "Perlu dibeli")}
-          {count > 0 && <span className="text-gray-400"> ({count})</span>}
+          {count > 0 && <span className="text-gray-500"> ({count})</span>}
         </h2>
 
         <form onSubmit={addToList} className="flex gap-2">
@@ -175,12 +175,12 @@ export function ShoppingTab() {
         </form>
 
         {count === 0 ? (
-          <p className="rounded-xl border border-dashed px-3 py-5 text-center text-sm text-muted-foreground">
+          <p className="rounded-2xl px-3 py-5 text-center text-sm text-muted-foreground">
             {t("Nothing to buy right now.", "Tidak ada yang perlu dibeli sekarang.")}
           </p>
         ) : (
           <>
-            <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
+            <div className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card shadow-card">
               {toBuy.map((item) => {
                 const by = item.stock_status_by ? staffName(item.stock_status_by) : null;
                 const when = day(item.stock_status_at);
@@ -245,7 +245,7 @@ export function ShoppingTab() {
         addLabel={t("Add item", "Tambah barang")}
         empty={
           inventoryItems.length > 0 ? (
-            <p className="rounded-xl border border-dashed px-3 py-5 text-center text-sm text-muted-foreground">
+            <p className="rounded-2xl px-3 py-5 text-center text-sm text-muted-foreground">
               {t("Food items are under Food → Ingredients.", "Bahan masakan ada di Makanan → Bahan masakan.")}
             </p>
           ) : (

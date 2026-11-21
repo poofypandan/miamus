@@ -213,8 +213,10 @@ people are **staf** and **admin**.
 | Automatic (an approval made at sign-up) | **Otomatis** | Phase 172 PR A1, the approvals page. |
 | New household · {name} just joined (push) | **Rumah baru** · **{name} baru bergabung.** | Phase 172 PR A1, to platform admins. |
 | Tap the mic on your keyboard and speak. | **Ketuk mic di keyboard, lalu bicara.** | Phase 172 PR A1, Kakak's keyboard tip. "Mic" is the everyday word on the keyboard. |
-| Listening. Tap Done when you're finished. / Done / Cancel | **Kakak mendengarkan. Ketuk Selesai kalau sudah.** / **Selesai** / **Batalkan** | Kakak voice's new flow, tap to start and tap Done to stop (2026-11-13, opt-in with ?newvoice=1). Nothing is sent before Kirim, so not "ketuk Berhenti kalau sudah" or "Batal, jangan kirim" (the current flow's words). |
-| Say what you need. Pauses are fine. · Check the words, then tap Send. | **Sebutkan yang Anda perlukan. Boleh sambil berpikir.** · **Cek kata-katanya, lalu ketuk Kirim.** | Kakak voice: the empty live-words line, and the line after Done while the words wait in the typing box. |
+| Listening. Tap Done to send. / Done / Cancel | **Kakak mendengarkan. Ketuk Selesai untuk mengirim.** / **Selesai** / **Batalkan** | Kakak voice, tap to talk and tap Done to send (20 Nov; the default since then, was opt-in with ?newvoice=1). Done sends the words to Kakak; nothing is saved until the card is confirmed. Not "ketuk Berhenti kalau sudah" (the older flow's words). |
+| Say what you need. Pauses are fine. · Edit words (the spoken line) | **Sebutkan yang Anda perlukan. Boleh sambil berpikir.** · **Ubah kata-kata** | Kakak voice: the empty live-words line, and the button under the owner's spoken line that puts the words back in the typing box to fix. Not plain "Ubah": that is the card's Change, often on screen at the same time. |
+| Listening stops in {n} s. Tap Done to send. | **Kakak berhenti mendengarkan dalam {n} detik. Ketuk Selesai untuk mengirim.** | Kakak voice: the quiet countdown from 1:45 before the two-minute limit. |
+| Listening stopped (at 2 minutes). Check the words, then tap Send. | **Kakak berhenti mendengarkan (setelah 2 menit). Cek kata-katanya, lalu ketuk Kirim.** | Kakak voice: listening ended without Done (the limit, or the browser stopped); the words wait in the typing box, unsent. |
 | How should we let you know? · Your WhatsApp number | **Bagaimana kami memberi tahu Anda? · Nomor WhatsApp Anda** | Phase 172 PR A1, the waiting screen (owner, 2026-11-11). |
 | We'll use your number only to tell you you're approved, then delete it. | **Nomor Anda hanya kami pakai untuk memberi tahu bahwa Anda sudah disetujui, lalu kami hapus.** | The note under the number field; "Kebijakan privasi" links to the policy. |
 | Copy link · Link copied | **Salin link · Link disalin** | The approvals page's third button. |
@@ -359,7 +361,12 @@ people are **staf** and **admin**.
 | See the first task done | **Lihat tugas pertama selesai** | Phase 175. Was "See it done / Lihat hasilnya". |
 | Ready for your staff today | **Siap untuk staf hari ini** | Phase 175: a new home, above the progress rows. |
 | Phone not linked yet | **HP belum terhubung** | Phase 175, on a person's row. |
-| Next up | **Berikutnya** | Phase 175, the folded day (later). |
+| Next up / Next | **Berikutnya** | Phase 175; Today v3 (21 Nov): the three rows after the circles. |
+| See all / Show less (Today's whole day) | **Lihat semua** / **Tampilkan lebih sedikit** | Today v3: the door beside Berikutnya. |
+| Symbols for what they look after (under each face on Today) | **Simbol yang ia urus** | Today v3: the person's own areas (05, section d), in the guide. "Urus", not "tanggung jawab". |
+| Latest (what has been finished today, behind Today's status) | **Terbaru** | Today v3: the sheet's title. "Finished today, the latest first." **Selesai hari ini, yang terbaru di atas.** |
+| Choose a day (the date pill's sheet) | **Pilih hari** | Today v3: "Sen 16" pill at the bottom left; while another day shows, **Hari ini** beside it. |
+| Nothing more today. | **Tidak ada lagi hari ini.** | Today v3: Next when the day has nothing left. |
 | How Miamus works here (Settings group) | **Cara Miamus bekerja di sini** | Phase 175: Features, Notifications, Kakak, Language, App lock. |
 | Activity and data (Settings group) | **Aktivitas dan data** | Phase 175. Not "Catatan", which already means Notes. |
 | Edit rooms | **Ubah ruangan** | Phase 175: the link on Rumah → Ruangan to the rooms editor. |
@@ -416,6 +423,9 @@ people are **staf** and **admin**.
 | Anything else? | **Ada lagi?** | 2026-11-14: the typing box after Kakak's answer or thanks; **Mau Kakak atur apa?** stays for the first line. |
 | I've just been updated. Please close Miamus, open it again, and tell me once more. | **Kakak baru saja diperbarui. Tutup Miamus, buka lagi, lalu bilang ke Kakak sekali lagi.** | 2026-11-14: said to a page left open across an update, instead of a card it can't show. |
 | Kakak sets up chores, shopping, pet routines, food, ingredients and what staff see from what you type or say, and answers questions about how Miamus works. | **Kakak mengatur tugas, belanja, rutinitas hewan, makanan, bahan masakan, dan yang dilihat staf dari yang Anda ketik atau ucapkan, dan menjawab pertanyaan tentang cara pakai Miamus.** | 2026-11-14: Settings → Kakak, the first line. |
+| Early access · By invitation | **Akses awal · Dengan undangan** | 2026-11-20, the One day landing page (Direction 3): replaces "beta" and "invite-only" as the idea, not an apology. Never "eksklusif", "VIP" or "terbatas". |
+| A day at home, without the asking. | **Sehari di rumah, tanpa bertanya-tanya.** | 2026-11-20, the One day page's headline; "bertanya-tanya" in Fraunces italic. |
+| Miamus, by Poofy Labs | **Miamus, oleh Poofy Labs** | 2026-11-20, the one endorsement line (landing footer, About Miamus, email sign-off). Replaces "Dibuat dengan sepenuh hati oleh Poofy Labs". |
 
 ## Formatting
 

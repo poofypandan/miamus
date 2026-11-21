@@ -28,6 +28,9 @@ jobs:
       # none are given.
       NEXT_PUBLIC_SUPABASE_URL: http://supabase.test
       NEXT_PUBLIC_SUPABASE_ANON_KEY: anon-test-key
+      # The "One day" landing page at its preview routes for the browser tests
+      # (src/lib/landing-flag.ts); /welcome stays today's page, as in production.
+      LANDING_ONE_DAY: preview
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
