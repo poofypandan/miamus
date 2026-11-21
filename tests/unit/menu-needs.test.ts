@@ -173,3 +173,18 @@ describe("the words", () => {
     expect(dishesWithAddable(needs).map((d) => d.dishId)).toEqual(["d1", "d2", "d3"]);
   });
 });
+
+describe("a name two items share", () => {
+  it("is never offered as not on the list", () => {
+    const twins = [item({ id: "c1", name: "Cabai" }), item({ id: "c2", name: "Cabai", scope: "pet" } as Partial<InventoryItem>)];
+    const sambal = recipe("sambal", "Sambal", [line({ name: "Cabai" })]);
+    expect(menuNeeds({ ...base, items: twins, recipes: [sambal], dishes: [dish("d", TODAY, "sambal", "Sambal")] })).toEqual([]);
+  });
+});
+
+describe("a name already noted on the shopping list", () => {
+  it("isn't offered again (Add missing files unlisted names as notes)", () => {
+    const needs = menuNeeds({ ...base, notes: ["serai "], dishes: [dish("d", TODAY, "soto", "Soto ayam")] });
+    expect(needs.map((n) => n.name)).toEqual(["Bihun"]);
+  });
+});

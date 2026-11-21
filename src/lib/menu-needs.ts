@@ -87,6 +87,7 @@ export function menuNeeds({
   today,
   amounts,
   forStaff,
+  notes = [],
   days = MENU_NEEDS_DAYS,
 }: {
   dishes: readonly MenuDish[];
@@ -95,8 +96,15 @@ export function menuNeeds({
   today: string;
   amounts: boolean;
   forStaff: boolean;
+  /**
+   * The open notes on the shopping list ("Daun jeruk"): a thing with no item
+   * that is noted there already (Add missing to Shopping files them so) is on
+   * the list, not "not there".
+   */
+  notes?: readonly string[];
   days?: number;
 }): MenuNeed[] {
+  const noted = new Set(notes.map(norm));
   const last = addDays(today, days - 1);
   const planned = dishes
     .filter((dish) => !dish.cooked_at && dish.day >= today && dish.day <= last && dish.recipe_id)
@@ -134,6 +142,8 @@ export function menuNeeds({
     // item's name), keyed by the Indonesian name so every phone agrees.
     for (const line of recipe.ingredients) {
       if (lineItem(line, items) || (!line.item_id && byName.get(norm(line.name)))) continue;
+      // A name two items share is neither of them, but it isn't "not there" either.
+      if (!line.item_id && byName.get(norm(line.name)) === null) continue;
       const saveName = lineName(line, items, true, recipe.written_in).trim();
       if (!saveName) continue;
       // Added from here before: an English line's item has its Indonesian
@@ -147,6 +157,7 @@ export function menuNeeds({
         continue;
       }
       if (isStaple(saveName) || isStaple(line.name)) continue;
+      if (noted.has(norm(saveName)) || noted.has(norm(line.name))) continue;
       const name = lineName(line, items, forStaff, recipe.written_in).trim();
       add(`name:${norm(saveName)}`, { name, kind: "not_there", item: null, buy: null, saveName }, forDish);
     }

@@ -8,12 +8,15 @@ export function ToBuyRow({
   title,
   detail,
   out = false,
+  note,
   tickLabel,
   onTick,
 }: {
   title: string;
   detail: string;
   out?: boolean;
+  /** A second quiet line: "Needed for Rendang (Sat)" (the wish list, step 1). */
+  note?: string;
   tickLabel: string;
   onTick: () => void;
 }) {
@@ -34,6 +37,7 @@ export function ToBuyRow({
             {detail}
           </span>
         )}
+        {note && <span className="text-xs text-muted-foreground">{note}</span>}
       </span>
     </div>
   );

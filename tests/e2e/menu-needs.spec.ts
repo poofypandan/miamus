@@ -151,11 +151,12 @@ test("For the menu: what the coming dishes need, a dashed tile in words, Add wit
   await expect(serai).toHaveAttribute("data-kind", "not_there");
   await expect(serai).toContainText("Not on your list");
   await expect(serai).toContainText(/Needed for Rendang \(\w+\), Soto ayam \(\w+\)/);
-  // Already on the shopping list: its own words, no Add.
-  const santanRow = row(section, "Santan");
-  await expect(santanRow).toContainText("Out · on the shopping list");
-  await expect(santanRow.getByRole("button")).toHaveCount(0);
-  await expect(row(section, "Bihun")).toContainText("Running low · on the shopping list");
+  // Already on To buy: not repeated here, but its To buy row says what it is for.
+  await expect(row(section, "Santan")).toHaveCount(0);
+  await expect(row(section, "Bihun")).toHaveCount(0);
+  await expect(section.getByRole("heading", { name: "For the menu (2)" })).toBeVisible();
+  await expect(page.getByRole("region", { name: /To buy/ }).getByText(/^Needed for Rendang \(\w+\)$/)).toBeVisible();
+  await expect(page.getByRole("region", { name: /To buy/ }).getByText(/^Needed for Soto ayam \(\w+\)$/)).toBeVisible();
   // Staples never; Ayam is there.
   await expect(row(section, "Garam")).toHaveCount(0);
   await expect(row(section, "Ayam")).toHaveCount(0);
@@ -164,7 +165,9 @@ test("For the menu: what the coming dishes need, a dashed tile in words, Add wit
   // One tap: a real item, marked Out, so it is on To buy; Undo takes it back off.
   await serai.getByRole("button", { name: "Add Serai to the shopping list" }).click();
   await expect.poll(() => stub.supplies.find((row) => row.name === "Serai")?.stock_status).toBe("out");
-  await expect(row(section, "Serai")).toContainText("Out · on the shopping list");
+  // Now a real item, Out: on To buy, and gone from For the menu.
+  await expect(row(section, "Serai")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Bought Serai" })).toBeVisible();
   await page.getByRole("button", { name: "Undo" }).click();
   await expect.poll(() => stub.supplies.some((row) => row.name === "Serai")).toBe(false);
   await expect(row(section, "Serai")).toHaveAttribute("data-kind", "not_there");
@@ -191,7 +194,8 @@ test("a staff phone reads Untuk menu in Bahasa Indonesia, with no Add", async ({
   const serai = row(section, "Serai");
   await expect(serai).toContainText("Belum ada di daftar");
   await expect(serai).toContainText(/Perlu untuk Rendang \(\w+\), Soto ayam \(\w+\)/);
-  await expect(row(section, "Santan")).toContainText("Habis · ada di daftar belanja");
+  await expect(row(section, "Santan")).toContainText("Habis");
+  await expect(row(section, "Santan")).toContainText("Perlu untuk Rendang");
   await expect(section.getByRole("button")).toHaveCount(0);
   await expect(section).not.toContainText("Needed for");
   await shot(page, "menu-needs-staff");

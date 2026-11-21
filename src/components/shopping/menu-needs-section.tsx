@@ -11,6 +11,7 @@ import { useRecipes } from "@/hooks/use-recipes";
 import { useToday } from "@/hooks/use-today";
 import { amountsOn, recipesOn } from "@/lib/features";
 import { STOCK_STATUS_LABELS } from "@/lib/inventory";
+import { isActiveAlert } from "@/lib/inventory-status";
 import { friendlyAmount } from "@/lib/kitchen-units";
 import { addDays, toBuyPatch } from "@/lib/menu";
 import { canAddNeed, dishesWithAddable, menuNeeds, neededForLine, type MenuNeed, type MenuNeedDish } from "@/lib/menu-needs";
@@ -28,42 +29,59 @@ import type { RecipeLang } from "@/lib/recipes";
  *     item, marked Out, so it is on To buy, and Bought turns it into stock.
  *   - A counted item that is short is a plain tile; Add puts it on To buy
  *     with what to buy, as Add missing to Shopping does.
- *   - Something already Running low or Out keeps its own words and says it
- *     is on the shopping list.
+ *   - Something already Running low or Out keeps its own words: on a staff
+ *     phone here; on an owner's, on its To buy row ("Needed for …").
  *
  * Owners add (one tap, or "Add all for Rendang"), with Undo. Staff read it
  * in Bahasa Indonesia, to know what to buy at the market. No prices.
  */
-export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boolean }) {
-  const { inventoryItems, addInventoryItem, setInventoryStatus, removeInventoryItem, markToBuy } = useHousehold();
-  const flags = useHouseholdFeatures();
-  const amounts = amountsOn(flags);
+/**
+ * What the coming menu needs, as this phone reads it (lib/menu-needs.ts):
+ * the section's tiles, and on an owner's phone the "Needed for" line on the
+ * To buy rows too.
+ */
+export function useMenuNeeds(owner: boolean): { needs: MenuNeed[]; today: string } {
+  const { inventoryItems, inventoryAlerts } = useHousehold();
+  const amounts = amountsOn(useHouseholdFeatures());
+  const notes = useMemo(() => inventoryAlerts.filter(isActiveAlert).flatMap((alert) => (alert.note ? [alert.note] : [])), [inventoryAlerts]);
   const enabled = recipesOn();
   const today = formatDateLocal(useToday());
   const { dishes: thisWeek } = useMenuWeek(today, { enabled });
   const { dishes: nextWeek } = useMenuWeek(addDays(today, 7), { enabled });
   const { recipes } = useRecipes({ enabled });
-  const [busy, setBusy] = useState<string | null>(null);
-  const tr = (en: string, id: string) => (lang === "id" ? id : en);
-
   const needs = useMemo(
     () =>
-      menuNeeds({
-        dishes: [...thisWeek, ...nextWeek.filter((d) => !thisWeek.some((t) => t.id === d.id))],
-        recipes,
-        items: inventoryItems,
-        today,
-        amounts,
-        forStaff: !owner,
-      }),
-    [thisWeek, nextWeek, recipes, inventoryItems, today, amounts, owner]
+      enabled
+        ? menuNeeds({
+            dishes: [...thisWeek, ...nextWeek.filter((d) => !thisWeek.some((t) => t.id === d.id))],
+            recipes,
+            items: inventoryItems,
+            today,
+            amounts,
+            forStaff: !owner,
+            notes,
+          })
+        : [],
+    [enabled, thisWeek, nextWeek, recipes, inventoryItems, today, amounts, owner, notes]
   );
+  return { needs, today };
+}
+
+export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boolean }) {
+  const { addInventoryItem, setInventoryStatus, removeInventoryItem, markToBuy } = useHousehold();
+  const { needs: all, today } = useMenuNeeds(owner);
+  const [busy, setBusy] = useState<string | null>(null);
+  const tr = (en: string, id: string) => (lang === "id" ? id : en);
+  // Fable: an owner already sees Running low and Out under To buy (with
+  // "Needed for" there), so here only what Add can do. Staff, with no To
+  // buy list of their own, see everything.
+  const needs = useMemo(() => (owner ? all.filter(canAddNeed) : all), [all, owner]);
   const allFor = useMemo(
     () => dishesWithAddable(needs).filter((dish) => needs.filter((n) => canAddNeed(n) && n.dishes.some((d) => d.dishId === dish.dishId)).length >= 2),
     [needs]
   );
 
-  if (!enabled || needs.length === 0) return null;
+  if (needs.length === 0) return null;
 
   /** One need onto the shopping list; returns how to take it back off. */
   async function addOne(need: MenuNeed): Promise<() => Promise<unknown>> {
@@ -78,7 +96,13 @@ export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boo
         min_threshold: 0,
         audit_frequency_days: 30,
       });
-      await setInventoryStatus(added.id, "out");
+      try {
+        await setInventoryStatus(added.id, "out");
+      } catch (err) {
+        // Not on To buy after all: take the new item back off, so a failed Add leaves nothing behind.
+        await removeInventoryItem(added.id).catch(() => undefined);
+        throw err;
+      }
       return () => removeInventoryItem(added.id);
     }
     const item = need.item!;
@@ -137,7 +161,7 @@ export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boo
             owner={owner}
             busy={busy !== null}
             adding={busy === need.key}
-            onAdd={() => void add([need], need.key, tr(`Added to the shopping list — ${need.name}`, `Ditambahkan ke daftar belanja — ${need.name}`))}
+            onAdd={() => void add([need], need.key, tr(`${need.name} · added to To buy`, `${need.name} · masuk Perlu dibeli`))}
           />
         ))}
       </ul>
@@ -150,7 +174,7 @@ export function MenuNeedsSection({ lang, owner }: { lang: RecipeLang; owner: boo
             className="min-h-11 rounded-xl"
             disabled={busy !== null}
             onClick={() =>
-              void add(forDish(dish), `all:${dish.dishId}`, tr(`Added what ${dish.title} needs`, `Ditambahkan yang perlu untuk ${dish.title}`))
+              void add(forDish(dish), `all:${dish.dishId}`, tr(`${dish.title}'s ingredients added to To buy`, `Bahan untuk ${dish.title} masuk Perlu dibeli`))
             }
           >
             {busy === `all:${dish.dishId}` ? <Loader2 className="animate-spin" /> : <ShoppingBasket />}
@@ -188,12 +212,12 @@ function NeedTile({
         ? need.buy !== null && need.item
           ? tr(`Buy ${friendlyAmount(need.buy, need.item.unit, lang)}`, `Beli ${friendlyAmount(need.buy, need.item.unit, lang)}`)
           : tr("Not enough at home", "Kurang di rumah")
-        : `${STOCK_STATUS_LABELS[lang][need.kind]} · ${tr("on the shopping list", "ada di daftar belanja")}`;
+        : STOCK_STATUS_LABELS[lang][need.kind];
   return (
     <li
       className={cn(
         "flex min-h-[60px] items-center gap-3 rounded-2xl px-3 py-2",
-        ghost ? "border border-dashed border-gray-300 bg-transparent" : "bg-card shadow-card"
+        ghost ? "border border-dashed border-gray-400 bg-transparent" : "bg-card shadow-card"
       )}
       data-kind={need.kind}
     >
@@ -203,7 +227,7 @@ function NeedTile({
         <span
           className={cn(
             "text-xs",
-            need.kind === "out" ? "text-red-700" : need.kind === "low" ? "text-amber-800" : "text-muted-foreground"
+            need.kind === "out" ? "text-red-700" : need.kind === "low" ? "text-amber-700" : "text-muted-foreground"
           )}
         >
           {state}

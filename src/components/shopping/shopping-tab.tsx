@@ -10,7 +10,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { usePurchase } from "@/components/shopping/bought-sheet";
 import { StockItemsPanel } from "@/components/shopping/stock-items-panel";
 import { ToBuyRow } from "@/components/shopping/to-buy-row";
-import { MenuNeedsSection } from "@/components/shopping/menu-needs-section";
+import { MenuNeedsSection, useMenuNeeds } from "@/components/shopping/menu-needs-section";
+import { neededForLine } from "@/lib/menu-needs";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useStaffNameLookup, useStaffProfiles } from "@/hooks/use-staff-profiles";
@@ -69,6 +70,13 @@ export function ShoppingTab() {
     [flags, inventoryItems]
   );
   const purchase = usePurchase(locale);
+  // The wish list, step 1 (Fable): what the coming menu needs, on the To buy row of each item it is for.
+  const { needs: menuNeeds, today: menuToday } = useMenuNeeds(true);
+  const neededFor = useMemo(() => {
+    const byItem = new Map<string, string>();
+    for (const need of menuNeeds) if (need.item) byItem.set(need.item.id, neededForLine(need, menuToday, locale));
+    return byItem;
+  }, [menuNeeds, menuToday, locale]);
   const [jot, setJot] = useState("");
   const [jotting, setJotting] = useState(false);
 
@@ -198,6 +206,7 @@ export function ShoppingTab() {
                     detail={[buy ? t(`Buy ${buy}`, `Beli ${buy}`) : null, STOCK_STATUS_LABELS[locale][status], amount, by, when]
                       .filter(Boolean)
                       .join(" · ")}
+                    note={neededFor.get(item.id)}
                     out={status === "out"}
                     tickLabel={t(`Bought ${stockItemName(item)}`, `${stockItemName(item)} sudah dibeli`)}
                     onTick={() => purchase.buy(item)}
