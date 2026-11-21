@@ -38,7 +38,7 @@ export function VideoTip({ id, locale }: { id: VideoTipId; locale: VideoTipLocal
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-h-[40px] w-fit items-center gap-1.5 rounded-lg border bg-white px-3 text-xs font-medium text-gray-900 active:bg-muted"
+        className="flex min-h-[40px] w-fit items-center gap-1.5 rounded-lg border bg-card px-3 text-xs font-medium text-foreground active:bg-muted"
       >
         <PlayCircle className="size-4" aria-hidden />
         {watchLabel(tip, locale)}
@@ -51,7 +51,7 @@ export function VideoTip({ id, locale }: { id: VideoTipId; locale: VideoTipLocal
           <div className="flex justify-center px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {open && (
               <video
-                className="max-h-[70dvh] w-auto rounded-xl bg-slate-100"
+                className="max-h-[70dvh] w-auto rounded-xl bg-muted"
                 src={files.video}
                 poster={files.poster}
                 playsInline

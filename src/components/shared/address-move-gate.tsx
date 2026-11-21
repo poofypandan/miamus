@@ -310,7 +310,7 @@ function MoveView({ audience, t }: { audience: MoveAudience; t: Translate }) {
       )}
 
       {confirming ? (
-        <div role="alert" className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <div role="alert" className="mt-5 rounded-xl bg-attention-tint px-4 py-3 text-sm text-attention">
           <p className="font-medium">{t("Move without them?", "Pindah tanpa catatan ini?")}</p>
           <p className="mt-1">
             {t(
@@ -543,8 +543,8 @@ function QueueStatus({
 
 const TONES = {
   neutral: { box: "border-border bg-muted/40 text-foreground", icon: "text-muted-foreground" },
-  green: { box: "border-emerald-200 bg-emerald-50 text-emerald-900", icon: "text-emerald-700" },
-  amber: { box: "border-amber-200 bg-amber-50 text-amber-900", icon: "text-amber-700" },
+  green: { box: "border-transparent bg-done-tint text-done-foreground", icon: "text-done-foreground" },
+  amber: { box: "border-transparent bg-attention-tint text-attention", icon: "text-attention" },
 } as const;
 
 function Notice({ tone, icon, children }: { tone: keyof typeof TONES; icon: ReactNode; children: ReactNode }) {

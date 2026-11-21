@@ -432,6 +432,9 @@ people are **staf** and **admin**.
 | Early access · By invitation | **Akses awal · Dengan undangan** | 2026-11-20, the One day landing page (Direction 3): replaces "beta" and "invite-only" as the idea, not an apology. Never "eksklusif", "VIP" or "terbatas". |
 | A day at home, without the asking. | **Sehari di rumah, tanpa bertanya-tanya.** | 2026-11-20, the One day page's headline; "bertanya-tanya" in Fraunces italic. |
 | Miamus, by Poofy Labs | **Miamus, oleh Poofy Labs** | 2026-11-20, the one endorsement line (landing footer, About Miamus, email sign-off). Replaces "Dibuat dengan sepenuh hati oleh Poofy Labs". |
+| {name} removed. Other staff phones stay signed in. | **{name} dihapus. HP staf lain tetap masuk.** | Staff onboarding step 1 (20 Nov): the toast after removing someone. The new house code is no longer in it: it shows on **Masuk staf**, where it is needed. |
+| The code changes when you remove someone; phones already signed in stay signed in. | **Kodenya berganti saat Anda menghapus staf; HP yang sudah masuk tetap masuk.** | Staff onboarding step 1: under the house code on **Masuk staf**. |
+| Adding a new staff member · A new staff member's first day · When someone leaves · Bringing someone back · Kitchen chores | **Menambah staf baru · Hari pertama staf baru · Kalau staf berhenti · Mengembalikan staf · Tugas dapur** | Staff onboarding step 1: the guide's entries (`src/lib/guide.ts`). No job title for the person (owner decision 8, 20 Nov): the area says it, **Dapur**. |
 
 ## Formatting
 
