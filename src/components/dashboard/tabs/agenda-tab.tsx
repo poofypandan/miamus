@@ -26,6 +26,7 @@ import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
 import { DatePill } from "@/components/agenda/date-pill";
 import { StaffProgressCard } from "@/components/dashboard/staff-progress-card";
 import { LatestList, latestRows } from "@/components/agenda/latest-list";
+import { useBackToClose } from "@/hooks/use-back-to-close";
 import { NextList } from "@/components/agenda/next-list";
 import { PeopleCircles } from "@/components/agenda/people-circles";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -396,6 +397,8 @@ export function AgendaTab() {
     startTransition(() => pushInPlace(query ? `${pathname}?${query}` : pathname));
   }
   const [latestOpen, setLatestOpen] = useState(false);
+  // Back closes Latest, as it does the date pill's sheet (Codex, PR #181).
+  useBackToClose(latestOpen, () => setLatestOpen(false));
   const notDoneCount = useMemo(() => {
     if (!showsToday) return 0;
     const now = new Date(clock);

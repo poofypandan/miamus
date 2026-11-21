@@ -18,7 +18,9 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
  *
  * Portalled to the page like Kakak's band (the pull-to-refresh wrapper is
  * transformed), at the band's height. While it is up, the band's first-time
- * hint steps aside (it marks <body> with data-date-pill).
+ * hint steps aside (it marks <body> with data-date-pill). It stacks one
+ * above the band (z-31 over z-30): the band is full width and takes taps,
+ * and its portal can be added after this one (Codex, PR #181).
  */
 export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
   const t = useT();
@@ -32,9 +34,15 @@ export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
 
   useEffect(() => {
     setMounted(true);
-    setBand(!!document.querySelector('[data-testid="kakak-band"]'));
+    // Kakak's band can arrive after the pill (her status loads on its own),
+    // or leave when she is switched off: follow it rather than reading once.
+    const readBand = () => setBand(!!document.querySelector('[data-testid="kakak-band"]'));
+    readBand();
+    const watch = new MutationObserver(readBand);
+    watch.observe(document.body, { childList: true });
     document.body.dataset.datePill = "";
     return () => {
+      watch.disconnect();
       delete document.body.dataset.datePill;
     };
   }, []);
@@ -54,7 +62,7 @@ export function DatePill({ rangeSwitch }: { rangeSwitch: ReactNode }) {
           over the page's last button. */}
       {!band && <div aria-hidden="true" className="h-24 shrink-0" />}
       {createPortal(
-        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+0.75rem+env(safe-area-inset-bottom))] z-30 mx-auto flex w-full max-w-md px-4">
+        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+0.75rem+env(safe-area-inset-bottom))] z-[31] mx-auto flex w-full max-w-md px-4">
           <div className="pointer-events-auto flex items-center gap-2">
             <button
               type="button"

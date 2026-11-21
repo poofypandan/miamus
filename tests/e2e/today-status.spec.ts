@@ -111,7 +111,10 @@ test("all clear: All on track first, no Waiting group, the pill down with the li
   await status(page).click();
   await expect(page.getByRole("dialog", { name: "Latest" })).toBeVisible();
   await expect(page.getByTestId("latest-list")).toBeVisible();
-  await page.keyboard.press("Escape");
+  // Back closes Latest and stays on Today (Codex, PR #181).
+  await page.goBack();
+  await expect(page.getByRole("dialog", { name: "Latest" })).toBeHidden();
+  await expect(status(page)).toBeVisible();
 
   // Week from the date pill's sheet keeps its pill on top; back on Day the
   // status returns.
@@ -226,4 +229,37 @@ test("a home that hasn't finished anything yet: the Set up card, no status line"
 
   await expect(page.getByRole("region", { name: "Set up your home" })).toBeVisible({ timeout: 20_000 });
   await expect(status(page)).toHaveCount(0);
+});
+
+test("the date pill sits above Kakak's band and takes its own taps (Codex, PR #181)", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  // Kakak's band arrives once her status loads, which on a phone is after
+  // the pill: hold her status back so the band's portal is added second, and
+  // the pill still has to be the one that receives the tap.
+  await page.route(/\/rpc\/kakak_status/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 2_500));
+    await route.fallback();
+  });
+  await page.goto("/dashboard?module=agenda");
+  await expect(page.getByTestId("date-pill")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("kakak-band")).toBeVisible({ timeout: 20_000 });
+  const pill = page.getByTestId("date-pill");
+  // Polled: the launch cover is still fading over everything at first.
+  await expect
+    .poll(
+      async () => {
+        const box = await pill.boundingBox();
+        if (!box) return false;
+        return page.evaluate(
+          ([x, y]) => document.elementFromPoint(x, y)?.closest('[data-testid="date-pill"]') != null,
+          [box.x + box.width / 2, box.y + box.height / 2]
+        );
+      },
+      { timeout: 10_000 }
+    )
+    .toBe(true);
+  await pill.click();
+  await expect(page.getByRole("dialog", { name: "Choose a day" })).toBeVisible();
+  // One room under the page, the band's: the pill adds none of its own.
+  await expect(page.locator("main [aria-hidden=true].h-24")).toHaveCount(1);
 });
