@@ -148,7 +148,7 @@ export function FeaturesPanel() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-semibold text-gray-900">{t("Features", "Fitur")}</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t("Features", "Fitur")}</h2>
         <p className="text-sm text-muted-foreground">
           {t(
             "Turn on what your home needs. Turning something off hides it; nothing is deleted.",
@@ -159,7 +159,7 @@ export function FeaturesPanel() {
 
       {GROUPS.map((group) => (
         <section key={group.title(t)} className="flex flex-col gap-2">
-          <h3 className="px-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+          <h3 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             {group.title(t)}
           </h3>
           <div className="overflow-hidden rounded-xl border bg-card">
@@ -179,11 +179,11 @@ export function FeaturesPanel() {
                     disabled={busy !== null}
                     className="flex min-h-16 w-full items-center gap-3 px-3 py-2 text-left active:bg-muted"
                   >
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-white text-gray-900">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border bg-card text-foreground">
                       <Icon className="size-5" aria-hidden />
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-sm font-medium text-gray-900">{row.label(t)}</span>
+                      <span className="text-sm font-medium text-foreground">{row.label(t)}</span>
                       <span className="text-xs text-muted-foreground">{row.line(t)}</span>
                     </span>
                     {busy === row.key ? (
@@ -193,13 +193,13 @@ export function FeaturesPanel() {
                         aria-hidden="true"
                         className={cn(
                           "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-                          on ? "bg-primary" : "bg-slate-300",
+                          on ? "bg-primary" : "bg-muted",
                           blocked && "opacity-60"
                         )}
                       >
                         <span
                           className={cn(
-                            "absolute top-0.5 size-6 rounded-full bg-white shadow transition-transform",
+                            "absolute top-0.5 size-6 rounded-full bg-card shadow transition-transform",
                             on ? "translate-x-[22px]" : "translate-x-0.5"
                           )}
                         />
@@ -208,7 +208,7 @@ export function FeaturesPanel() {
                   </button>
                   {/* What stays when it's off with open work (D6). */}
                   {row.key === "repairs" && !on && openRepairs > 0 && (
-                    <p className="mx-3 mb-3 rounded-lg bg-muted px-3 py-2 text-xs text-gray-700">
+                    <p className="mx-3 mb-3 rounded-lg bg-muted px-3 py-2 text-xs text-foreground">
                       {t(
                         `${openRepairs} open ${openRepairs === 1 ? "repair stays" : "repairs stay"} saved. Staff can't report new ones while this is off.`,
                         `${openRepairs} perbaikan yang belum selesai tetap tersimpan. Staf tidak bisa melapor yang baru selama fitur ini mati.`
@@ -216,7 +216,7 @@ export function FeaturesPanel() {
                     </p>
                   )}
                   {blocked && (
-                    <p className="mx-3 mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                    <p className="mx-3 mb-3 rounded-lg bg-attention-tint px-3 py-2 text-xs text-attention">
                       {t(
                         `You have ${livePets} ${livePets === 1 ? "pet" : "pets"} in Miamus. Archive them in Pets first; their history stays.`,
                         `Ada ${livePets} hewan di Miamus. Arsipkan dulu di tab Hewan; riwayatnya tetap tersimpan.`

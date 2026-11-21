@@ -74,11 +74,11 @@ export function AboutMiamus() {
     <article className="flex flex-col gap-6 pb-4">
       <header className="flex flex-col items-center gap-3 pt-2 text-center">
         <BrandMark size={64} rounded />
-        <h2 className="text-xl font-semibold tracking-tight text-gray-900">{copy.title}</h2>
-        <p className="text-[15px] text-muted-foreground">{copy.promise}</p>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">{copy.title}</h2>
+        <p className="text-base text-muted-foreground">{copy.promise}</p>
       </header>
 
-      <div className="flex flex-col gap-4 text-[15px] leading-relaxed text-gray-800">
+      <div className="flex flex-col gap-4 text-base leading-relaxed text-foreground">
         {copy.story.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
@@ -86,7 +86,7 @@ export function AboutMiamus() {
 
       {copy.proverb && (
         <figure className="rounded-xl border bg-muted/40 px-4 py-4 text-center">
-          <blockquote className="text-[15px] font-medium italic text-gray-900">
+          <blockquote className="text-base font-medium italic text-foreground">
             “{copy.proverb.text}”
           </blockquote>
           <figcaption className="mt-1.5 text-sm text-muted-foreground">{copy.proverb.note}</figcaption>
@@ -106,7 +106,7 @@ export function AboutMiamus() {
           <BookOpen className="size-5" strokeWidth={1.75} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-base font-semibold text-gray-900">{copy.guide}</span>
+          <span className="text-base font-semibold text-foreground">{copy.guide}</span>
           <span className="text-xs text-muted-foreground">{copy.guideDetail}</span>
         </span>
         <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
@@ -121,7 +121,7 @@ export function AboutMiamus() {
           <MessageSquareText className="size-5" strokeWidth={1.75} />
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="text-base font-semibold text-gray-900">{copy.feedback}</span>
+          <span className="text-base font-semibold text-foreground">{copy.feedback}</span>
           <span className="text-xs text-muted-foreground">{copy.feedbackDetail}</span>
         </span>
         <ChevronRight className="size-5 shrink-0 text-muted-foreground" />
