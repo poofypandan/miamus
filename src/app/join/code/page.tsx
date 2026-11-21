@@ -15,6 +15,7 @@ import { dataProvider } from "@/lib/data";
 import type { HouseCodePerson } from "@/lib/data/types";
 import { storeTenantId } from "@/lib/tenant";
 import { markStaffTipsSeenOnJoin } from "@/lib/whats-new";
+import { markFirstDay } from "@/lib/first-day";
 import { claimFromFragment, codeFromFragment, staffFromFragment, typedHouseCode } from "@/lib/setup-apply";
 import { VideoTip } from "@/components/shared/video-tip";
 
@@ -418,6 +419,8 @@ function ClaimStep({
         storeTenantId(result.household_id);
         rememberStaffOnThisPhone(person);
         markStaffTipsSeenOnJoin();
+        // Their first day (step 8): one quiet line on Tugas Hari Ini.
+        markFirstDay(person.id);
         // A full load, as after an invite link.
         window.location.replace("/staff");
         return;

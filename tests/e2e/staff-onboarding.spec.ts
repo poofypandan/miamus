@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { HOUSEHOLD_ID } from "../fixtures/household";
+import { HOUSEHOLD_ID, MOCHI, SCHEDULES } from "../fixtures/household";
 import { OWNER, OWNER_PROFILE_ID, STAFF_ID, STUB_URL, freshSession, installStub } from "./stub-backend";
 
 // Staff onboarding (docs/private/staff-onboarding-plan.md), step 1: the
@@ -339,6 +339,8 @@ test("staff: her own link asks Anda Sri?; Ya goes to Buat PIN for her, Bukan sho
   for (const d of "2468") await page.getByRole("button", { name: d, exact: true }).click();
   await linked;
   expect(claims).toEqual([{ p_code: "K7P-M2Q", p_staff_id: SRI, p_new_pin: "2468", p_claim: "ABCDEFGHJK" }]);
+  // Her first day starts on this phone (step 8).
+  expect(JSON.parse((await page.evaluate(() => window.localStorage.getItem("miamus:first-day"))) ?? "{}").staffId).toBe(SRI);
 });
 
 test("staff: a link naming someone not on the list just shows the names", async ({ context, page }) => {
@@ -531,4 +533,209 @@ test("en: a trial for someone who does Chores: chores that fail to load say so, 
   fail = false;
   await sheet.getByRole("button", { name: "Try again" }).click();
   await expect(sheet.getByRole("button", { name: "Add Wati" })).toBeEnabled();
+});
+
+// Step 6: the trial reminder's two answers on Today (decision 3), and step 8:
+// the first-day line on Tugas Hari Ini (decision 4).
+
+const localDay = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const WATI_ID = "00000000-0000-4000-8000-00000000c0b1";
+const trialTask = (title: string) => ({
+  id: "00000000-0000-4000-8000-0000000006a1",
+  household_id: HOUSEHOLD_ID,
+  title,
+  category: "errand",
+  assigned_to: OWNER_PROFILE_ID,
+  due_date: localDay(),
+  due_time: null,
+  status: "pending",
+  completed_by: null,
+  completed_at: null,
+  photo_url: null,
+  created_at: "2026-11-01T00:00:00Z",
+  recurrence: "none",
+  recurrence_until: null,
+  parent_task_id: null,
+  requires_supervision: false,
+  before_photo_url: null,
+  after_photo_url: null,
+  location_id: null,
+  spot: null,
+  remind_days_before: 0,
+});
+
+test("en: Decide on Wati's trial: Keep Wati marks it done", async ({ context, page }) => {
+  const staff = [...roster(), person(WATI_ID, "Wati")];
+  const stub = await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true }, chores: [trialTask("Decide on Wati's trial")] });
+  await page.goto("/dashboard");
+  const mine = page.getByRole("region", { name: "My tasks" });
+  await expect(mine.getByText("Decide on Wati's trial")).toBeVisible({ timeout: 20_000 });
+  await expect(mine.getByRole("button", { name: "Wati is leaving" })).toBeVisible();
+  await shot(page, "pr6-en-1-trial-reminder");
+  await mine.getByRole("button", { name: "Keep Wati" }).click();
+  await expect.poll(() => stub.writes.some(([m, t]) => m === "PATCH" && t === "household_tasks")).toBe(true);
+});
+
+test("id: Putuskan masa percobaan Wati: Wati berhenti opens the remove card, then the reminder is done", async ({ context, page }) => {
+  const staff = [...roster(), person(WATI_ID, "Wati")];
+  const stub = await installStub(context, { owner: { locale: "id" }, staff, household: { hasPets: true }, chores: [trialTask("Putuskan masa percobaan Wati")] });
+  const archived: unknown[] = [];
+  await page.route("**/rest/v1/rpc/archive_staff_profile*", async (route) => {
+    const body = route.request().postDataJSON() as { p_staff_id: string };
+    archived.push(body);
+    Object.assign(staff.find((p) => p.id === body.p_staff_id)!, { archived_at: new Date().toISOString() });
+    await route.fulfill({ json: null });
+  });
+  await page.goto("/dashboard");
+  const mine = page.getByRole("region", { name: "Tugas saya" });
+  await mine.getByRole("button", { name: "Wati berhenti" }).click({ timeout: 20_000 });
+  const card = page.getByRole("dialog", { name: "Wati berhenti hari ini" });
+  await expect(card).toBeVisible();
+  await shot(page, "pr6-id-1-trial-leaving");
+  await card.getByRole("button", { name: "Siapa saja" }).click();
+  await card.getByRole("button", { name: "Hapus Wati" }).click();
+  await expect(page.getByText("Wati dihapus. Tugasnya sekarang untuk siapa saja.")).toBeVisible();
+  expect(archived).toEqual([{ p_staff_id: WATI_ID }]);
+  await expect.poll(() => stub.writes.some(([m, t]) => m === "PATCH" && t === "household_tasks")).toBe(true);
+});
+
+test("staff: the first-day line, the day they joined only, gone once tapped", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession(), staffPhone: true });
+  await page.addInitScript(
+    ([staffId, day]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day })),
+    [STAFF_ID, localDay()]
+  );
+  await page.goto("/staff");
+  const line = page.getByTestId("first-day-line");
+  await expect(line).toHaveText("Ini tugas Anda hari ini. Foto Sebelum, foto Sesudah, lalu ketuk Selesai.", { timeout: 20_000 });
+  await shot(page, "pr8-staff-id-1-first-day");
+  await line.click();
+  await expect(line).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText("Ini tugas Anda hari ini.", { exact: false })).toHaveCount(0);
+});
+
+test("staff: no first-day line on another day", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession(), staffPhone: true });
+  await page.addInitScript(
+    ([staffId]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day: "2026-01-01" })),
+    [STAFF_ID]
+  );
+  await page.goto("/staff");
+  await expect(page.getByText("Tugas Hari Ini", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("first-day-line")).toHaveCount(0);
+});
+
+test("staff: a pet routine done today also ends the first-day line (Codex, PR #174)", async ({ context, page }) => {
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    logs: [
+      {
+        id: "00000000-0000-4000-8000-0000000174f1",
+        schedule_id: SCHEDULES[0].id,
+        entity_id: MOCHI.id,
+        module: "pet",
+        photo_url: null,
+        notes: null,
+        staff_id: STAFF_ID,
+        completed_at: new Date().toISOString(),
+        sub_type: "complete",
+      },
+    ],
+  });
+  await page.addInitScript(
+    ([staffId, day]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day })),
+    [STAFF_ID, localDay()]
+  );
+  await page.goto("/staff");
+  await expect(page.getByText("Tugas Hari Ini", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("first-day-line")).toHaveCount(0);
+  // And the record on the phone is gone, not just hidden.
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("miamus:first-day"))).toBeNull();
+});
+
+test("staff: a walk's start photo doesn't end the first-day line; only a finished task does (Codex, PR #174)", async ({ context, page }) => {
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    logs: [
+      {
+        id: "00000000-0000-4000-8000-0000000174f2",
+        schedule_id: SCHEDULES[0].id,
+        entity_id: MOCHI.id,
+        module: "pet",
+        photo_url: null,
+        notes: null,
+        staff_id: STAFF_ID,
+        completed_at: new Date().toISOString(),
+        sub_type: "check_in",
+      },
+    ],
+  });
+  await page.addInitScript(
+    ([staffId, day]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day })),
+    [STAFF_ID, localDay()]
+  );
+  await page.goto("/staff");
+  await expect(page.getByTestId("first-day-line")).toBeVisible({ timeout: 20_000 });
+});
+
+test("staff: a chore someone else finished doesn't end the first-day line (Codex, PR #174)", async ({ context, page }) => {
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    chores: [
+      {
+        ...trialTask("Sapu teras"),
+        id: "00000000-0000-4000-8000-0000000006c1",
+        category: "cleaning",
+        assigned_to: null,
+        status: "completed",
+        completed_by: OWNER_PROFILE_ID,
+        completed_at: new Date().toISOString(),
+        before_photo_url: "a.jpg",
+        after_photo_url: "b.jpg",
+      },
+    ],
+  });
+  await page.addInitScript(
+    ([staffId, day]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day })),
+    [STAFF_ID, localDay()]
+  );
+  await page.goto("/staff");
+  await expect(page.getByTestId("first-day-line")).toBeVisible({ timeout: 20_000 });
+});
+
+test("staff: a chore carried over from yesterday and finished today ends the first-day line (Codex, PR #174)", async ({ context, page }) => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    chores: [
+      {
+        ...trialTask("Sapu teras"),
+        id: "00000000-0000-4000-8000-0000000006c2",
+        category: "cleaning",
+        assigned_to: STAFF_ID,
+        due_date: `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`,
+        status: "completed",
+        completed_by: STAFF_ID,
+        completed_at: new Date().toISOString(),
+        before_photo_url: "a.jpg",
+        after_photo_url: "b.jpg",
+      },
+    ],
+  });
+  await page.addInitScript(
+    ([staffId, day]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day })),
+    [STAFF_ID, localDay()]
+  );
+  await page.goto("/staff");
+  await expect(page.getByText("Tugas Hari Ini", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("first-day-line")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("miamus:first-day"))).toBeNull();
 });

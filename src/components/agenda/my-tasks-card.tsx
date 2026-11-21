@@ -14,6 +14,8 @@ import {
   MapPin,
   ReceiptText,
   Repeat,
+  UserMinus,
+  UserRoundCheck,
 } from "lucide-react";
 import { useT } from "@/context/owner-locale-context";
 import { useFormatTime } from "@/components/ui/ui-labels";
@@ -46,6 +48,8 @@ export function MyTasksCard({
   onOpen,
   billLine,
   couldntLine,
+  trialOf,
+  onTrialLeave,
 }: {
   /** Already the admin's own, in order (myOccurrences). */
   occurrences: ChoreOccurrence[];
@@ -64,6 +68,13 @@ export function MyTasksCard({
    * owner's language ("Couldn't: other · Rina · 4:05 PM"), or null.
    */
   couldntLine?: (occurrence: ChoreOccurrence) => string | null;
+  /**
+   * A trial reminder (staff onboarding step 6, decision 3): the person it is
+   * about, still on the staff list, or null for any other chore.
+   */
+  trialOf?: (occurrence: ChoreOccurrence) => { id: string; name: string } | null;
+  /** "Sri is leaving": opens the remove card. */
+  onTrialLeave?: (occurrence: ChoreOccurrence, person: { id: string; name: string }) => void;
 }) {
   const t = useT();
   // Rows being saved right now show as done at once, and go back if the
@@ -156,8 +167,10 @@ export function MyTasksCard({
           locationName={roomName(o.task.location_id, o.task.spot)}
           billLine={billLine?.(o, isDone(o)) ?? null}
           couldntLine={isDone(o) ? null : (couldntLine?.(o) ?? null)}
+          trial={mode === "today" && !isDone(o) ? (trialOf?.(o) ?? null) : null}
           onFinish={() => void finish(o)}
           onOpen={() => onOpen(o)}
+          onTrialLeave={(person) => onTrialLeave?.(o, person)}
         />
       ))}
     </section>
@@ -173,8 +186,10 @@ function MyTaskRow({
   locationName,
   billLine,
   couldntLine,
+  trial,
   onFinish,
   onOpen,
+  onTrialLeave,
 }: {
   occurrence: ChoreOccurrence;
   done: boolean;
@@ -184,8 +199,10 @@ function MyTaskRow({
   locationName: string | null;
   billLine: string | null;
   couldntLine: string | null;
+  trial: { id: string; name: string } | null;
   onFinish: () => void;
   onOpen: () => void;
+  onTrialLeave: (person: { id: string; name: string }) => void;
 }) {
   const t = useT();
   const formatTime = useFormatTime();
@@ -194,6 +211,7 @@ function MyTaskRow({
   const carried = occurrence.overdue && !done;
 
   return (
+    <>
     <div
       className={cn(
         "flex min-h-12 items-center gap-1 rounded-lg border border-transparent pr-1",
@@ -279,5 +297,28 @@ function MyTaskRow({
         </span>
       </button>
     </div>
+    {/* The trial's two answers (decision 3): Keep marks the reminder done;
+        Leaving opens the remove card. Nothing about the trial is stored. */}
+    {trial && (
+      <div className="flex gap-2 pb-1.5 pl-12 pr-1">
+        <button
+          type="button"
+          onClick={onFinish}
+          className="flex min-h-10 items-center gap-1.5 rounded-xl border bg-white px-3 text-sm font-medium text-gray-900 active:bg-muted"
+        >
+          <UserRoundCheck className="size-4 text-emerald-600" aria-hidden />
+          {t(`Keep ${trial.name}`, `Pertahankan ${trial.name}`)}
+        </button>
+        <button
+          type="button"
+          onClick={() => onTrialLeave(trial)}
+          className="flex min-h-10 items-center gap-1.5 rounded-xl border bg-white px-3 text-sm font-medium text-gray-900 active:bg-muted"
+        >
+          <UserMinus className="size-4 text-red-600" aria-hidden />
+          {t(`${trial.name} is leaving`, `${trial.name} berhenti`)}
+        </button>
+      </div>
+    )}
+    </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { AREAS } from "@/lib/staff-areas";
-import { startTransition, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useMemo, useRef, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
 import { Bell, CalendarDays, CalendarOff, ChevronRight, Clock, CookingPot, Moon, PawPrint, Plus, ShoppingBasket, Smartphone, Sparkles, Wrench } from "lucide-react";
@@ -13,6 +13,10 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { FilterPill } from "@/components/shared/filter-pill";
 import { OverdueSection } from "@/components/agenda/overdue-section";
 import { MyTasksCard } from "@/components/agenda/my-tasks-card";
+import { RemoveStaffCard, type RemoveChoice } from "@/components/dashboard/remove-staff-card";
+import { staffWithName, trialNameFrom } from "@/lib/staff-onboarding";
+import { dataProvider } from "@/lib/data";
+import type { StaffProfile } from "@/types/database";
 import { FirstRunCard } from "@/components/agenda/first-run-card";
 import { TodayStatus } from "@/components/agenda/today-status";
 import { WhatsNewCard } from "@/components/shared/whats-new";
@@ -141,6 +145,7 @@ export function AgendaTab() {
     pendingIds,
     leaveRequests,
     routineProposals,
+    refresh: refreshHousehold,
   } = useHousehold();
   const householdName = useHouseholdName();
   // "Who lives here?" (Phase 162): with pets off, Today says nothing about
@@ -151,7 +156,20 @@ export function AgendaTab() {
   // Nothing anywhere yet, not just nothing today: the first screen after
   // onboarding, which greets rather than reports (Phase 120).
   const brandNew = pets.length === 0 && householdTasks.length === 0;
-  const { allProfiles } = useStaffProfiles();
+  const { allProfiles, reload: reloadStaff } = useStaffProfiles();
+  // A trial reminder's "Sri is leaving" (staff onboarding step 6): the remove
+  // card from Settings → Staff, then the reminder is marked done.
+  const [leaving, setLeaving] = useState<{ profile: StaffProfile; occurrence: ChoreOccurrence } | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const trialOf = useCallback(
+    (occurrence: ChoreOccurrence) => {
+      const name = trialNameFrom(occurrence.task.title);
+      if (!name) return null;
+      const person = staffWithName(name, allProfiles ?? []);
+      return person ? { id: person.id, name: person.name } : null;
+    },
+    [allProfiles]
+  );
   const staffName = useStaffNameLookup(allProfiles, t("Someone", "Seseorang"));
   const roomName = useLocationName();
   const allChores = useChoreOccurrences();
@@ -179,6 +197,33 @@ export function AgendaTab() {
     [householdTasks, memberProfile]
   );
   const { finish } = useFinishMyChore();
+
+  async function removeAfterTrial(person: StaffProfile, choice: RemoveChoice) {
+    if (removing || !leaving) return;
+    setRemoving(true);
+    try {
+      await dataProvider.archiveStaffProfile(person.id, choice.giveTo);
+      await reloadStaff();
+      // The decision is made: the reminder is done.
+      await finish(leaving.occurrence).catch(() => null);
+      // Then their chores and routines, which changed hands, shown at once.
+      // After the finish, so a slower read can't bring the reminder back as
+      // still open (Codex, PR #174).
+      void refreshHousehold({ silent: true });
+      const to = choice.giveTo ? (allProfiles ?? []).find((p) => p.id === choice.giveTo)?.name : null;
+      toast.success(
+        to
+          ? t(`${person.name} removed. Their work is ${to}'s now.`, `${person.name} dihapus. Tugasnya sekarang milik ${to}.`)
+          : t(`${person.name} removed. Their work is for anyone now.`, `${person.name} dihapus. Tugasnya sekarang untuk siapa saja.`)
+      );
+      setLeaving(null);
+    } catch (err) {
+      console.error(err);
+      toast.error(t(`Couldn't remove ${person.name}`, `Gagal menghapus ${person.name}`));
+    } finally {
+      setRemoving(false);
+    }
+  }
   // Held as a key, as the staff list does: occurrences are rebuilt on every
   // write, so a captured one would go stale the moment the chore is saved.
   const [myOpenKey, setMyOpenKey] = useState<string | null>(null);
@@ -863,8 +908,20 @@ export function AgendaTab() {
               return (await finish(occurrence)) !== null;
             }}
             onOpen={(occurrence) => setMyOpenKey(occurrence.key)}
+            trialOf={trialOf}
+            onTrialLeave={(occurrence, person) => {
+              const profile = (allProfiles ?? []).find((p) => p.id === person.id);
+              if (profile) setLeaving({ profile, occurrence });
+            }}
           />
         )}
+        <RemoveStaffCard
+          person={leaving?.profile ?? null}
+          roster={allProfiles ?? []}
+          busy={removing}
+          onCancel={() => setLeaving(null)}
+          onRemove={(person, choice) => void removeAfterTrial(person, choice)}
+        />
 
         {/* Who is on track, at a glance (owners, 11 Nov): what Today is
             opened for in a home with staff. A row opens that person's day
