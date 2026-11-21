@@ -90,9 +90,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${fontSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* Before the first paint: on an installed Android app, lift the
-            launch stage to the screen's centre, where the phone's own splash
-            drew the mark (lib/android-launch). Sets one CSS variable. */}
+        {/* Before the first paint: on an installed app, lift the launch
+            stage to the screen's true centre, where the phone's splash or our
+            iPhone launch screen drew the mark (lib/android-launch). Sets one
+            CSS variable. */}
         <script dangerouslySetInnerHTML={{ __html: LAUNCH_LIFT_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col">
