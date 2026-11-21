@@ -128,6 +128,8 @@ for (const locale of ["en", "id"] as const) {
 
     await page.goto("/dashboard/approvals");
     await expect(page.getByText("Maya Putri")).toBeVisible({ timeout: 20_000 });
+    // Every heading in the owner's language (the operator may read it in Indonesian).
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText(locale === "id" ? "Permintaan rumah baru" : "Household requests");
     const card = page.locator("[data-slot=card]").filter({ hasText: "Maya Putri" });
     await expect(card).toContainText(locale === "id" ? "Ingin dibantu" : "Wants help with");
     await expect(card).toContainText("Staff at home, Repairs");
