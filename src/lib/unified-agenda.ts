@@ -99,6 +99,26 @@ export function isEntryDone(entry: UnifiedAgendaEntry): boolean {
 }
 
 /**
+ * What has been finished on the day, for Latest (Today v3): every completed
+ * chore, the admin's own among them (they count in the status ring too), and
+ * every pet a routine has been through, even while others in the same group
+ * are still waiting (each completion counts in the ring as it lands). A
+ * partly finished routine comes back narrowed to its finished pets, so its
+ * row names and shows only those (Codex, PR #181).
+ */
+export function finishedEntries(params: {
+  groups: AgendaGroup[];
+  chores: ChoreOccurrence[];
+}): UnifiedAgendaEntry[] {
+  const groups = params.groups.flatMap((group) => {
+    const items = group.items.filter((item) => item.status === "completed");
+    return items.length > 0 ? [{ ...group, items }] : [];
+  });
+  const chores = params.chores.filter((occurrence) => occurrence.status === "completed");
+  return buildUnifiedAgenda({ groups, chores });
+}
+
+/**
  * Today's rolled-over chores, lifted out of the timeline (Phase 113).
  *
  * They used to sit in it at their old time, marked "carried over" — which put

@@ -82,6 +82,7 @@ import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import {
   buildUnifiedAgenda,
+  finishedEntries,
   isEntryDone,
   splitOverdue,
   weekStartOf,
@@ -235,8 +236,12 @@ export function AgendaTab() {
   );
   const entries = useMemo(() => applyAgendaFilter(allEntries, filter), [allEntries, filter]);
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
-  /** Finished today, the latest first by its time: what Latest shows. */
-  const finished = useMemo(() => allEntries.filter(isEntryDone).reverse(), [allEntries]);
+  /**
+   * Finished on the day: what Latest shows (latestRows puts the latest
+   * first). From the whole day, the admin's own chores and the finished pets
+   * of a routine still under way included, as the status ring counts them.
+   */
+  const finished = useMemo(() => finishedEntries({ groups, chores: allChores }), [groups, allChores]);
 
   // Things to buy (Phase 154): one quiet line here instead of a banner on
   // every tab. Items marked running low or out, plus the staff's notes.
