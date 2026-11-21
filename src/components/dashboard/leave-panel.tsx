@@ -47,7 +47,7 @@ export function LeavePanel({ staffName }: { staffName: (id: string) => string })
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("Leave", "Cuti")}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t("Leave", "Cuti")}</h2>
       <Card className="py-2">
         <CardContent className="flex flex-col divide-y px-0">
           {open.map((leave) => {
@@ -58,7 +58,7 @@ export function LeavePanel({ staffName }: { staffName: (id: string) => string })
                 href={leaveApprovalPath(leave.id)}
                 className="flex items-center gap-3 px-4 py-3 text-sm active:bg-muted/50"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                   <CalendarOff className="size-4" />
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
@@ -67,12 +67,12 @@ export function LeavePanel({ staffName }: { staffName: (id: string) => string })
                 </span>
                 <Badge
                   className={cn(
-                    "shrink-0 text-[10px]",
+                    "shrink-0 text-xs",
                     leave.status === "pending"
-                      ? "bg-slate-100 text-slate-700"
+                      ? "bg-muted text-muted-foreground"
                       : away
-                        ? "bg-red-100 text-red-700"
-                        : "bg-emerald-100 text-emerald-800"
+                        ? "bg-urgent-tint text-urgent"
+                        : "bg-done-tint text-done-foreground"
                   )}
                 >
                   {leave.status === "pending"

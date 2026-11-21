@@ -42,7 +42,7 @@ export function LanguageSettings() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t.heading}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t.heading}</h2>
       <Card className="py-4">
         <CardContent className="flex flex-col gap-3 px-4">
           <SegmentedControl
@@ -96,8 +96,8 @@ export function LanguageChoice({ onChosen }: { onChosen?: (locale: OwnerLocale) 
             className={cn(
               "flex min-h-[56px] items-center justify-between gap-3 rounded-xl border px-4 text-left text-base font-medium transition-colors",
               current
-                ? "border-primary bg-primary/5 text-gray-900"
-                : "border-border bg-card text-gray-900 active:bg-muted"
+                ? "border-primary bg-primary/5 text-foreground"
+                : "border-border bg-card text-foreground active:bg-muted"
             )}
           >
             {LOCALE_NAMES[value]}
@@ -134,7 +134,7 @@ export function LanguagePrompt() {
     <Dialog open={open} onOpenChange={(next) => !next && setDismissed(true)}>
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <span className="flex size-9 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+          <span className="flex size-9 items-center justify-center rounded-full bg-muted text-muted-foreground">
             <Languages className="size-5" />
           </span>
           <DialogTitle>

@@ -39,9 +39,9 @@ export function SettingsRow({
       className={`flex min-h-[52px] items-center gap-3 px-4 text-left text-sm active:bg-muted${wrap ? " py-3" : ""}`}
     >
       {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
-      <span className={`min-w-0 flex-1 font-medium text-gray-900 ${wrap ? "leading-snug" : "truncate"}`}>{label}</span>
+      <span className={`min-w-0 flex-1 font-medium text-foreground ${wrap ? "leading-snug" : "truncate"}`}>{label}</span>
       {detail && (
-        <span className={waiting ? "text-xs font-medium text-amber-700" : "text-xs text-muted-foreground"}>
+        <span className={waiting ? "text-xs font-medium text-attention" : "text-xs text-muted-foreground"}>
           {detail}
         </span>
       )}
