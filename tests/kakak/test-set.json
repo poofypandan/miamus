@@ -7789,6 +7789,556 @@
         ]
       ],
       "note": "Fable S1 (with the three-section card): Santan is Out, so already on the shopping list. Her line may say so; it must never say she is adding it."
+    },
+    {
+      "id": "K189",
+      "sentence": "Masak apa malam ini?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "nasi goreng",
+                "rendang daging"
+              ]
+            ],
+            "avoids": [
+              "soto",
+              "sayur asem",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "PR C1: a short reply, no card. The block lists the ready ones first (Nasi goreng, Rendang daging); up to three, never Soto or Sayur asem (missing two, or not checkable)."
+    },
+    {
+      "id": "K190",
+      "sentence": "What can we cook tonight?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "recipes": [
+          {
+            "ref": "D1",
+            "name": "Opor ayam",
+            "state": "missing",
+            "missing": [
+              "Santan"
+            ],
+            "onList": [
+              "Santan"
+            ],
+            "unchecked": [
+              "Serai"
+            ]
+          },
+          {
+            "ref": "D3",
+            "name": "Soto ayam",
+            "state": "missing",
+            "missing": [
+              "Ayam",
+              "Bihun"
+            ],
+            "onList": [
+              "Bihun"
+            ],
+            "unchecked": []
+          },
+          {
+            "ref": "D4",
+            "name": "Sayur asem",
+            "state": "unknown",
+            "missing": [],
+            "unchecked": [
+              "Asam jawa",
+              "Kacang panjang"
+            ]
+          }
+        ],
+        "menu": []
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "opor"
+              ],
+              [
+                "santan",
+                "coconut milk"
+              ]
+            ],
+            "avoids": [
+              "nasi goreng",
+              "rendang",
+              "ready to cook",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "PR C1: nothing is ready. The ones missing least, with what each needs; never a recipe that isn't saved, never 'ready'."
+    },
+    {
+      "id": "K191",
+      "sentence": "Kak, masak apa malam ini?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "recipes": [
+          {
+            "ref": "D1",
+            "name": "Opor ayam",
+            "state": "ready",
+            "missing": [],
+            "unchecked": [],
+            "usesSoon": [
+              {
+                "name": "Ayam",
+                "expiresOn": "2026-11-12"
+              }
+            ]
+          },
+          {
+            "ref": "D2",
+            "name": "Nasi goreng",
+            "state": "ready",
+            "missing": [],
+            "unchecked": []
+          },
+          {
+            "ref": "D3",
+            "name": "Soto ayam",
+            "state": "missing",
+            "missing": [
+              "Bihun"
+            ],
+            "onList": [
+              "Bihun"
+            ],
+            "unchecked": []
+          }
+        ],
+        "menu": []
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "opor"
+              ],
+              [
+                "ayam"
+              ]
+            ],
+            "avoids": [
+              "sayur asem",
+              "rendang",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "PR C1: Ayam expires tomorrow, so Opor (which uses it) goes first, with why."
+    },
+    {
+      "id": "K192",
+      "sentence": "What can we cook tonight?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "recipes": [],
+        "menu": []
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "no saved recipe",
+                "no recipes",
+                "don't have any",
+                "haven't saved",
+                "aren't any",
+                "any saved recipe",
+                "don't see any",
+                "no recipe"
+              ],
+              [
+                "menu"
+              ]
+            ],
+            "avoids": [
+              "opor",
+              "nasi goreng",
+              "rendang",
+              "soto",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "PR C1: no saved recipes. She says so and points to Kitchen → Menu; never makes one up. Run 44737820659: \"I don't see any saved recipes yet\" is the same answer, so it counts."
+    },
+    {
+      "id": "K193",
+      "sentence": "What can we cook tonight? Put the first one on the menu.",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "plan_dish",
+                "fields": {
+                  "recipe": "D2",
+                  "dish_name": "none",
+                  "day": "2026-11-11",
+                  "meal": "dinner",
+                  "servings": 0,
+                  "add_missing": false
+                }
+              }
+            ],
+            "mentions": [
+              [
+                "nasi goreng"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "PR C1: the first in the block's order is Nasi goreng (ready), tonight's dinner, nothing to add."
+    },
+    {
+      "id": "K194",
+      "sentence": "Besok makan apa?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "nasi goreng"
+              ],
+              [
+                "siang"
+              ]
+            ],
+            "avoids": [
+              "sayur asem",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The wife's questions (owner, 20 Nov): the menu for a day that has a dish. Tomorrow (Thursday 12 Nov) lunch is Nasi goreng; nothing else is planned that day. No card. She may add ideas for the unplanned dinner (run 44737820659 named Rendang daging and Opor ayam, which is fine); the check is that she gives the planned lunch."
+    },
+    {
+      "id": "K195",
+      "sentence": "What's on the menu this week?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "nasi goreng"
+              ],
+              [
+                "soto"
+              ]
+            ],
+            "avoids": [
+              "opor",
+              "rendang",
+              "sayur asem",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The wife's questions: the coming week from 'Menu, from today' (Nasi goreng Thursday lunch, Soto ayam Sunday dinner). Never a dish that isn't planned. No card."
+    },
+    {
+      "id": "K196",
+      "sentence": "Kita masih punya telur?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "telur"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The wife's questions: what we have. Telur is listed and not marked Out; Kakak is never given an amount, so she may say it isn't marked habis and where the amount shows (Dapur → Makanan), never a number. No card."
+    },
+    {
+      "id": "K197",
+      "sentence": "Do we still have coconut milk?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "out",
+                "ran out",
+                "none left",
+                "no more",
+                "shopping list",
+                "run out"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The wife's questions: Santan (I12) is marked Out, so it is already on the shopping list. She says so; no card adding it again."
+    },
+    {
+      "id": "K198",
+      "sentence": "Perlu beli apa ya?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "belanja"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The wife's questions: what to buy. The list itself is in Dapur → Belanja (Kakak doesn't see all of it yet); she may name what she knows is Out, such as Santan, and points there. No card."
+    },
+    {
+      "id": "K199",
+      "sentence": "masak apa ya hari ini",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "kitchen",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "nasi goreng",
+                "rendang daging"
+              ]
+            ],
+            "avoids": [
+              "soto",
+              "sayur asem",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "The wife's questions, casual: what to cook today (PR C1). Ready first (Nasi goreng, Rendang daging); no card until she picks one."
     }
   ]
 }

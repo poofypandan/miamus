@@ -37,12 +37,12 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: ask Kakak if you can cook it", id: "Baru: tanya Kakak, bahannya lengkap?" },
     steps: {
       en: [
-        "Say what you're cooking: \"We're making opor tonight. Do we have everything?\" Kakak checks your saved recipe against what is at home and answers in one line.",
+        "Say what you're cooking: \"We're making opor tonight. Do we have everything?\" Kakak checks your saved recipe against what is at home. Not sure? Ask \"What can we cook tonight?\"",
         "Her card puts the dish on the menu and what is missing on the shopping list. Nothing is saved until you tap Looks right.",
         "No saved recipe for it? She says so. Add it once in Kitchen → Menu and she can check it next time.",
       ],
       id: [
-        "Sebutkan yang mau dimasak: \"Malam ini opor, bahannya lengkap?\" Kakak mengecek resep yang tersimpan dengan stok di rumah, lalu menjawab singkat.",
+        "Sebutkan yang mau dimasak: \"Malam ini opor, bahannya lengkap?\" Kakak mengecek resep yang tersimpan dengan stok di rumah. Belum tahu? Tanya \"Masak apa malam ini?\"",
         "Kartunya memasukkan masakan ke menu dan yang kurang ke daftar belanja. Tidak ada yang tersimpan sebelum Anda ketuk Sudah benar.",
         "Resepnya belum ada? Kakak akan bilang. Tambahkan sekali di Dapur → Menu, nanti Kakak bisa mengeceknya.",
       ],

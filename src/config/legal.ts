@@ -260,6 +260,10 @@ export const LEGAL = {
   // photo's own location data is removed on the phone (the English already
   // did; PR #161 makes that true when compression fails, too). Nothing
   // stored, collected or shared changes. Set effectiveDate to the merge day.
+  // No version of its own, no policy change (PR C1, "What can we cook tonight?"):
+  // the recipe lines are listed ready first, and say "uses soon" with an
+  // ingredient's use-by date, which is already sent while Ingredients are
+  // on. Nothing new is sent or stored.
   policyVersion: "2026-11-21.2",
   effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
