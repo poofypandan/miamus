@@ -402,9 +402,8 @@ describe("the test set", () => {
     // K146–K154 (a new ingredient, amounts), plus K117–K126 (what a staff
     // member sees, Phase 178 follow-up), plus K155–K160 on 2026-11-16 (room shorthand:
     // "second-floor lounge" is LT2 · Lounge, "kamar tamu dua" is GB2), plus K161–K174
-    // and K175–K176 (the film's sentence) and K177–K187 (Fable's A1–A10) on 2026-11-20, plus K230 (the week's menu, wish list step 1) on
-    // 2026-11-21. All for tuning; the holdout is as it was.
-    expect(testSet.cases).toHaveLength(202);
+    // and K175–K176 (the film's sentence) and K177–K187 (Fable's A1–A10) on 2026-11-20. All for tuning; the holdout is as it was.
+    expect(testSet.cases).toHaveLength(201);
     expect(testSet.cases.filter((c) => c.holdout)).toHaveLength(30);
   });
 

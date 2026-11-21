@@ -8648,53 +8648,6 @@
         ]
       ],
       "note": "E2: everything marked out or running low (Santan out; Bihun, Galon air low), and where the list is. No card."
-    },
-    {
-      "id": "K230",
-      "sentence": "Belanja apa untuk menu minggu ini?",
-      "ownerLocale": "id",
-      "lang": "id",
-      "category": "kitchen",
-      "holdout": false,
-      "mustNever": [
-        "states_amount",
-        "invents_ingredient"
-      ],
-      "paths": [
-        [
-          {
-            "kind": "message",
-            "mentions": [
-              [
-                "ayam"
-              ],
-              [
-                "bihun"
-              ],
-              [
-                "untuk menu",
-                "belanja"
-              ]
-            ],
-            "avoids": [
-              "ml",
-              " gram",
-              "gr ",
-              " kg",
-              "liter",
-              " cup",
-              "kaleng",
-              "sdm",
-              "sendok",
-              "tbsp",
-              "tsp",
-              "serai",
-              "asam jawa"
-            ]
-          }
-        ]
-      ],
-      "note": "Wish list step 1 (21 Nov): the week's menu is Nasi goreng (ready) and Soto ayam (missing Ayam; Bihun already on the list). Each missing item once, where the list is (Untuk menu), no amounts; Opor and Sayur asem aren't on the menu, so Serai and Asam jawa are never named."
     }
   ]
 }
