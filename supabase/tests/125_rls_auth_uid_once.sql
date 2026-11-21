@@ -53,7 +53,8 @@ select pg_temp.ok((select count(*) = 1 from public.households), 'and only their 
 select pg_temp.ok((select count(*) = 1 from public.owner_invites) and (select count(*) = 1 from public.staff_invites),
   'and their household''s invites');
 insert into public.household_locations (household_id, name) values ('00000000-0000-0000-0000-0000000125f1', 'Dapur');
-select pg_temp.ok((select count(*) = 1 from public.household_locations where name = 'Dapur'), 'an admin adds a room');
+select pg_temp.ok((select count(*) = 1 from public.household_locations
+                     where name = 'Dapur' and household_id = '00000000-0000-0000-0000-0000000125f1'), 'an admin adds a room');
 update public.leave_requests set status = 'rejected' where id = '00000000-0000-0000-0000-0000000125c1';
 select pg_temp.ok((select status = 'rejected' from public.leave_requests where id = '00000000-0000-0000-0000-0000000125c1'),
   'an admin decides leave');
@@ -90,7 +91,8 @@ select pg_temp.ok((select count(*) = 0 from public.household_locations) and (sel
   'and none of A''s rooms or invites');
 delete from public.household_locations where household_id = '00000000-0000-0000-0000-0000000125f1';
 reset role;
-select pg_temp.ok((select count(*) = 1 from public.household_locations where name = 'Dapur'),
+select pg_temp.ok((select count(*) = 1 from public.household_locations
+                     where name = 'Dapur' and household_id = '00000000-0000-0000-0000-0000000125f1'),
   'and cannot delete A''s rooms');
 
 rollback;
