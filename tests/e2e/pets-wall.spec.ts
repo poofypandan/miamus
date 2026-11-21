@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { HOUSEHOLD_ID } from "../fixtures/household";
+import { HOUSEHOLD_ID, SCHEDULES } from "../fixtures/household";
 import { installStub, type Stub } from "./stub-backend";
 
 // The Pets tab as a wall (21 Nov; Fable's 08, section 5, decisions 19–35):
@@ -97,6 +97,35 @@ test("a late routine turns the line amber with its mark, by Today's rule", async
   await expect(wall.getByRole("button", { name: /^Mochi\. Late: / })).toBeVisible();
   // The facts give way: never two lines under a name.
   await expect(wall.getByRole("button", { name: /^Mochi/ })).not.toContainText("Toy poodle");
+});
+
+test("a routine staff said couldn't be done is explained, never late (Codex, PR #197)", async ({ context, page }) => {
+  await page.clock.setFixedTime(new Date("2026-11-21T08:30:00+07:00"));
+  const potty = SCHEDULES.find((s) => s.entity_id === "00000000-0000-4000-8000-0000000000a1" && s.title === "Pipis & Pup")!;
+  const stub = await installStub(context, {
+    owner: { locale: "en" },
+    exceptions: [
+      {
+        id: "00000000-0000-4000-8000-000000197001",
+        household_id: HOUSEHOLD_ID,
+        chore_id: null,
+        schedule_id: potty.id,
+        entity_id: potty.entity_id,
+        occurs_on: "2026-11-21",
+        slot_time: "07:00:00",
+        reason: "other",
+        note: null,
+        photo_url: null,
+        inventory_item_id: null,
+        staff_id: null,
+        created_at: "2026-11-21T00:10:00Z",
+      },
+    ],
+  });
+  stub.entities[0].metadata = { breed: "Toy poodle" };
+  const wall = await openPets(page);
+  // The 07:00 potty break is explained, and the 08:00 medicine is inside its hour: no amber.
+  await expect(wall.getByRole("button", { name: "Mochi. Toy poodle." })).toBeVisible();
 });
 
 test("in Bahasa Indonesia, and a pet at the clinic says so quietly", async ({ context, page }) => {

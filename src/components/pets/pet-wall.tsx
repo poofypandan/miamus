@@ -5,6 +5,9 @@ import { Stethoscope, TriangleAlert } from "lucide-react";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useToday } from "@/hooks/use-today";
+import { useMinuteClock } from "@/hooks/use-minute-clock";
+import { useTaskExceptions } from "@/hooks/use-task-exceptions";
+import { itemException } from "@/lib/couldnt-do";
 import { earliestLate, factsLine, lateLine, tilePhotoWidth, wallLayout, type WallLayout } from "@/lib/pet-wall";
 import { getPetMeta, isAdmitted, petFocus, petPictureKind } from "@/lib/pets";
 import { photoSrc } from "@/lib/photos";
@@ -60,14 +63,21 @@ function PetTile({ pet, layout, single }: { pet: TaskEntity; layout: WallLayout;
   const kind = petPictureKind(pet);
   const atVet = isAdmitted(pet);
 
-  // Today's routines for this pet, by Today's rule. Nothing is late while the
-  // pet is at the clinic: its routines are paused.
+  // Today's routines for this pet, by Today's rule (useStaffProgress): read
+  // again each minute, so a routine that crosses its grace turns amber while
+  // the tab is open; one that someone said couldn't be done is explained,
+  // never late (Codex, PR #197). Nothing is late while the pet is at the
+  // clinic: its routines are paused.
+  const { exceptions } = useTaskExceptions();
+  const clock = useMinuteClock();
   const late = useMemo(() => {
     if (atVet) return null;
-    const now = new Date();
-    const items = buildAgenda({ date: todayStr, entities: [pet], schedules, logs, now }).flatMap((g) => g.items);
+    const now = new Date(clock);
+    const items = buildAgenda({ date: todayStr, entities: [pet], schedules, logs, now })
+      .flatMap((g) => g.items)
+      .filter((item) => !itemException(exceptions, todayStr, item));
     return earliestLate(items, todayStr, now.getHours() * 60 + now.getMinutes());
-  }, [atVet, todayStr, pet, schedules, logs]);
+  }, [atVet, todayStr, pet, schedules, logs, exceptions, clock]);
 
   const facts = factsLine({ breed: meta.breed }, layout.columns);
   const line = late
