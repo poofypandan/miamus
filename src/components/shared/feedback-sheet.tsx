@@ -101,10 +101,10 @@ function FeedbackForm({ locale, asStaff, onDone }: { locale: OwnerLocale; asStaf
           <SheetTitle>{tr("Send feedback", "Kirim masukan")}</SheetTitle>
           <SheetDescription>{tr("Sent", "Terkirim")}</SheetDescription>
         </SheetHeader>
-        <span className="flex size-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+        <span className="flex size-14 items-center justify-center rounded-full bg-done-tint text-done-foreground">
           <CheckCircle2 className="size-7" strokeWidth={1.75} />
         </span>
-        <p className="text-lg font-semibold text-gray-900">{tr("Thank you", "Terima kasih")}</p>
+        <p className="text-lg font-semibold text-foreground">{tr("Thank you", "Terima kasih")}</p>
         <p className="max-w-xs text-sm text-muted-foreground">
           {tr("Your message reached the Miamus team.", "Pesan Anda sudah sampai ke tim Miamus.")}
         </p>
@@ -147,7 +147,7 @@ function FeedbackForm({ locale, asStaff, onDone }: { locale: OwnerLocale; asStaf
           />
           <p
             id={ids.count}
-            className={cn("text-right text-[11px] tabular-nums", left < 100 ? "text-amber-700" : "text-muted-foreground")}
+            className={cn("text-right text-xs tabular-nums", left < 100 ? "text-attention" : "text-muted-foreground")}
           >
             {left < 100
               ? tr(`${left} characters left`, `Sisa ${left} karakter`)
@@ -171,7 +171,7 @@ function FeedbackForm({ locale, asStaff, onDone }: { locale: OwnerLocale; asStaf
                   onClick={() => setCategory(on ? null : kind)}
                   className={cn(
                     "flex min-h-[40px] items-center gap-1 rounded-full border px-3.5 text-sm",
-                    on ? "border-gray-900 bg-gray-900 font-medium text-white" : "bg-card active:bg-muted"
+                    on ? "border-foreground bg-foreground font-medium text-background" : "bg-card active:bg-muted"
                   )}
                 >
                   {on && <Check className="size-3.5" />}
@@ -182,7 +182,7 @@ function FeedbackForm({ locale, asStaff, onDone }: { locale: OwnerLocale; asStaf
           </div>
         </div>
 
-        <p className="text-[11px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {tr(
             "Sent with the screen you were on and the app version. Nothing else from your phone.",
             "Dikirim bersama halaman yang sedang dibuka dan versi aplikasi. Tidak ada data lain dari HP Anda."

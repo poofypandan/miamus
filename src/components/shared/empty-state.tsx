@@ -33,7 +33,7 @@ export function EmptyState({
         <Icon className="size-5" />
       </span>
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-gray-900">{title}</p>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       {children && <div className="flex w-full flex-wrap justify-center gap-2">{children}</div>}

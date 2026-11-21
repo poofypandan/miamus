@@ -102,21 +102,21 @@ export function WhatsNewCard({ id, onTry }: { id: string; onTry?: () => void }) 
   return (
     <section
       aria-label={entry.title[locale]}
-      className="relative flex flex-col gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 animate-view-fade motion-reduce:animate-none"
+      className="relative flex flex-col gap-2 rounded-2xl bg-card px-4 py-3 shadow-card animate-view-fade motion-reduce:animate-none"
     >
       <button
         type="button"
         onClick={close}
         aria-label={t("Close", "Tutup")}
-        className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-zinc-200"
+        className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
       >
         <X className="size-4" />
       </button>
-      <h3 className="flex items-center gap-1.5 pr-8 text-sm font-semibold text-gray-900">
+      <h3 className="flex items-center gap-1.5 pr-8 text-sm font-semibold text-foreground">
         <Sparkles className="size-4 shrink-0" aria-hidden />
         {entry.title[locale]}
       </h3>
-      <ol className="flex list-decimal flex-col gap-1 pl-5 text-[13px] leading-snug text-gray-700">
+      <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm leading-snug text-foreground">
         {entry.steps[locale].map((step) => (
           <li key={step}>{step}</li>
         ))}
@@ -191,24 +191,24 @@ export function StaffTipCard({ tips }: { tips: StaffTipCandidate[] }) {
   return (
     <section
       aria-label={entry.title}
-      className="relative flex flex-col gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 animate-view-fade motion-reduce:animate-none"
+      className="relative flex flex-col gap-1 rounded-2xl bg-card px-4 py-3 shadow-card animate-view-fade motion-reduce:animate-none"
     >
       <button
         type="button"
         onClick={close}
         aria-label="Tutup"
-        className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-zinc-200"
+        className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
       >
         <X className="size-4" />
       </button>
-      <h3 className="flex items-center gap-1.5 pr-8 text-sm font-semibold text-gray-900">
+      <h3 className="flex items-center gap-1.5 pr-8 text-sm font-semibold text-foreground">
         <Sparkles className="size-4 shrink-0" aria-hidden />
         {entry.title}
       </h3>
       {entry.lines.length === 1 ? (
-        <p className="pr-2 text-[13px] leading-snug text-gray-700">{entry.lines[0]}</p>
+        <p className="pr-2 text-sm leading-snug text-foreground">{entry.lines[0]}</p>
       ) : (
-        <ol className="flex list-decimal flex-col gap-1 pl-5 text-[13px] leading-snug text-gray-700">
+        <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm leading-snug text-foreground">
           {entry.lines.map((line) => (
             <li key={line}>{line}</li>
           ))}
@@ -232,8 +232,8 @@ export function WhatsNewList() {
       {owner.map((entry) => (
         <section key={entry.id} className="flex flex-col gap-1.5 rounded-xl border bg-card px-4 py-3">
           <p className="text-xs text-muted-foreground">{dateFormat.format(new Date(`${entry.date}T00:00:00`))}</p>
-          <h3 className="text-sm font-semibold text-gray-900">{entry.title[locale]}</h3>
-          <ol className="flex list-decimal flex-col gap-1 pl-5 text-[13px] leading-snug text-gray-700">
+          <h3 className="text-sm font-semibold text-foreground">{entry.title[locale]}</h3>
+          <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm leading-snug text-foreground">
             {entry.steps[locale].map((step) => (
               <li key={step}>{step}</li>
             ))}

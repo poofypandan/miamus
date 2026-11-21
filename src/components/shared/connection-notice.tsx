@@ -58,7 +58,7 @@ export function ConnectionNotice({ locale }: { locale: "id" | "en" }) {
       variant="outline"
       onClick={retry}
       disabled={retrying}
-      className="min-h-[44px] shrink-0 rounded-lg border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+      className="min-h-[44px] shrink-0 rounded-lg border-attention/30 bg-card text-attention hover:bg-attention-tint"
     >
       {retrying ? <Loader2 className="animate-spin" /> : <RotateCw />}
       {copy.retry}
@@ -69,10 +69,10 @@ export function ConnectionNotice({ locale }: { locale: "id" | "en" }) {
     return (
       <div
         role="status"
-        className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2"
+        className="flex items-center gap-3 rounded-xl bg-attention-tint px-3 py-2"
       >
-        <WifiOff className="size-4 shrink-0 text-amber-700" />
-        <p className="min-w-0 flex-1 text-xs text-amber-900">
+        <WifiOff className="size-4 shrink-0 text-attention" />
+        <p className="min-w-0 flex-1 text-xs text-attention">
           <span className="font-medium">{copy.bannerTitle}.</span> {copy.bannerBody}
         </p>
         {button}
@@ -83,12 +83,12 @@ export function ConnectionNotice({ locale }: { locale: "id" | "en" }) {
   return (
     <div
       role="status"
-      className="flex flex-col items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-6 text-center"
+      className="flex flex-col items-center gap-3 rounded-xl bg-attention-tint px-4 py-6 text-center"
     >
-      <WifiOff className="size-6 text-amber-700" />
+      <WifiOff className="size-6 text-attention" />
       <div className="flex flex-col gap-1">
-        <p className="text-sm font-semibold text-amber-900">{copy.cardTitle}</p>
-        <p className="text-xs text-amber-900/80">{copy.cardBody}</p>
+        <p className="text-sm font-semibold text-attention">{copy.cardTitle}</p>
+        <p className="text-xs text-attention">{copy.cardBody}</p>
       </div>
       {button}
     </div>
