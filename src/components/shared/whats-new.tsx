@@ -161,6 +161,8 @@ function closedOn(): string | null {
  *
  * Decided after mount: the server has no storage.
  */
+// Staff phones keep this look until the staff slice of the sweep (after the
+// staff onboarding stack); the owners' card above has moved (04, PR 8).
 export function StaffTipCard({ tips }: { tips: StaffTipCandidate[] }) {
   const today = formatDateLocal(useToday());
   // null until read on this phone: nothing shows before that. `closedOn` is
@@ -191,24 +193,24 @@ export function StaffTipCard({ tips }: { tips: StaffTipCandidate[] }) {
   return (
     <section
       aria-label={entry.title}
-      className="relative flex flex-col gap-1 rounded-2xl bg-card px-4 py-3 shadow-card animate-view-fade motion-reduce:animate-none"
+      className="relative flex flex-col gap-1 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 animate-view-fade motion-reduce:animate-none"
     >
       <button
         type="button"
         onClick={close}
         aria-label="Tutup"
-        className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
+        className="absolute top-1.5 right-1.5 flex size-9 items-center justify-center rounded-full text-muted-foreground active:bg-zinc-200"
       >
         <X className="size-4" />
       </button>
-      <h3 className="flex items-center gap-1.5 pr-8 text-sm font-semibold text-foreground">
+      <h3 className="flex items-center gap-1.5 pr-8 text-sm font-semibold text-gray-900">
         <Sparkles className="size-4 shrink-0" aria-hidden />
         {entry.title}
       </h3>
       {entry.lines.length === 1 ? (
-        <p className="pr-2 text-sm leading-snug text-foreground">{entry.lines[0]}</p>
+        <p className="pr-2 text-[13px] leading-snug text-gray-700">{entry.lines[0]}</p>
       ) : (
-        <ol className="flex list-decimal flex-col gap-1 pl-5 text-sm leading-snug text-foreground">
+        <ol className="flex list-decimal flex-col gap-1 pl-5 text-[13px] leading-snug text-gray-700">
           {entry.lines.map((line) => (
             <li key={line}>{line}</li>
           ))}

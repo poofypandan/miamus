@@ -88,7 +88,7 @@ export function ConnectionNotice({ locale }: { locale: "id" | "en" }) {
       <WifiOff className="size-6 text-attention" />
       <div className="flex flex-col gap-1">
         <p className="text-sm font-semibold text-attention">{copy.cardTitle}</p>
-        <p className="text-xs text-attention">{copy.cardBody}</p>
+        <p className="text-xs text-attention/80">{copy.cardBody}</p>
       </div>
       {button}
     </div>
