@@ -491,8 +491,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Kakak", id: "Kakak" },
     body: {
-      en: "Kakak is Miamus's AI helper. Type or say what you need, or tap one of three examples, and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Settings → Kakak turns her on or off.",
-      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik, ucapkan, atau dari tiga contoh yang bisa diketuk: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Atur di Pengaturan → Kakak.",
+      en: "Kakak is Miamus's AI helper. Type, say or tap an example and she prepares a card: chores, shopping, pet routines, food, ingredients or what staff see. Nothing is saved until you confirm. Close her with the cross or by dragging down. Settings → Kakak turns her on or off.",
+      id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik, ucapkan, atau pilih: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Tutup lewat silang atau tarik ke bawah. Atur di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
     covers: ["kakak-routines-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
@@ -503,8 +503,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "settings",
     title: { en: "Talk to Kakak", id: "Bicara dengan Kakak" },
     body: {
-      en: "Tap the mic in Kakak and talk; pauses are fine, she keeps listening. Tap Done to send, then Edit words if one was misheard. Nothing is saved until you confirm her card; Read replies aloud lets you hear her.",
-      id: "Ketuk mikrofon di Kakak lalu bicara; boleh berhenti sejenak, Kakak tetap mendengarkan. Ketuk Selesai untuk mengirim, lalu Ubah kata-kata kalau ada yang salah dengar. Semua disimpan setelah kartunya Anda konfirmasi; Bacakan jawaban Kakak memperdengarkan suaranya.",
+      en: "Tap the mic in Kakak and talk; pauses are fine, she keeps listening. Tap Done to send, then Edit words if one was misheard. After her first reply the mic moves beside the typing box. Read replies aloud lets you hear her.",
+      id: "Ketuk mikrofon di Kakak lalu bicara; boleh berhenti sejenak. Ketuk Selesai untuk mengirim, lalu Ubah kata-kata kalau ada yang salah dengar. Setelah jawaban pertama, mikrofon pindah ke samping kotak ketik. Bacakan jawaban Kakak memperdengarkan suaranya.",
     },
     where: null,
     covers: ["kakak-voice-2026-11", "kakak-tap-to-talk-2026-11"],
