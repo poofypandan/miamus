@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Loader2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PublicLanguageSwitch } from "@/components/shared/public-language-switch";
-import { MiamusMark } from "@/components/brand/loading-screens";
+import { LaunchStage, MiamusMark } from "@/components/brand/loading-screens";
 import { usePublicLocale } from "@/hooks/use-public-locale";
 import type { OwnerLocale } from "@/lib/owner-locale";
 import { supabase } from "@/lib/supabase/client";
@@ -161,15 +161,16 @@ function FrontDoor() {
   return (
     <main
       lang={locale}
-      className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center"
+      className="relative mx-auto flex min-h-screen w-full max-w-md animate-view-fade flex-col justify-center px-6 pb-[calc(3rem+env(safe-area-inset-bottom))] text-center motion-reduce:animate-none"
     >
       <PublicLanguageSwitch locale={locale} onChange={setLocale} />
 
-      {/* The mark, still: the same picture as the launch splash a moment ago,
-          with its roof drawn and nothing moving, so this reads as the same
-          app (Phase 150). */}
+      {/* The mark, still and smaller: the brand at the head of a page of its
+          own rather than the launch picture, so it keeps its 88px (Phase 150).
+          The page fades up over the launch splash (animate-view-fade on
+          <main>) instead of cutting from the big mark to this one. */}
       <div className="mx-auto mb-6">
-        <MiamusMark still />
+        <MiamusMark still size={88} />
       </div>
 
       <h1 className="text-3xl font-semibold tracking-tight text-balance text-gray-900">{t.title}</h1>
@@ -220,14 +221,15 @@ function FrontDoor() {
 
 // Deliberately wordless: it shows for a moment on every launch, and whatever
 // it said would be wrong for one of the two audiences about to be routed.
-// The mark (Phase 123; a rounded square since 2026-11-09) is the brand rather than either audience's
-// screen, and the same picture /dashboard's launch cover opens on — so an
-// owner's cold start is one unbroken screen from tap to Agenda.
+// The mark is the brand rather than either audience's screen, on the same
+// launch stage as /dashboard's launch cover and on one clock with it
+// (lib/launch-clock), so an owner's cold start is one unbroken picture from
+// the phone's own splash to Agenda (20 Nov).
 function Splash() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50">
-      <MiamusMark />
-    </main>
+    <LaunchStage>
+      <MiamusMark opening />
+    </LaunchStage>
   );
 }
 

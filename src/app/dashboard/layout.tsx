@@ -65,7 +65,7 @@ function DashboardShell({ children }: { children: ReactNode }) {
           column (Phase 113) and takes up its own space, so the last card of a
           feed already ends above it. min-h-screen is what keeps the bar on the
           bottom edge when a tab is short. */}
-      <div className="flex min-h-screen w-full flex-col bg-slate-50">
+      <div className="flex min-h-screen w-full flex-col bg-background">
         {/* TopNav reads the active tab via useSearchParams(), which requires a
           Suspense boundary. */}
         <Suspense fallback={null}>
