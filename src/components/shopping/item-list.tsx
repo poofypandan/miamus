@@ -42,7 +42,7 @@ export function ItemList({
         return (
           <div key={scope} className="flex flex-col gap-1.5">
             {headings && <h3 className="px-1 text-xs font-medium text-muted-foreground">{scopes[scope]}</h3>}
-            <div className="flex flex-col divide-y overflow-hidden rounded-xl border bg-card">
+            <div className="flex flex-col divide-y overflow-hidden rounded-2xl bg-card shadow-card">
               {rows.map((item) => {
                 const Icon = CATEGORY_ICONS[item.category];
                 return (

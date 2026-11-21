@@ -260,7 +260,22 @@ export const LEGAL = {
   // photo's own location data is removed on the phone (the English already
   // did; PR #161 makes that true when compression fails, too). Nothing
   // stored, collected or shared changes. Set effectiveDate to the merge day.
-  // 2026-11-21.4: staff who leave (staff onboarding step 4, migrations/180)
+  // No version of its own, no policy change (PR C1, "What can we cook tonight?"):
+  // the recipe lines are listed ready first, and say "uses soon" with an
+  // ingredient's use-by date, which is already sent while Ingredients are
+  // on. Nothing new is sent or stored.
+  // 2026-11-21.3 (E1, Kakak sees ready-to-eat food): while Food at home is
+  // on, each Kakak request also carries the ready-to-eat food at home: its
+  // name, where it is kept and its use-by date. Never its photo, its notes,
+  // who gave it or who added it. Nothing new is stored; no new service or
+  // region. Set effectiveDate to the merge day.
+  // 2026-11-21.4 (E2): each Kakak request also says whether each shopping
+  // item is marked Running low or Out (never an amount), for "what's
+  // running low?" and "what do we need to buy?". Kakak may suggest marking
+  // a listed item bought (Enough), saved only when the admin confirms.
+  // Nothing new is stored; no new service or region. Set effectiveDate to
+  // the merge day.
+  // 2026-11-21.5: staff who leave (staff onboarding step 4, migrations/180)
   // — an archived staff profile keeps its name on past work for 12 months,
   // then the name is replaced with "Former staff" ("Mantan staf") and the
   // rest of the row is cleared, automatically every night; an admin can do
@@ -269,7 +284,7 @@ export const LEGAL = {
   // and the date the name was removed. When someone leaves, their chores and
   // pet routines can go to another staff member (data that was already
   // stored). No new service or region; nothing new sent to Kakak.
-  policyVersion: "2026-11-21.4",
+  policyVersion: "2026-11-21.5",
   effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

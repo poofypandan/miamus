@@ -277,7 +277,7 @@ test.describe("a chore missed while supervising explains itself (D10)", () => {
     await context.addInitScript(() => {
       localStorage.setItem("miamus.whats-new.walkins-2026-11", "seen");
     });
-    await page.goto("/dashboard");
+    await page.goto("/dashboard?day=all");
     await expect(page.getByTestId("staff-progress-line").first()).toHaveText("Supervising a repair since 10:00 AM", {
       timeout: 20_000,
     });

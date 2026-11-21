@@ -28,14 +28,16 @@ export function OverdueSection({
   return (
     <section
       aria-label={`${t.title} (${count})`}
-      className="flex flex-col gap-2 rounded-xl border border-red-200 bg-red-50/70 p-2"
+      // Attention, not urgent (Fable's look, 07): a chore a few days late is
+      // something to look at, not an alarm. Its icon and dark text carry it.
+      className="flex flex-col gap-2 rounded-2xl bg-attention-tint/60 p-2"
     >
       <header className="flex items-center gap-1.5 px-1 pt-0.5">
-        <AlertTriangle className="size-4 shrink-0 text-red-600" />
-        <h3 className="text-sm font-semibold text-red-800">
+        <AlertTriangle className="size-4 shrink-0 text-attention" />
+        <h3 className="text-sm font-semibold text-attention">
           {t.title} · {count}
         </h3>
-        <span className="ml-auto truncate text-[11px] text-red-700/80">{t.hint}</span>
+        <span className="ml-auto truncate text-[11px] text-attention/80">{t.hint}</span>
       </header>
       <div className="flex flex-col gap-1.5">{children}</div>
     </section>
