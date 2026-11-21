@@ -18,7 +18,7 @@ import {
 } from "@/lib/food-preferences";
 import { buildContext, type ContextRows } from "@/lib/kakak/context";
 import { describeSuggestion, savedSummary } from "@/lib/kakak/describe";
-import { nextUserTurn, runKakakTurn, type KakakHistory, type TurnDeps } from "@/lib/kakak/engine";
+import { foodRulesAsked, householdForBlock, nextUserTurn, runKakakTurn, type KakakHistory, type TurnDeps } from "@/lib/kakak/engine";
 import { renderHouseholdBlock, type KakakHousehold } from "@/lib/kakak/household";
 import { practiceClient } from "@/lib/kakak/practice";
 import { MAX_ANSWER_CHARS, MAX_IDEAS_CHARS, guardReplyText, replyProblems, watchesAmounts } from "@/lib/kakak/reply-guard";
@@ -363,5 +363,68 @@ describe("the eval's ideas cases", () => {
     // A typed Vegetarian on the card counts as the rule for the rest of the conversation.
     const meat = gradeCase(evalHousehold, kase("K221"), [cardTurn, message("Idea: Chicken fried rice (Nasi goreng ayam), uses Ayam.")]);
     expect(meat.mustNever.join(" ")).toMatch(/vegetarian: (ayam|chicken)/);
+  });
+});
+
+describe("the block stays as it was for the conversation (Codex, PR #190)", () => {
+  const ask = { type: "tool_use", id: "toolu_1", name: "ask_food_preferences", input: { for: "ideas" } };
+  const answered: KakakHistory = {
+    messages: [
+      { role: "user", content: "Ada ide masak apa?" },
+      { role: "assistant", content: [ask as Anthropic.ToolUseBlockParam] },
+      { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: "Halal. (Disimpan untuk berikutnya.)" }] },
+      { role: "assistant", content: [{ type: "text", text: "Ide: Sayur lodeh." }] },
+    ],
+  };
+
+  it("keeps saying not asked yet once the card was shown, though the answer was saved", () => {
+    const { household } = built({ foodPreferences: ["halal"] });
+    expect(renderHouseholdBlock(householdForBlock(household, answered))).toContain("Food preferences (for recipe ideas): not asked yet.");
+    // A new conversation reads what was saved.
+    expect(renderHouseholdBlock(householdForBlock(household, { messages: [] }))).toContain("halal (no pork or lard)");
+  });
+
+  it("doesn't count a card the checks sent back", () => {
+    const rejected: KakakHistory = {
+      messages: [
+        { role: "user", content: "Ada ide?" },
+        { role: "assistant", content: [{ ...ask, input: { for: "dinner" } } as Anthropic.ToolUseBlockParam] },
+        { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", is_error: true, content: "Not accepted: for must be \"ideas\"." }] },
+      ],
+    };
+    expect(foodRulesAsked(rejected.messages)).toBe(false);
+    expect(foodRulesAsked(answered.messages)).toBe(true);
+  });
+});
+
+describe("a card the checks sent back, then corrected", () => {
+  it("shows the card on the second try", async () => {
+    const replies = [
+      [{ type: "tool_use", id: "toolu_a", name: "ask_food_preferences", input: { for: "dinner" } }],
+      [{ type: "tool_use", id: "toolu_b", name: "ask_food_preferences", input: { for: "ideas" } }],
+    ];
+    let call = 0;
+    const fetch = async () =>
+      new Response(
+        JSON.stringify({
+          id: `msg_${call}`,
+          type: "message",
+          role: "assistant",
+          model: "claude-opus-5-5",
+          content: replies[Math.min(call++, 1)],
+          stop_reason: "tool_use",
+          stop_sequence: null,
+          usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    const client = new Anthropic({ apiKey: "k", authToken: null, baseURL: "http://fake.test", maxRetries: 0, fetch });
+    const { household, refs, names } = built({ foodPreferences: null }, "id");
+    const result = await runKakakTurn(
+      { client, model: "claude-opus-5-5", effort: "low", household, refs, names, begin: async () => ({ ok: true, requestId: id(702), callsLeft: 5 }), record: async () => undefined },
+      null,
+      "Ada ide masak?",
+    );
+    expect(result).toMatchObject({ kind: "question", foodRules: true });
   });
 });

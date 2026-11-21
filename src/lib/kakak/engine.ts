@@ -178,9 +178,36 @@ function questionsAsked(messages: Anthropic.MessageParam[]): number {
   return messages.filter((m) => m.role === "assistant" && toolUses(m).some((t) => QUESTION_TOOLS.includes(t.name))).length;
 }
 
-/** The food-rules card was shown already in this conversation (PR C2): its answer holds until the end of it. */
-function foodRulesAsked(messages: Anthropic.MessageParam[]): boolean {
-  return messages.some((m) => m.role === "assistant" && toolUses(m).some((t) => t.name === "ask_food_preferences"));
+/**
+ * The food-rules card was shown already in this conversation (PR C2): its
+ * answer holds until the end of it. A call the checks sent back (an error
+ * result) was never shown, so it doesn't count (Codex, PR #190).
+ */
+export function foodRulesAsked(messages: Anthropic.MessageParam[]): boolean {
+  return messages.some((message, index) => {
+    if (message.role !== "assistant") return false;
+    const next = messages[index + 1];
+    const results = next && Array.isArray(next.content) ? (next.content as Anthropic.ContentBlockParam[]) : [];
+    return toolUses(message).some(
+      (use) =>
+        use.name === "ask_food_preferences" &&
+        !results.some((block) => block.type === "tool_result" && block.tool_use_id === use.id && block.is_error),
+    );
+  });
+}
+
+/**
+ * The household as this conversation's block shows it. The block must stay
+ * byte-identical on every turn (KakakHistory.startedAt), but the food-rules
+ * card saves the answer before the owner's reply is sent. The card is only
+ * shown while the block says "not asked yet", so once it was shown the
+ * block keeps saying so for the rest of the conversation; the answer
+ * reaches Kakak in the reply (Codex, PR #190).
+ */
+export function householdForBlock(household: KakakHousehold, history: KakakHistory): KakakHousehold {
+  return household.foodRules !== undefined && household.foodRules !== null && foodRulesAsked(history.messages)
+    ? { ...household, foodRules: null }
+    : household;
 }
 
 /** The owner's words, as the next user turn after the history. */
@@ -271,7 +298,7 @@ export function kakakSystem(household: KakakHousehold): Anthropic.TextBlockParam
 export async function runKakakTurn(deps: TurnDeps, historyIn: unknown, reply: string): Promise<TurnResult> {
   const history = checkHistory(historyIn);
   const messages: Anthropic.MessageParam[] = [...history.messages, nextUserTurn(history, reply)];
-  const system = kakakSystem(deps.household);
+  const system = kakakSystem(householdForBlock(deps.household, history));
   // One second try per turn, whichever needs it first: a tool call that fails
   // the checks, or a plain reply that can't be shown.
   let retried = false;
