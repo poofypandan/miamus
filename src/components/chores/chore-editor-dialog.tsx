@@ -601,7 +601,9 @@ export function ChoreEditorDialog({
           </div>
           {whenOpen && (
             <div className="flex flex-col gap-4 rounded-xl bg-muted/40 p-3">
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+              {/* Date and time each on their own line, so "09.00" always shows
+                  whole, at 360 px and in Indonesian (Fable's look, #204). */}
+              <div className="flex flex-col gap-3">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <Label className="text-xs">{repeats ? t("Starts", "Mulai") : t("Date", "Tanggal")}</Label>
                   <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />

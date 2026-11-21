@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronRight, CircleAlert, Loader2, PackageX, Pencil, Scale, TriangleAlert } from "lucide-react";
+import { Check, ChevronRight, CircleAlert, Loader2, Package, PackageX, Pencil, Scale, TriangleAlert } from "lucide-react";
 import { IngredientWhereWhen } from "@/components/kitchen/ingredient-where-when";
 import { keepOpenForToasts } from "@/components/kitchen/sheet-toast";
 import { AmountControls } from "@/components/shopping/amount-controls";
@@ -35,8 +35,10 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { InventoryItem, StockStatus } from "@/types/database";
 
+// The tick belongs to the chosen state only (below); Enough's own symbol is
+// neutral, so two states never look chosen at once (Fable's look, #204).
 const ICONS: Record<StockStatus, typeof Check> = {
-  ok: Check,
+  ok: Package,
   low: CircleAlert,
   out: PackageX,
 };
@@ -161,7 +163,7 @@ export function StockStatusSheet({
                 onClick={() => choose(status)}
                 aria-pressed={selected}
               >
-                {busy === status ? <Loader2 className="animate-spin" /> : <Icon className="size-5" />}
+                {busy === status ? <Loader2 className="animate-spin" /> : selected ? <Check className="size-5" /> : <Icon className="size-5" />}
                 {labels[status]}
               </Button>
             );
@@ -175,7 +177,8 @@ export function StockStatusSheet({
             <button
               type="button"
               onClick={() => onTrack(item)}
-              className="mt-1 flex min-h-12 items-center gap-3 rounded-xl border bg-card px-3 text-left text-sm active:bg-muted"
+              // A quiet row, as the rest of the sheet (Fable's look, #204).
+              className="mt-1 flex min-h-12 items-center gap-3 rounded-xl px-1 text-left text-sm active:bg-muted"
             >
               <Scale className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <span className="flex-1">{id ? "Catat jumlah" : "Track amount"}</span>
