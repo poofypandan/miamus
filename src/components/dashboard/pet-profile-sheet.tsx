@@ -27,6 +27,7 @@ import { useBackToClose } from "@/hooks/use-back-to-close";
 import { useToday } from "@/hooks/use-today";
 import { getPetMeta, isAdmitted, petFocus, petMasterUrl, petPictureKind } from "@/lib/pets";
 import { photoSrc } from "@/lib/photos";
+import { FocusImg } from "@/components/pets/focus-img";
 import type { TaskEntity } from "@/types/database";
 import { dayLabel } from "@/lib/date-label";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
@@ -278,12 +279,10 @@ function PetHero({ pet, onOpenPhoto }: { pet: TaskEntity; onOpenPhoto?: () => vo
   if (kind === "full") {
     const photo = (
       <>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <FocusImg
           src={photoSrc(meta.full_image_url ?? null, 1280)}
-          alt=""
+          focus={focus}
           className="absolute inset-0 size-full bg-zinc-200 object-cover"
-          style={{ objectPosition: `${focus.x}% ${focus.y}%` }}
         />
         <span aria-hidden className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
       </>

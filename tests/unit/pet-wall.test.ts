@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { earliestLate, factsLine, lateLine, tilePhotoWidth, wallLayout } from "@/lib/pet-wall";
-import { petFocus, petPictureKind } from "@/lib/pets";
+import { coverPosition, petFocus, petPictureKind } from "@/lib/pets";
 import type { AgendaItem } from "@/lib/scheduleEngine";
 import type { TaskEntity } from "@/types/database";
 
@@ -48,6 +48,22 @@ describe("a pet's picture", () => {
   it("centres on the framed square, or a little above the middle when none was kept", () => {
     expect(petFocus(pet({}))).toEqual({ x: 50, y: 40 });
     expect(petFocus(pet({ frame: { x: 10, y: 20, width: 40, height: 30 } }))).toEqual({ x: 30, y: 35 });
+  });
+
+  it("puts the focus at the middle of the tile, clamped at the photo's edges (Codex, PR #197)", () => {
+    const upright = { width: 810, height: 1080 };
+    // A wide band shows a slice of an upright photo: a face at 30 % down sits
+    // in the band's middle, so the slice starts above it.
+    const band = { width: 358, height: 204 };
+    const pos = coverPosition({ x: 50, y: 30 }, upright, band);
+    expect(pos.x).toBe(50);
+    // scale 358/810; scaled height 477.3; offset = 102 - 0.3*477.3 = -41.2; spare = -273.3 → 15.1 %
+    expect(pos.y).toBeCloseTo(15.1, 0);
+    // At the very top, clamped to 0 %; at the very bottom, 100 %.
+    expect(coverPosition({ x: 50, y: 0 }, upright, band).y).toBe(0);
+    expect(coverPosition({ x: 50, y: 100 }, upright, band).y).toBe(100);
+    // Without sizes yet: the focus as it is.
+    expect(coverPosition({ x: 30, y: 35 }, null, band)).toEqual({ x: 30, y: 35 });
   });
 
   it("is the full photo, a print of the old square, or none", () => {

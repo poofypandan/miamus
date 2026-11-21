@@ -13,6 +13,7 @@ import { getPetMeta, isAdmitted, petFocus, petPictureKind } from "@/lib/pets";
 import { photoSrc } from "@/lib/photos";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
+import { FocusImg } from "@/components/pets/focus-img";
 import type { TaskEntity } from "@/types/database";
 
 /**
@@ -100,13 +101,11 @@ function PetTile({ pet, layout, single }: { pet: TaskEntity; layout: WallLayout;
     >
       {kind === "full" ? (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <FocusImg
             src={photoSrc(meta.full_image_url ?? null, tilePhotoWidth(layout))}
-            alt=""
+            focus={petFocus(pet)}
             loading="lazy"
             className="absolute inset-0 size-full bg-zinc-200 object-cover"
-            style={{ objectPosition: `${petFocus(pet).x}% ${petFocus(pet).y}%` }}
           />
           {/* The soft shade that keeps the name readable on any photo. */}
           <span

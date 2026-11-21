@@ -42,6 +42,31 @@ export function petFocus(entity: TaskEntity): { x: number; y: number } {
 }
 
 /**
+ * The CSS object-position that puts a focal point (percent of the photo) at
+ * the centre of a box the photo covers, clamped so the photo never leaves an
+ * edge (Codex, PR #197). object-position aligns the same percentage of photo
+ * and box, so the focus itself is only right when it is 50 %: the offset is
+ * worked out from both sizes. Without sizes yet, the focus as it is.
+ */
+export function coverPosition(
+  focus: { x: number; y: number },
+  image: { width: number; height: number } | null,
+  box: { width: number; height: number } | null
+): { x: number; y: number } {
+  if (!image || !box || !image.width || !image.height || !box.width || !box.height) return focus;
+  const scale = Math.max(box.width / image.width, box.height / image.height);
+  const axis = (f: number, imageSide: number, boxSide: number) => {
+    const scaled = imageSide * scale;
+    const spare = boxSide - scaled; // zero or negative
+    if (Math.abs(spare) < 0.5) return 50;
+    const offset = Math.min(0, Math.max(spare, boxSide / 2 - (f / 100) * scaled));
+    return Math.round((offset / spare) * 1000) / 10 || 0;
+  };
+  return { x: axis(focus.x, image.width, box.width), y: axis(focus.y, image.height, box.height) };
+}
+
+/**
+ * Which picture a pet's tile shows/**
  * Which picture a pet's tile shows (Fable's 08, section 5): its full photo,
  * edge to edge; only the old small square, shown as a print and never
  * stretched; or none, a paper portrait with its initial.
