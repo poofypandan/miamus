@@ -155,7 +155,7 @@ test("owners see a couldn't-do chore in amber, open what was said, and reach the
       exception({ chore_id: bill.id, reason: "other", note: "Office closed today" }),
     ],
   });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   // My tasks counts it.
   const card = page.getByRole("region", { name: "My tasks" });

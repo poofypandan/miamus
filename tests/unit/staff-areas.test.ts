@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   AREAS,
   areaHasNobody,
+  areaSymbols,
   effectiveAreas,
   hiddenAreasOf,
   sees,
@@ -240,5 +241,28 @@ describe("occurrencesForStaff with the home switch (Phase 178)", () => {
     expect(occurrencesForStaff(all, "ari").map((o) => o.task.assigned_to)).toEqual(["ari", null]);
     expect(occurrencesForStaff(all, "ari", true).map((o) => o.task.assigned_to)).toEqual(["ari", null]);
     expect(occurrencesForStaff(all, "ari", false).map((o) => o.task.assigned_to)).toEqual(["ari"]);
+  });
+});
+
+describe("areaSymbols (under each face on Today; 05, section d)", () => {
+  it("shows the person's own areas, from what the owner left on", () => {
+    expect(areaSymbols(person("ari", { hidden_areas: ["pets", "kitchen", "repairs"] }), AREAS)).toEqual(["home"]);
+    expect(areaSymbols(person("syam", { hidden_areas: ["home", "repairs"] }), AREAS)).toEqual(["pets", "kitchen"]);
+  });
+
+  it("shows nothing for someone with every area, so never more than three", () => {
+    expect(areaSymbols(person("dewi"), AREAS)).toEqual([]);
+    expect(areaSymbols(person("eka", { hidden_areas: ["repairs"] }), AREAS)).toEqual(["home", "pets", "kitchen"]);
+  });
+
+  it("only counts the areas the household uses", () => {
+    // Pets and Repairs off: Chores and Kitchen are all there is.
+    const used = ["home", "kitchen"] as const;
+    expect(areaSymbols(person("ari", { hidden_areas: ["kitchen"] }), used)).toEqual(["home"]);
+    expect(areaSymbols(person("dewi", { hidden_areas: ["pets", "repairs"] }), used)).toEqual([]);
+  });
+
+  it("an owner's own row looks after everything: no symbols", () => {
+    expect(areaSymbols(person("owner", { user_id: "u1", hidden_areas: ["pets"] }), AREAS)).toEqual([]);
   });
 });

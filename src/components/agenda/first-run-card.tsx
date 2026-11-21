@@ -83,7 +83,7 @@ export function FirstRunCard({
     return (
       <section
         aria-label={t("Your home is set up", "Rumah Anda sudah siap")}
-        className="flex flex-col gap-2 rounded-xl border border-emerald-200 bg-emerald-50/60 px-4 py-3 animate-view-fade motion-reduce:animate-none"
+        className="flex flex-col gap-2 rounded-2xl bg-done-tint/60 px-4 py-3 animate-view-fade motion-reduce:animate-none"
       >
         <h3 className="flex items-center gap-1.5 text-[15px] font-semibold text-emerald-800">
           <CircleCheckBig className="size-4 shrink-0" aria-hidden />
@@ -191,7 +191,7 @@ export function FirstRunCard({
   return (
     <section
       aria-label={title}
-      className="flex flex-col gap-2 rounded-xl border bg-card px-3.5 pt-3 pb-1 animate-view-fade motion-reduce:animate-none"
+      className="flex flex-col gap-2 rounded-2xl bg-card shadow-card px-3.5 pt-3 pb-1 animate-view-fade motion-reduce:animate-none"
     >
       <header className="flex items-baseline justify-between gap-2">
         <h3 className="text-[15px] font-semibold text-gray-900">{title}</h3>
