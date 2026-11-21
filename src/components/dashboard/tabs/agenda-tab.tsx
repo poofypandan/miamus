@@ -831,7 +831,7 @@ export function AgendaTab() {
             lines, in one calm group. Nothing here waits on a decision. */}
         {comingLines && (
           <section aria-label={t("Coming up", "Segera")} data-testid="coming-up" className="flex flex-col gap-1">
-            <h2 className="text-sm font-semibold text-gray-900">{t("Coming up", "Segera")}</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground">{t("Coming up", "Segera")}</h2>
             <div className="-my-1 flex flex-col">
               {/* Bills and upkeep inside their reminder window (Phase 164).
                   Named in full for screen readers; the heading is the lead
@@ -897,7 +897,7 @@ export function AgendaTab() {
         {range === "day" ? (
           <>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-gray-900">{label}</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
               {rangePill("sm")}
             </div>
             {/* Under the heading, as the Pets tab's photo filters sit under

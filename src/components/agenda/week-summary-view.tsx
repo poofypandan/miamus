@@ -101,7 +101,7 @@ export function WeekSummaryView({
       <section className="flex flex-col gap-3" aria-labelledby="week-beyond-title">
         <div className="flex flex-col gap-0.5">
           {/* Not "This week": the pager above already says that. */}
-          <h2 id="week-beyond-title" className="text-sm font-semibold text-gray-900">
+          <h2 id="week-beyond-title" className="text-sm font-semibold text-muted-foreground">
             {t("Chores & appointments", "Tugas & janji temu")}
           </h2>
           <p className="text-xs text-muted-foreground">
