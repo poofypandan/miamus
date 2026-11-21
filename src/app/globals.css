@@ -849,3 +849,31 @@
     --tw-exit-translate-y: 0 !important;
   }
 }
+
+/*
+ * A row in a grouped list, pressed (Fable, PR 7): no scale, which would
+ * shrink it inside the card's clip; the track at half strength at once, and
+ * back over 200 ms when the thumb lifts.
+ */
+@utility press-row {
+  transition: background-color 200ms var(--ease-settle);
+  &:active:not(:disabled) {
+    background-color: color-mix(in srgb, var(--muted) 50%, transparent);
+    transition-duration: 0ms;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/*
+ * Paper does not fade (Fable, PR 7): a bottom sheet is solid from its first
+ * frame and travels; only its scrim fades. Under reduced motion, where it
+ * doesn't travel, the sheet fades as a whole (above).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-slot="sheet-content"][data-side="bottom"] {
+    --tw-enter-opacity: 1 !important;
+    --tw-exit-opacity: 1 !important;
+  }
+}

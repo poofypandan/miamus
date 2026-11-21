@@ -60,9 +60,16 @@ test("a sheet arrives from below on the arrive easing", async ({ context, page }
   await expect(sheet).toBeVisible();
   const style = await sheet.evaluate((el) => {
     const s = getComputedStyle(el);
-    return { enter: s.getPropertyValue("--tw-enter-translate-y").trim(), easing: s.animationTimingFunction, duration: s.animationDuration };
+    return {
+      enter: s.getPropertyValue("--tw-enter-translate-y").trim(),
+      opacity: s.getPropertyValue("--tw-enter-opacity").trim(),
+      easing: s.animationTimingFunction,
+      duration: s.animationDuration,
+    };
   });
   expect(style.enter).toBe("100%");
+  // Paper does not fade: solid from its first frame; only the scrim fades.
+  expect(style.opacity).toBe("1");
   expect(style.easing).toBe(ARRIVE);
   expect(style.duration).toBe("0.42s");
 });
@@ -80,6 +87,7 @@ test("with reduced motion, nothing slides or settles", async ({ context, page })
   await expect(sheet).toBeVisible();
   // The sheet only fades.
   expect(await sheet.evaluate((el) => getComputedStyle(el).getPropertyValue("--tw-enter-translate-y").trim())).toBe("0");
+  expect(await sheet.evaluate((el) => getComputedStyle(el).getPropertyValue("--tw-enter-opacity").trim())).toBe("0");
   // A shared Button keeps its size under the thumb.
   const button = sheet.locator('[data-slot="button"]').first();
   expect(await button.evaluate((el) => getComputedStyle(el).transitionProperty)).toBe("none");
