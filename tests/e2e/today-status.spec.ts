@@ -282,6 +282,8 @@ test("on a 360 px phone in Indonesian, Hari ini stands above the date pill, clea
   const back = page.getByRole("button", { name: "Hari ini", exact: true });
   await expect(back).toBeVisible();
   await expect(page.locator("[data-stacked]")).toHaveCount(1);
+  // The last row can still scroll clear of the higher pill.
+  await expect(page.getByTestId("date-pill-room")).toHaveCount(1);
   const [a, b, pill] = await Promise.all([back.boundingBox(), kakak.boundingBox(), page.getByTestId("date-pill").boundingBox()]);
   if (!a || !b || !pill) throw new Error("missing a box");
   // Not over Kakak's button, and above the date pill rather than beside it.
@@ -421,4 +423,23 @@ test("a routine tapped in Next opens the whole day with Chores no longer filteri
   await expect(page).toHaveURL(/day=all/);
   await expect(page).not.toHaveURL(/show=chores/);
   await expect(page.getByText("Makan Siang").first()).toBeVisible();
+});
+
+test("at 390 px in Indonesian, the date pill and Hari ini stay on one line beside Kakak (Fable, PR #181)", async ({ context, page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await installStub(context, { owner: { locale: "id" }, kakak: { allowed: true, enabled: true } });
+  await page.goto("/dashboard?module=agenda");
+  await expect(page.getByRole("button", { name: "Bilang ke Kakak" })).toBeVisible({ timeout: 20_000 });
+  await page.getByTestId("date-pill").click();
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  await page
+    .getByRole("dialog")
+    .getByRole("button")
+    .filter({ hasText: new RegExp(`^\\D*${tomorrow.getDate()}$`) })
+    .first()
+    .click();
+  await expect(page.getByRole("button", { name: "Hari ini", exact: true })).toBeVisible();
+  await expect(page.locator("[data-stacked]")).toHaveCount(0);
+  await expect(page.getByTestId("date-pill-room")).toHaveCount(0);
 });

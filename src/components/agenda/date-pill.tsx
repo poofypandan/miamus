@@ -112,6 +112,9 @@ export function DatePill({
           no room under the last row; the pill makes its own, or it would sit
           over the page's last button. */}
       {!band && <div aria-hidden="true" className="h-24 shrink-0" />}
+      {/* Stacked, the Today pill stands one pill higher (a 48px pill and its
+          8px gap): the last row still has to scroll clear of it. */}
+      {stack && <div aria-hidden="true" data-testid="date-pill-room" className="h-14 shrink-0" />}
       {createPortal(
         <div className="pointer-events-none fixed inset-x-0 bottom-[calc(4rem+0.75rem+env(safe-area-inset-bottom))] z-[31] mx-auto flex w-full max-w-md px-4">
           <div
@@ -124,9 +127,12 @@ export function DatePill({
               onClick={() => setOpen(true)}
               data-testid="date-pill"
               aria-label={t(`${label}. Choose a day`, `${label}. Pilih hari`)}
-              className="flex min-h-12 items-center gap-2 rounded-full bg-card pr-4 pl-3.5 text-base font-semibold text-gray-900 tabular-nums shadow-float active:scale-[0.98]"
+              className={`flex min-h-12 items-center gap-2 rounded-full bg-card pr-4 text-base font-semibold text-gray-900 tabular-nums shadow-float active:scale-[0.98] ${isToday ? "pl-3.5" : "pl-4"}`}
             >
-              <CalendarDays className="size-5 text-muted-foreground" aria-hidden />
+              {/* Only on today: beside the Today pill the day's name says what
+                  this pill is, and the room keeps Indonesian on one line at
+                  390px (Fable, PR #181). */}
+              {isToday && <CalendarDays className="size-5 text-muted-foreground" aria-hidden />}
               {label}
             </button>
             {!isToday && (
