@@ -25,7 +25,7 @@ export function PendingBar({ active }: { active: boolean }) {
     >
       <div
         className={cn(
-          "h-full w-2/5 animate-pending-slide bg-zinc-900/70 will-change-transform",
+          "h-full w-2/5 animate-pending-slide bg-foreground/70 will-change-transform",
           "motion-reduce:w-full motion-reduce:animate-none"
         )}
       />

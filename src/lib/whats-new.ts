@@ -28,6 +28,27 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    // 21 Nov (Fable's tab redesigns, the owners' kitchen inventory): shown
+    // on Kitchen → Food, under the calm-start rules.
+    id: "kitchen-shelves-2026-11",
+    date: "2026-11-21",
+    audience: "owner",
+    title: { en: "New: the kitchen on shelves", id: "Baru: dapur dalam rak" },
+    steps: {
+      en: [
+        "Kitchen → Food now shows each place as a shelf: Fridge, Freezer, Counter and Cupboard, one tile for each thing. Food and ingredients sit together.",
+        "Use soon comes first. Amber means eat it today or tomorrow, or it is running low; a word always says which.",
+        "Tap a tile for what you could do before: Eaten, Given away, Thrown out, or Enough, Running low, Out. To buy shows what is running low or out.",
+      ],
+      id: [
+        "Dapur → Makanan sekarang menampilkan tiap tempat sebagai rak: Kulkas, Freezer, Meja, dan Lemari, satu kotak untuk tiap barang. Makanan dan bahan masakan ada bersama.",
+        "Segera dipakai ada di paling atas. Kuning berarti perlu dimakan hari ini atau besok, atau hampir habis; selalu ada kata yang menjelaskannya.",
+        "Ketuk kotaknya untuk pilihan yang sama seperti sebelumnya: Dimakan, Diberikan, Dibuang, atau Masih ada, Hampir habis, Habis. Perlu dibeli menunjukkan yang hampir habis atau habis.",
+      ],
+    },
+    tryLabel: { en: "Got it", id: "Mengerti" },
+  },
+  {
     // 21 Nov (Fable's tab redesigns, PR 1): the tabs reordered and Home
     // opening on the house. Shown on Home, under the calm-start rules.
     id: "home-centre-2026-11",

@@ -56,9 +56,13 @@ export function PlacePicker({
               onClick={() => {
                 if (!on || tapSelected) onChange(place);
               }}
+              // The chosen place is lifted paper, like the chips: black is for
+              // the one action (Fable's look, #189).
               className={cn(
-                "flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border px-1 text-xs font-medium disabled:opacity-50",
-                on ? "border-2 border-primary text-foreground" : "text-gray-700 active:bg-muted"
+                "flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl px-1 text-xs font-medium disabled:opacity-50",
+                on
+                  ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)]"
+                  : "bg-muted text-muted-foreground active:bg-muted/70"
               )}
             >
               <Icon className="size-5" strokeWidth={on ? 2.25 : 1.75} aria-hidden />
