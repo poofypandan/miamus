@@ -133,6 +133,8 @@ test("Household Supplies and Shopping show the form as before", async ({ context
   await page.keyboard.press("Escape");
 
   await page.getByRole("tab", { name: "Shopping" }).click();
+  // Supplies at home is one row that opens the list (21 Nov).
+  await page.getByRole("button", { name: /^Supplies at home/ }).click();
   await page.getByRole("button", { name: "Add item" }).click();
   const shopping = page.getByRole("dialog", { name: "Add item" });
   await expect(shopping.getByLabel("Name")).toBeVisible();

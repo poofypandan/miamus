@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
+import { CalendarClock, ChevronDown, Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +33,7 @@ import { useHouseholdLocations } from "@/hooks/use-household-locations";
 import { LocationCombobox } from "@/components/chores/location-combobox";
 import { SpotField } from "@/components/chores/spot-field";
 import { dayKeyLabel } from "@/lib/date-label";
+import { choreWhenSummary } from "@/lib/chore-when";
 import { formatDateLocal } from "@/lib/scheduleEngine";
 import { choreSaveTellsStaff, staffWillBeNotified } from "@/lib/staff-push";
 import {
@@ -48,6 +49,7 @@ import { useBillPayments } from "@/hooks/use-bill-payments";
 import { historyFor, paidOn } from "@/lib/bill-payments";
 import { formatIdr } from "@/lib/repairs";
 import { photoSrc } from "@/lib/photos";
+import { cn } from "@/lib/utils";
 import {
   HOUSEHOLD_TASK_CATEGORIES,
   categoryIcon,
@@ -165,6 +167,13 @@ export function ChoreEditorDialog({
   // the sheet closes after a save, released when it opens again.
   const lock = useSubmitLock();
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Short by default (21 Nov; Fable's 07, section 10): What, Who, When and
+  // the button. When opens the date, time and repeat; More opens the room,
+  // category, reminder, waiting for an owner and notes. Nothing becomes
+  // required; nothing is taken away.
+  const [whenOpen, setWhenOpen] = useState(false);
+  const whenId = useId();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // Everyone in the house, admins included (Phase 139; migrations/106 put
   // them on the roster). Yourself first, since assigning your own chores is
@@ -192,6 +201,20 @@ export function ChoreEditorDialog({
     lock.release();
     setSaving(false);
     setConfirmDelete(false);
+    setWhenOpen(false);
+    // Editing shows everything a chore has; adding starts short, unless it
+    // was opened from somewhere that already filled in what More holds (a
+    // room's "Add chore here", a repair's visit, "Other bill").
+    setMoreOpen(
+      !!task ||
+        !!(
+          preset?.locationId ||
+          preset?.spot ||
+          preset?.notes ||
+          (preset?.category && preset.category !== "cleaning") ||
+          preset?.remindDaysBefore != null
+        )
+    );
     if (task) {
       setTitle(task.title);
       // A room that has since been deleted reads as none, and saves as none.
@@ -525,7 +548,7 @@ export function ChoreEditorDialog({
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t("Title", "Judul")}</Label>
+            <Label className="text-xs">{t("What", "Apa")}</Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -533,50 +556,8 @@ export function ChoreEditorDialog({
             />
           </div>
 
-          {/* Right under the title, which it used to be typed into (Phase 135). */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t("Room (optional)", "Ruangan (opsional)")}</Label>
-            <LocationCombobox
-              values={places}
-              onChange={(next) => {
-                setPlaces(next);
-                if (next.length === 0) setSpot(null);
-              }}
-              multiple={!editing && !repairId}
-            />
-          </div>
-
-          {places.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">{t("Spot (optional)", "Bagian (opsional)")}</Label>
-              <SpotField value={spot} onChange={setSpot} placeIds={placeIds} />
-            </div>
-          )}
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t("Category", "Kategori")}</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {/* Bills and upkeep off (Phase 171): no Bill chip, unless this
-                  chore already is one, so a new chore never hides as it's saved. */}
-              {HOUSEHOLD_TASK_CATEGORIES.filter((c) => c !== "bill" || billsOn || category === "bill").map((c) => {
-                const Icon = categoryIcon(c);
-                return (
-                  <Button
-                    key={c}
-                    type="button"
-                    variant={category === c ? "default" : "outline"}
-                    className="min-h-[44px]"
-                    onClick={() => setCategory(c)}
-                  >
-                    <Icon /> {categoryLabel(c, locale)}
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t("Assignee", "Ditugaskan ke")}</Label>
+            <Label className="text-xs">{t("Who", "Siapa")}</Label>
             <Select value={assignee} onValueChange={setAssignee}>
               <SelectTrigger className="min-h-[48px] w-full">
                 <SelectValue />
@@ -595,164 +576,247 @@ export function ChoreEditorDialog({
             </Select>
           </div>
 
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <Label className="text-xs">{repeats ? t("Starts", "Mulai") : t("Date", "Tanggal")}</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <Label className="text-xs">{t("Time (optional)", "Jam (opsional)")}</Label>
-              {/* A real time control, and clearable: setting a chore back to
-                  "sometime today" was impossible before this phase, because
-                  the only way to change a time was to delete the chore. */}
-              <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  className="min-w-0 flex-1"
-                />
-                {time && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="min-h-[44px] shrink-0 px-2 text-xs"
-                    onClick={() => setTime("")}
-                  >
-                    {t("Clear", "Hapus")}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-          <p className="-mt-2 text-[11px] text-muted-foreground">
-            {t(
-              "No time means “sometime today”, and sorts below timed chores.",
-              "Tanpa jam berarti “kapan saja hari ini”, dan muncul di bawah tugas berjam."
-            )}
-          </p>
-
-          {dayOfRepeat ? (
-            // A written day of a repeat: its repeat is edited from the repeat.
-            <p className="text-[11px] text-muted-foreground">
-              {t(
-                "This is one day of a repeating chore. Changes apply to this date only.",
-                "Ini satu hari dari tugas berulang. Perubahan hanya berlaku untuk tanggal ini."
-              )}
-            </p>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">{t("Repeat", "Ulangi")}</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {repeatOptions.map((choice) => (
-                  <Button
-                    key={choice.key}
-                    type="button"
-                    variant={sameRepeat(choice) ? "default" : "outline"}
-                    className="min-h-[44px]"
-                    onClick={() => {
-                      setRecurrence(choice.recurrence);
-                      setRepeatEvery(choice.interval);
-                    }}
-                  >
-                    {repeatLabel(choice.recurrence, choice.interval, locale)}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {repeats && (
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">{t("Repeat until (optional)", "Ulangi sampai (opsional)")}</Label>
-              <Input
-                type="date"
-                value={until}
-                min={date}
-                onChange={(e) => setUntil(e.target.value)}
+          {/* When, read back in words; a tap opens the date, time and repeat. */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs" id={`${whenId}-label`}>
+              {t("When", "Kapan")}
+            </Label>
+            <button
+              type="button"
+              aria-expanded={whenOpen}
+              aria-labelledby={`${whenId}-label ${whenId}-value`}
+              onClick={() => setWhenOpen((v) => !v)}
+              className="flex min-h-[48px] w-full items-center gap-2 rounded-xl border bg-card px-3 text-left text-sm active:bg-muted"
+            >
+              <CalendarClock className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              <span id={`${whenId}-value`} className="min-w-0 flex-1 truncate font-medium text-gray-900">
+                {choreWhenSummary({ date, time, recurrence, interval: repeatEvery, until }, locale)}
+              </span>
+              <ChevronDown
+                className={cn("size-4 shrink-0 text-muted-foreground transition-transform", whenOpen && "rotate-180")}
+                aria-hidden
               />
-              {untilBeforeStart ? (
-                <p className="text-[11px] font-medium text-destructive">
-                  {t("The repeat cannot end before it starts.", "Pengulangan tidak bisa berakhir sebelum dimulai.")}
-                </p>
-              ) : (
+            </button>
+          </div>
+          {whenOpen && (
+            <div className="flex flex-col gap-4 rounded-xl bg-muted/40 p-3">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <Label className="text-xs">{repeats ? t("Starts", "Mulai") : t("Date", "Tanggal")}</Label>
+                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+                </div>
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <Label className="text-xs">{t("Time (optional)", "Jam (opsional)")}</Label>
+                  {/* A real time control, and clearable: setting a chore back to
+                      "sometime today" was impossible before this phase, because
+                      the only way to change a time was to delete the chore. */}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
+                      className="min-w-0 flex-1"
+                    />
+                    {time && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="min-h-[44px] shrink-0 px-2 text-xs"
+                        onClick={() => setTime("")}
+                      >
+                        {t("Clear", "Hapus")}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="-mt-2 text-[11px] text-muted-foreground">
+                {t(
+                  "No time means “sometime today”, and sorts below timed chores.",
+                  "Tanpa jam berarti “kapan saja hari ini”, dan muncul di bawah tugas berjam."
+                )}
+              </p>
+
+              {dayOfRepeat ? (
+                // A written day of a repeat: its repeat is edited from the repeat.
                 <p className="text-[11px] text-muted-foreground">
                   {t(
-                    "Leave empty to keep repeating. Nothing is written in advance — occurrences appear on the agenda as their day comes round.",
-                    "Kosongkan agar terus berulang. Tidak ada yang dibuat di muka — jadwal muncul di agenda saat harinya tiba."
+                    "This is one day of a repeating chore. Changes apply to this date only.",
+                    "Ini satu hari dari tugas berulang. Perubahan hanya berlaku untuk tanggal ini."
                   )}
                 </p>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs">{t("Repeat", "Ulangi")}</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {repeatOptions.map((choice) => (
+                      <Button
+                        key={choice.key}
+                        type="button"
+                        variant={sameRepeat(choice) ? "default" : "outline"}
+                        className="min-h-[44px]"
+                        onClick={() => {
+                          setRecurrence(choice.recurrence);
+                          setRepeatEvery(choice.interval);
+                        }}
+                      >
+                        {repeatLabel(choice.recurrence, choice.interval, locale)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               )}
+
+              {repeats && (
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs">{t("Repeat until (optional)", "Ulangi sampai (opsional)")}</Label>
+                  <Input
+                    type="date"
+                    value={until}
+                    min={date}
+                    onChange={(e) => setUntil(e.target.value)}
+                  />
+                  {untilBeforeStart ? (
+                    <p className="text-[11px] font-medium text-destructive">
+                      {t("The repeat cannot end before it starts.", "Pengulangan tidak bisa berakhir sebelum dimulai.")}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      {t(
+                        "Leave empty to keep repeating. Nothing is written in advance — occurrences appear on the agenda as their day comes round.",
+                        "Kosongkan agar terus berulang. Tidak ada yang dibuat di muka — jadwal muncul di agenda saat harinya tiba."
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
+
             </div>
           )}
 
-          {/* Remind me (Phase 164, D3): any chore, off by default. */}
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">
-              {t("Remind me", "Ingatkan saya")}
-              {dayOfRepeat && (
-                <span className="font-normal text-muted-foreground">
-                  {" "}
-                  {t("(for the whole repeat)", "(untuk seluruh pengulangan)")}
-                </span>
+          <button
+            type="button"
+            aria-expanded={moreOpen}
+            onClick={() => setMoreOpen((v) => !v)}
+            className="flex min-h-[44px] items-center gap-1.5 self-start rounded-lg px-1 text-sm font-medium text-gray-700 active:bg-muted"
+          >
+            {t("More", "Lainnya")}
+            <ChevronDown className={cn("size-4 transition-transform", moreOpen && "rotate-180")} aria-hidden />
+          </button>
+          {moreOpen && (
+            <div className="flex flex-col gap-4">
+              {/* Right under the title, which it used to be typed into (Phase 135). */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs">{t("Room (optional)", "Ruangan (opsional)")}</Label>
+                <LocationCombobox
+                  values={places}
+                  onChange={(next) => {
+                    setPlaces(next);
+                    if (next.length === 0) setSpot(null);
+                  }}
+                  multiple={!editing && !repairId}
+                />
+              </div>
+
+              {places.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <Label className="text-xs">{t("Spot (optional)", "Bagian (opsional)")}</Label>
+                  <SpotField value={spot} onChange={setSpot} placeIds={placeIds} />
+                </div>
               )}
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {REMIND_CHOICES.map((days) => (
-                <Button
-                  key={days ?? "off"}
-                  type="button"
-                  size="sm"
-                  variant={remind === days ? "default" : "outline"}
-                  className="min-h-[40px]"
-                  aria-pressed={remind === days}
-                  onClick={() => setRemind(days)}
-                >
-                  {remindLabel(days, locale)}
-                </Button>
-              ))}
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              {remind === null
-                ? t(
-                    "No reminder. Turn one on for bills and visits someone has to be home for.",
-                    "Tanpa pengingat. Nyalakan untuk tagihan dan kunjungan yang perlu ditunggu di rumah."
-                  )
-                : t(
-                    "A notification at 7:00 AM that day, and again on the day itself if it isn't done. It also shows on Today.",
-                    "Notifikasi pukul 07.00 pada hari itu, dan lagi saat jatuh tempo kalau belum selesai. Juga tampil di Hari ini."
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs">{t("Category", "Kategori")}</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Bills and upkeep off (Phase 171): no Bill chip, unless this
+                      chore already is one, so a new chore never hides as it's saved. */}
+                  {HOUSEHOLD_TASK_CATEGORIES.filter((c) => c !== "bill" || billsOn || category === "bill").map((c) => {
+                    const Icon = categoryIcon(c);
+                    return (
+                      <Button
+                        key={c}
+                        type="button"
+                        variant={category === c ? "default" : "outline"}
+                        className="min-h-[44px]"
+                        onClick={() => setCategory(c)}
+                      >
+                        <Icon /> {categoryLabel(c, locale)}
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Remind me (Phase 164, D3): any chore, off by default. */}
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs">
+                  {t("Remind me", "Ingatkan saya")}
+                  {dayOfRepeat && (
+                    <span className="font-normal text-muted-foreground">
+                      {" "}
+                      {t("(for the whole repeat)", "(untuk seluruh pengulangan)")}
+                    </span>
                   )}
-            </p>
-          </div>
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {REMIND_CHOICES.map((days) => (
+                    <Button
+                      key={days ?? "off"}
+                      type="button"
+                      size="sm"
+                      variant={remind === days ? "default" : "outline"}
+                      className="min-h-[40px]"
+                      aria-pressed={remind === days}
+                      onClick={() => setRemind(days)}
+                    >
+                      {remindLabel(days, locale)}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  {remind === null
+                    ? t(
+                        "No reminder. Turn one on for bills and visits someone has to be home for.",
+                        "Tanpa pengingat. Nyalakan untuk tagihan dan kunjungan yang perlu ditunggu di rumah."
+                      )
+                    : t(
+                        "A notification at 7:00 AM that day, and again on the day itself if it isn't done. It also shows on Today.",
+                        "Notifikasi pukul 07.00 pada hari itu, dan lagi saat jatuh tempo kalau belum selesai. Juga tampil di Hari ini."
+                      )}
+                </p>
+              </div>
 
-          <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
-            <input
-              type="checkbox"
-              checked={supervision}
-              onChange={(e) => setSupervision(e.target.checked)}
-              className="mt-0.5 size-4 shrink-0 accent-amber-700"
-            />
-            <span className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-amber-900">
-                {t("Wait for an owner", "Tunggu pemilik rumah")}
-              </span>
-              <span className="text-[11px] text-amber-900/80">
-                {t(
-                  "Whoever does this chore waits for one of you to be there, rather than starting on their own.",
-                  "Yang mengerjakan tugas ini menunggu salah satu pemilik rumah ada, bukan mulai sendiri."
-                )}
-              </span>
-            </span>
-          </label>
+              <label className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                <input
+                  type="checkbox"
+                  checked={supervision}
+                  onChange={(e) => setSupervision(e.target.checked)}
+                  className="mt-0.5 size-4 shrink-0 accent-amber-700"
+                />
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm font-medium text-amber-900">
+                    {t("Wait for an owner", "Tunggu pemilik rumah")}
+                  </span>
+                  <span className="text-[11px] text-amber-900/80">
+                    {t(
+                      "Whoever does this chore waits for one of you to be there, rather than starting on their own.",
+                      "Yang mengerjakan tugas ini menunggu salah satu pemilik rumah ada, bukan mulai sendiri."
+                    )}
+                  </span>
+                </span>
+              </label>
 
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t("Notes (optional)", "Catatan (opsional)")}</Label>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={t("e.g. the brush is in the back store room", "mis. sikatnya di gudang belakang")}
-            />
-          </div>
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs">{t("Notes (optional)", "Catatan (opsional)")}</Label>
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder={t("e.g. the brush is in the back store room", "mis. sikatnya di gudang belakang")}
+                />
+              </div>
+
+            </div>
+          )}
 
           {editingBill && billHistory.length > 0 && (
             <section aria-label={t("Payments", "Riwayat bayar")} className="flex flex-col gap-1.5">
@@ -906,7 +970,8 @@ export function ChoreEditorDialog({
           )}
         </div>
 
-        <DialogFooter>
+        {/* Always in reach, however far the form is opened (07, rule 9). */}
+        <DialogFooter className="sticky -bottom-4 z-10 bg-popover">
           <Button onClick={save} disabled={saving} className="min-h-[48px]">
             {saving ? <Loader2 className="animate-spin" /> : editing ? <Save /> : <Plus />}
             {editing ? t("Save Changes", "Simpan Perubahan") : t("Add Chore", "Tambah Tugas")}

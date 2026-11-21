@@ -67,6 +67,8 @@ test("an owner tracks rice under Food → Ingredients; the old count is only a h
 
   // Shopping keeps the non-food supplies.
   await page.getByRole("tab", { name: "Shopping" }).click();
+  // Supplies at home is one row that opens the list (21 Nov).
+  await page.getByRole("button", { name: /^Supplies at home/ }).click();
   await expect(page.getByRole("button", { name: /Sabun cuci/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /Beras/ })).toHaveCount(0);
 });
@@ -85,6 +87,8 @@ test("Food · Menu · Shopping, and Food's buttons say what they add", async ({ 
 
   // Shopping's supplies keep the small corner button.
   await page.getByRole("tab", { name: "Shopping" }).click();
+  // Supplies at home is one row that opens the list (21 Nov).
+  await page.getByRole("button", { name: /^Supplies at home/ }).click();
   await expect(page.getByRole("button", { name: "Add item" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add ingredient" })).toHaveCount(0);
 });
@@ -177,6 +181,8 @@ test("Kitchen amounts off hides the amounts, Track amount and Ingredients", asyn
   await expect(page.getByRole("heading", { name: "Ready to eat" })).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Shopping" }).click();
+  // Supplies at home is one row that opens the list (21 Nov).
+  await page.getByRole("button", { name: /^Supplies at home/ }).click();
   const row = page.getByRole("button", { name: /Beras/ });
   await expect(row).toBeVisible();
   await expect(row).not.toContainText("left");
@@ -501,4 +507,29 @@ test("editing a food's note keeps a portion another phone took meanwhile (Codex,
 
   await expect.poll(() => stub.foods[0].notes).toBe("Panaskan dulu");
   expect(stub.foods[0].portions).toBe(2);
+});
+
+test("Shopping: Supplies at home is one row, amber when something runs low, and opens the list; Back returns", async ({
+  context,
+  page,
+}) => {
+  await installStub(context, {
+    owner: { locale: "en" },
+    features: { kitchen: true },
+    items: [rice(), { ...soap, stock_status: "low" }],
+  });
+  await page.goto("/dashboard?module=inventory&kitchen=buy");
+  const row = page.getByRole("button", { name: /^Supplies at home/ });
+  await expect(row).toContainText("1 running low", { timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Add item" })).toHaveCount(0);
+  await page.evaluate(() => window.scrollTo(0, 400));
+  await row.click();
+  await expect(page).toHaveURL(/supplies=open/);
+  // It opens at its heading, not halfway down (Codex, PR #191).
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.getByRole("heading", { name: "Supplies at home" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Sabun cuci/ })).toBeVisible();
+  await page.goBack();
+  await expect(row).toBeVisible();
+  await expect(page).not.toHaveURL(/supplies=open/);
 });
