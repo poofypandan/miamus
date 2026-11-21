@@ -403,38 +403,205 @@
 }
 
 /*
- * The Miamus mark's roof drawing itself (MiamusMark, 2026-11-09). Two
- * animations on one 2.4s clock: a strip of the tile's ink slides from just
- * left of the roof (14px) to just past it (74px), revealing it left to right;
- * the roof holds, then fades, and at the restart the strip is back over it
- * while the roof returns to full opacity unseen. Transform and opacity only.
+ * The Miamus mark drawing itself (MiamusMark, 20 Nov; the roof alone from
+ * 2026-11-09). Timings from the film's end card, where the roof draws over
+ * 14 frames and the M starts 10 frames after it and draws over 22: at 30
+ * frames a second, 467ms, +333ms and 733ms. Curves from Fable's look (20 Nov):
+ * the roof slides on the motion kit's draw curve (0.25, 0.1, 0.25, 1), which
+ * on a slide writes for about 270ms instead of popping; the M goes in pen
+ * order, one strip per part, handing on as each lands. Fades use the kit's
+ * EVEN curve.
+ *
+ * One 2.6s cycle, transform and opacity only:
+ *     0–300ms   the strokes fade out (EVEN)
+ *   300ms       ink strips cover each line, unseen (ink on ink)
+ *   340ms       the strokes return under the strips
+ *   400–867ms   the roof's strip slides off it, left to right
+ *   733–943ms   the M's left wall, upwards        (0.4, 0, 0.8, 0.8)
+ *   923–1273ms  the V, left to right              (linear: the hand-on)
+ *  1253–1467ms  the right wall, downwards         (0.2, 0.2, 0.2, 1)
+ *  1500ms       the strips go (unseen); the whole house rests to 2.6s
+ *
+ * First move 2.2s after launch (a 2200ms delay, `backwards`, so the delay
+ * shows the 0% frame: the whole house): the still mark, then the promise line
+ * at 1.5s, then the loop, never two at once. Shares of the 512 box: the roof
+ * runs 92–420; the roof strip's soft edge is 20 wide.
  */
 @theme inline {
-  /* Started halfway through (-1.2s): the first frame is the whole house, the
-     same picture as the icon just tapped, so a quick load never shows a
-     roofless M. The roof first fades and redraws about 0.7s in. */
-  --animate-roof-reveal: roof-reveal 2.4s -1.2s infinite;
-  --animate-roof-fade: roof-fade 2.4s -1.2s infinite;
+  --animate-mark-strokes: mark-strokes 2.6s 2200ms infinite backwards;
+  --animate-mark-roof: mark-roof 2.6s 2200ms infinite backwards;
+  --animate-mark-m-left: mark-m-left 2.6s 2200ms infinite backwards;
+  --animate-mark-m-v: mark-m-v 2.6s 2200ms infinite backwards;
+  --animate-mark-m-right: mark-m-right 2.6s 2200ms infinite backwards;
 
-  @keyframes roof-reveal {
-    0%,
-    10% {
-      transform: translateX(14px);
-      animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1);
+  @keyframes mark-strokes {
+    0% {
+      opacity: 1;
+      animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
     }
-    48%,
+    11.54% {
+      opacity: 0;
+      animation-timing-function: step-end;
+    }
+    13.08%,
     100% {
-      transform: translateX(74px);
+      opacity: 1;
     }
   }
 
-  @keyframes roof-fade {
-    0%,
-    78% {
-      opacity: 1;
+  @keyframes mark-roof {
+    0% {
+      opacity: 0;
+      transform: translateX(82.8%);
+      animation-timing-function: step-end;
     }
-    92%,
+    11.54% {
+      opacity: 1;
+      transform: translateX(14.06%);
+    }
+    15.38% {
+      opacity: 1;
+      transform: translateX(14.06%);
+      animation-timing-function: cubic-bezier(0.25, 0.1, 0.25, 1);
+    }
+    33.35% {
+      opacity: 1;
+      transform: translateX(82.8%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
     100% {
+      opacity: 0;
+      transform: translateX(82.8%);
+    }
+  }
+
+  @keyframes mark-m-left {
+    0% {
+      opacity: 0;
+      transform: translateY(-100%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    28.19% {
+      opacity: 1;
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.4, 0, 0.8, 0.8);
+    }
+    36.27% {
+      opacity: 1;
+      transform: translateY(-100%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+  }
+
+  @keyframes mark-m-v {
+    0% {
+      opacity: 0;
+      transform: translateX(100%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    35.5% {
+      opacity: 1;
+      transform: translateX(0);
+      animation-timing-function: linear;
+    }
+    48.96% {
+      opacity: 1;
+      transform: translateX(100%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes mark-m-right {
+    0% {
+      opacity: 0;
+      transform: translateY(100%);
+      animation-timing-function: step-end;
+    }
+    11.54% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    48.19% {
+      opacity: 1;
+      transform: translateY(0);
+      animation-timing-function: cubic-bezier(0.2, 0.2, 0.2, 1);
+    }
+    56.42% {
+      opacity: 1;
+      transform: translateY(100%);
+      animation-timing-function: step-end;
+    }
+    57.69%,
+    100% {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+  }
+}
+
+/*
+ * The launch mark on an installed Android app (20 Nov, Fable's look): the
+ * phone's own splash, held. Android draws that splash from the maskable icon
+ * cut to a 160dp circle, the glyph at 192dp (the icon's 80% safe zone on a
+ * 240dp canvas); on a 160px mark that is this circle and the glyph at 1.2.
+ * Nothing animates: the home icon and the splash are circles there, so the
+ * mark stays one, the loop drawing inside it, until the cover lifts. The
+ * circular clip also keeps the loop's ink strips inside the circle.
+ *
+ * Only where that splash exists: an installed app (display-mode: standalone)
+ * that is not an iPhone (-webkit-touch-callout is iOS Safari's alone). iPhones
+ * and browser tabs keep the rounded square, which their launch screen and home
+ * icon show. In CSS rather than script so the very first server-rendered frame
+ * is already right. Static, so reduced motion needs nothing different.
+ */
+@media (display-mode: standalone) {
+  @supports not (-webkit-touch-callout: none) {
+    .mark-opening {
+      border-radius: 50% !important;
+    }
+    .mark-opening-glyph {
+      transform: scale(1.2);
+    }
+  }
+}
+
+/*
+ * The staff cover taking over from the launch mark (20 Nov, Fable's look):
+ * the mark fades out over 200ms and the RUMAH rules fade in from 120ms later,
+ * so nothing leaves in one frame. When, is brand-cover.tsx's call (it sets
+ * each animation's start on the launch clock); these only say how.
+ */
+@theme inline {
+  --animate-staff-mark-out: staff-mark-out 200ms cubic-bezier(0.37, 0, 0.63, 1) both;
+  --animate-staff-rules-in: staff-rules-in 240ms cubic-bezier(0.25, 0.1, 0.25, 1) 120ms both;
+
+  @keyframes staff-mark-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  @keyframes staff-rules-in {
+    from {
       opacity: 0;
     }
   }
