@@ -140,7 +140,7 @@ function StaffTasks() {
   return (
     <div
       className={cn(
-        "mx-auto flex min-h-screen w-full max-w-md flex-col bg-slate-50",
+        "mx-auto flex min-h-screen w-full max-w-md flex-col bg-background",
         // Tugas also has the "+ Lapor" FAB floating bottom-right (h-14 at
         // bottom-6): clear it so the last card can scroll out from under it.
         view === "tugas"
@@ -634,7 +634,7 @@ function HeaderIdentity() {
 function OnDutyBadge() {
   const { staffName } = useStaffIdentity();
   return (
-    <span className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 text-xs font-medium text-gray-500">
+    <span className="flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full border border-gray-200 bg-card px-3 text-xs font-medium text-gray-500">
       <UserRound className="size-3.5" />
       {staffName ?? "Admin"}
     </span>
