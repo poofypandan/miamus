@@ -59,7 +59,13 @@ function DashboardCanvas() {
           its first read (lib/resource) during a switch leaves the previous
           tab showing until it is complete (Phase 125). The fallback only
           ever appears on a cold start, under the launch cover. */}
-      <Suspense fallback={<TabFallback />}>{TABS[activeModule]}</Suspense>
+      <Suspense fallback={<TabFallback />}>
+        {/* Keyed by tab, so each new tab arrives with the view change (04,
+            PR 7): opacity only, so the tab's fixed children keep their place. */}
+        <div key={activeModule} className="flex flex-1 flex-col animate-view-fade motion-reduce:animate-none">
+          {TABS[activeModule]}
+        </div>
+      </Suspense>
       {/* Mounted once, outside the tabs: a pet profile can be opened from the
           Agenda's summary card and from the Pets tab, and it should survive
           switching between them. */}

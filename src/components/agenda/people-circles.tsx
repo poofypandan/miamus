@@ -104,7 +104,7 @@ function Circle({
       onClick={onPress}
       data-testid="person-circle"
       aria-label={t(`${person.name}: ${said}. Open their day`, `${person.name}: ${said}. Buka harinya`)}
-      className="flex w-16 shrink-0 flex-col items-center gap-1 rounded-2xl py-1 active:bg-muted/60"
+      className="press flex w-16 shrink-0 flex-col items-center gap-1 rounded-2xl py-1 active:bg-muted/60"
     >
       <span className="relative">
         <ProgressRing done={done} total={total} size={56} stroke={3.5} arcClass={attention ? "stroke-attention" : "stroke-done"}>
@@ -157,7 +157,7 @@ function AnyoneCircle({ anyone, symbolRow, onPress }: { anyone: AnyoneProgress; 
       onClick={onPress}
       data-testid="anyone-circle"
       aria-label={t(`${label}: ${anyone.open} not done yet. Open the list`, `${label}: ${anyone.open} belum dikerjakan. Buka daftarnya`)}
-      className="flex w-16 shrink-0 flex-col items-center gap-1 rounded-2xl py-1 active:bg-muted/60"
+      className="press flex w-16 shrink-0 flex-col items-center gap-1 rounded-2xl py-1 active:bg-muted/60"
     >
       <span className="relative">
         <span className="flex size-14 items-center justify-center rounded-full bg-muted text-muted-foreground" aria-hidden>

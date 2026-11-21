@@ -68,7 +68,7 @@ export function NextList({
                 <button
                   type="button"
                   onClick={() => onOpen(entry)}
-                  className="flex min-h-[3.75rem] w-full items-center gap-3 px-4 py-2 text-left active:bg-muted/60"
+                  className="flex min-h-[3.75rem] w-full items-center gap-3 px-4 py-2 text-left press-row"
                 >
                   <span className="w-12 shrink-0 text-sm font-medium text-muted-foreground tabular-nums">
                     {entry.time ? formatTime(entry.time) : t("Any time", "Kapan saja")}

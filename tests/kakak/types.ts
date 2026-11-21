@@ -117,7 +117,7 @@ export interface KakakCase {
    * household's (nothing ready, a use-soon ingredient, no recipes). Applied
    * by householdForCase everywhere a case is run, checked or graded.
    */
-  household?: Partial<Pick<KakakHousehold, "recipes" | "menu">>;
+  household?: Partial<Pick<KakakHousehold, "recipes" | "menu" | "foods">>;
 }
 
 /** The household a case runs against: the shared one, with the case's own recipes and menu. */
