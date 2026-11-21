@@ -174,7 +174,7 @@ export function useLaunchClock(ref: RefObject<HTMLElement | null>, enabled: bool
 /**
  * The full-screen stage every launch picture stands on: the "/" splash and the
  * launch and navigation covers (brand-cover.tsx). One element, so they are the
- * same pixels: fixed to the app column, white like the phone's splash
+ * same pixels: fixed to the app column, warm paper like the phone's splash
  * (manifest.ts background_color), the picture on the screen's exact centre.
  */
 export function LaunchStage({

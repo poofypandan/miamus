@@ -4,7 +4,7 @@
  *
  * Without one an iPhone shows a plain white screen and the mark pops in when
  * the page paints. With one, the icon zooms open into this picture (the same
- * white, the same settled 160pt mark at the very spot the launch stage will
+ * paper, the same settled 160pt mark at the very spot the launch stage will
  * draw it) and the hand-over to the page cannot be seen. Android draws its own
  * splash from the manifest instead (see manifest.ts and MiamusMark).
  *

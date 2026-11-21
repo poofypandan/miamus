@@ -219,7 +219,7 @@ export function StaffLoginGate({ children }: { children: ReactNode }) {
       {confirming && !ownerBypass && (
         // Over the page rather than instead of it, so what was open stays
         // as it was when they come back.
-        <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-50">
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-background">
           <PinStep
             step={{ kind: "enter", profile: confirming.profile }}
             onBack={cancelConfirm}

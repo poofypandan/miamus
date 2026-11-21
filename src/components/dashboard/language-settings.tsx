@@ -97,7 +97,7 @@ export function LanguageChoice({ onChosen }: { onChosen?: (locale: OwnerLocale) 
               "flex min-h-[56px] items-center justify-between gap-3 rounded-xl border px-4 text-left text-base font-medium transition-colors",
               current
                 ? "border-primary bg-primary/5 text-gray-900"
-                : "border-border bg-background text-gray-900 active:bg-muted"
+                : "border-border bg-card text-gray-900 active:bg-muted"
             )}
           >
             {LOCALE_NAMES[value]}
