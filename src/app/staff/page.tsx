@@ -219,6 +219,7 @@ function TasksView() {
     pets,
     schedules,
     logs,
+    householdTasks,
     loading,
     syncFailed,
     hasData,
@@ -486,6 +487,16 @@ function TasksView() {
             anyDone={
               // Finished by them, not by someone else (Codex, PR #174).
               chores.some((c) => c.status === "completed" && !!staffId && c.task.completed_by === staffId) ||
+              // A chore carried over from an earlier day leaves today's list once
+              // done, so the rows themselves are read too (Codex, PR #174).
+              householdTasks.some(
+                (t) =>
+                  !!staffId &&
+                  t.status === "completed" &&
+                  t.completed_by === staffId &&
+                  !!t.completed_at &&
+                  formatDateLocal(new Date(t.completed_at)) === dateStr
+              ) ||
               // A walk's start and arrived photos leave it open (scheduleEngine): only a finish counts.
               logs.some(
                 (l) =>

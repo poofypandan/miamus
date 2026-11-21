@@ -707,3 +707,35 @@ test("staff: a chore someone else finished doesn't end the first-day line (Codex
   await page.goto("/staff");
   await expect(page.getByTestId("first-day-line")).toBeVisible({ timeout: 20_000 });
 });
+
+test("staff: a chore carried over from yesterday and finished today ends the first-day line (Codex, PR #174)", async ({ context, page }) => {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  await installStub(context, {
+    stored: freshSession(),
+    staffPhone: true,
+    chores: [
+      {
+        ...trialTask("Sapu teras"),
+        id: "00000000-0000-4000-8000-0000000006c2",
+        category: "cleaning",
+        assigned_to: STAFF_ID,
+        due_date: `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`,
+        status: "completed",
+        completed_by: STAFF_ID,
+        completed_at: new Date().toISOString(),
+        before_photo_url: "a.jpg",
+        after_photo_url: "b.jpg",
+      },
+    ],
+  });
+  await page.addInitScript(
+    ([staffId, day]) => window.localStorage.setItem("miamus:first-day", JSON.stringify({ staffId, day })),
+    [STAFF_ID, localDay()]
+  );
+  await page.goto("/staff");
+  await expect(page.getByText("Tugas Hari Ini", { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("first-day-line")).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("miamus:first-day"))).toBeNull();
+});
