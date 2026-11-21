@@ -204,8 +204,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Adding a chore by hand", id: "Menambah tugas sendiri" },
     body: {
-      en: "Home → Chores → Add Chore: what to do, who does it or anyone, the day, and whether it repeats. A room, a time and a note are optional. With Kakak on, one sentence to her does the same.",
-      id: "Rumah → Tugas → Tambah Tugas: apa yang dikerjakan, siapa yang mengerjakan atau siapa saja, harinya, dan apakah berulang. Ruangan, jam, dan catatan boleh dikosongkan. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
+      en: "Home → Chores → Add Chore: What to do, Who does it (or anyone), and When: tap it for the day, a time and whether it repeats. A room, a reminder and a note are under More, all optional. With Kakak on, one sentence to her does the same.",
+      id: "Rumah → Tugas → Tambah Tugas: Apa yang dikerjakan, Siapa yang mengerjakan (atau siapa saja), dan Kapan: ketuk untuk hari, jam, dan apakah berulang. Ruangan, pengingat, dan catatan ada di Lainnya, semuanya opsional. Kalau Kakak aktif, cukup satu kalimat ke Kakak.",
     },
     where: "home_chores",
   },
@@ -374,8 +374,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "The shopping list", id: "Daftar belanja" },
     body: {
-      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought. Or tell Kakak \"I bought the santan\".",
-      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa. Atau bilang ke Kakak \"Santan sudah dibeli\".",
+      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping; staff can add to it too. Whoever shops taps Bought; a tracked item asks how much. The home's supplies are under Supplies at home, below the list. Or tell Kakak \"I bought the santan\".",
+      id: "Barang yang Hampir habis atau Habis masuk ke daftar di Dapur → Belanja; staf juga bisa menambahkannya. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan jumlahnya. Stok di rumah ada di bawah daftar. Atau bilang ke Kakak \"Santan sudah dibeli\".",
     },
     where: "kitchen_shopping",
   },

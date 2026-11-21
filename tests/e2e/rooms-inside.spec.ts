@@ -120,6 +120,7 @@ test("Rooms view and picker: rooms inside under their room, counted once each, w
   // The picker: rooms inside indented under their room; search finds them by bedroom.
   await page.getByRole("button", { name: "Tambah Tugas" }).first().click();
   const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Lainnya", exact: true }).click();
   await dialog.getByRole("combobox", { name: "Ruangan" }).click();
   const list = dialog.getByRole("listbox", { name: "Ruangan" });
   await expect(list.getByRole("group", { name: "LT2" }).getByRole("option")).toHaveText([
