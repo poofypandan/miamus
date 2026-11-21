@@ -308,20 +308,12 @@ export function ShoppingTab() {
         className="flex min-h-16 w-full items-center gap-3 rounded-2xl bg-card px-4 py-3 text-left shadow-card active:bg-muted"
       >
         <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-base font-semibold text-gray-900">{t("Supplies at home", "Stok di rumah")}</span>
-          {runningLow > 0 ? (
-            <span className="flex items-center gap-1 text-sm font-medium text-amber-800">
+          <span className="truncate text-sm font-semibold text-gray-900">{t("Supplies at home", "Stok di rumah")}</span>
+          {/* Only when something is low: a quiet row otherwise (Fable's look, #191). */}
+          {runningLow > 0 && (
+            <span className="flex items-center gap-1 text-xs font-medium text-attention">
               <TriangleAlert className="size-3.5 shrink-0" aria-hidden />
               {t(`${runningLow} running low`, `${runningLow} hampir habis`)}
-            </span>
-          ) : (
-            <span className="text-sm text-muted-foreground">
-              {supplies.length === 0
-                ? t("Nothing added yet", "Belum ada barang")
-                : t(
-                    `${supplies.length} ${supplies.length === 1 ? "thing" : "things"}, none running low`,
-                    `${supplies.length} barang, tidak ada yang hampir habis`
-                  )}
             </span>
           )}
         </span>

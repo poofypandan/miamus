@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { CalendarClock, ChevronDown, Loader2, Lock, Plus, Save, Trash2 } from "lucide-react";
+import { CalendarClock, ChevronDown, Loader2, Lock, Plus, Save, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -566,7 +566,8 @@ export function ChoreEditorDialog({
                 {/* First, and the default: a chore nobody is named on gets
                     picked up by whoever is free, which is how most of these
                     actually get done. */}
-                <SelectItem value={UNASSIGNED}>{t("Unassigned", "Belum ditugaskan")}</SelectItem>
+                {/* "Anyone", as everywhere an unowned chore is named (Fable's look, #194). */}
+                <SelectItem value={UNASSIGNED}>{t("Anyone", "Siapa saja")}</SelectItem>
                 {assignees.map(({ profile, label }) => (
                   <SelectItem key={profile.id} value={profile.id}>
                     {label}
@@ -600,7 +601,9 @@ export function ChoreEditorDialog({
           </div>
           {whenOpen && (
             <div className="flex flex-col gap-4 rounded-xl bg-muted/40 p-3">
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(8rem,1fr))] gap-3">
+              {/* Date and time each on their own line, so "09.00" always shows
+                  whole, at 360 px and in Indonesian (Fable's look, #204). */}
+              <div className="flex flex-col gap-3">
                 <div className="flex min-w-0 flex-col gap-1.5">
                   <Label className="text-xs">{repeats ? t("Starts", "Mulai") : t("Date", "Tanggal")}</Label>
                   <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -618,13 +621,16 @@ export function ChoreEditorDialog({
                       className="min-w-0 flex-1"
                     />
                     {time && (
+                      // An icon, so the time itself is never cut off (Fable's look, #194).
                       <Button
                         type="button"
                         variant="ghost"
-                        className="min-h-[44px] shrink-0 px-2 text-xs"
+                        size="icon"
+                        className="size-10 shrink-0"
+                        aria-label={t("Clear the time", "Hapus jam")}
                         onClick={() => setTime("")}
                       >
-                        {t("Clear", "Hapus")}
+                        <X className="size-4" />
                       </Button>
                     )}
                   </div>
@@ -648,21 +654,31 @@ export function ChoreEditorDialog({
               ) : (
                 <div className="flex flex-col gap-1.5">
                   <Label className="text-xs">{t("Repeat", "Ulangi")}</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {repeatOptions.map((choice) => (
-                      <Button
-                        key={choice.key}
-                        type="button"
-                        variant={sameRepeat(choice) ? "default" : "outline"}
-                        className="min-h-[44px]"
-                        onClick={() => {
-                          setRecurrence(choice.recurrence);
-                          setRepeatEvery(choice.interval);
-                        }}
-                      >
-                        {repeatLabel(choice.recurrence, choice.interval, locale)}
-                      </Button>
-                    ))}
+                  {/* One wrapping row of chips, the chosen one lifted paper:
+                      black is for the one action (Fable's look, #194). */}
+                  <div className="flex flex-wrap gap-2">
+                    {repeatOptions.map((choice) => {
+                      const on = sameRepeat(choice);
+                      return (
+                        <button
+                          key={choice.key}
+                          type="button"
+                          aria-pressed={on}
+                          className={cn(
+                            "min-h-10 rounded-full px-3.5 text-sm",
+                            on
+                              ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)]"
+                              : "bg-muted text-muted-foreground active:bg-muted/70"
+                          )}
+                          onClick={() => {
+                            setRecurrence(choice.recurrence);
+                            setRepeatEvery(choice.interval);
+                          }}
+                        >
+                          {repeatLabel(choice.recurrence, choice.interval, locale)}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

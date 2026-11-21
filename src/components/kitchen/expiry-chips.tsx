@@ -85,8 +85,10 @@ function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; chi
       aria-pressed={on}
       onClick={onClick}
       className={cn(
-        "min-h-10 rounded-full border px-3.5 text-sm disabled:opacity-50",
-        on ? "border-primary bg-primary text-primary-foreground" : "text-gray-700 active:bg-muted"
+        // Chosen is lifted paper, the rest on the track: black is for the
+        // one action (Fable's look, #189).
+        "min-h-10 rounded-full px-3.5 text-sm disabled:opacity-50",
+        on ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)]" : "bg-muted text-muted-foreground active:bg-muted/70"
       )}
     >
       {children}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Check, ChevronRight, CircleAlert, Loader2, PackageX, Pencil, Scale } from "lucide-react";
+import { Check, ChevronRight, CircleAlert, Loader2, Package, PackageX, Pencil, Scale, TriangleAlert } from "lucide-react";
 import { IngredientWhereWhen } from "@/components/kitchen/ingredient-where-when";
 import { keepOpenForToasts } from "@/components/kitchen/sheet-toast";
 import { AmountControls } from "@/components/shopping/amount-controls";
@@ -35,8 +35,10 @@ import { formatDateLocal } from "@/lib/scheduleEngine";
 import { cn } from "@/lib/utils";
 import type { InventoryItem, StockStatus } from "@/types/database";
 
+// The tick belongs to the chosen state only (below); Enough's own symbol is
+// neutral, so two states never look chosen at once (Fable's look, #204).
 const ICONS: Record<StockStatus, typeof Check> = {
-  ok: Check,
+  ok: Package,
   low: CircleAlert,
   out: PackageX,
 };
@@ -112,7 +114,11 @@ export function StockStatusSheet({
     <Sheet open={item !== null} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="bottom"
-        className={places ? "max-h-[92dvh] overflow-y-auto" : undefined}
+        // The shared sheet shape, the rounded top (Fable's look, #189).
+        className={cn(
+          "rounded-t-[30px] border-t-0 shadow-[0_-12px_44px_rgb(31_26_23/0.2)]",
+          places && "max-h-[92dvh] overflow-y-auto"
+        )}
         onInteractOutside={places ? keepOpenForToasts : undefined}
       >
         <SheetHeader>
@@ -144,15 +150,20 @@ export function StockStatusSheet({
             const Icon = ICONS[status];
             const selected = status === current;
             return (
+              // The chosen state is lifted paper, the others on the track:
+              // a state is not the one action (Fable's look, #189).
               <Button
                 key={status}
-                variant={selected ? "default" : "outline"}
-                className={cn("min-h-14 justify-start gap-3 rounded-xl px-4 text-base")}
+                variant="ghost"
+                className={cn(
+                  "min-h-14 justify-start gap-3 rounded-xl px-4 text-base",
+                  selected ? "bg-card font-semibold text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)] hover:bg-card" : "bg-muted text-gray-700 hover:bg-muted/70"
+                )}
                 disabled={busy !== null}
                 onClick={() => choose(status)}
                 aria-pressed={selected}
               >
-                {busy === status ? <Loader2 className="animate-spin" /> : <Icon className="size-5" />}
+                {busy === status ? <Loader2 className="animate-spin" /> : selected ? <Check className="size-5" /> : <Icon className="size-5" />}
                 {labels[status]}
               </Button>
             );
@@ -166,7 +177,8 @@ export function StockStatusSheet({
             <button
               type="button"
               onClick={() => onTrack(item)}
-              className="mt-1 flex min-h-12 items-center gap-3 rounded-xl border bg-card px-3 text-left text-sm active:bg-muted"
+              // A quiet row, as the rest of the sheet (Fable's look, #204).
+              className="mt-1 flex min-h-12 items-center gap-3 rounded-xl px-1 text-left text-sm active:bg-muted"
             >
               <Scale className="size-4 shrink-0 text-muted-foreground" aria-hidden />
               <span className="flex-1">{id ? "Catat jumlah" : "Track amount"}</span>
@@ -227,7 +239,8 @@ export function StockStatusText({
       <span className="flex shrink-0 flex-col items-end text-xs">
         <span className={cn(line.stale ? "text-muted-foreground" : "font-medium text-gray-900")}>{line.text}</span>
         {status !== "ok" && (
-          <span className={cn("font-medium", status === "out" ? "text-red-700" : "text-amber-700")}>
+          <span className={cn("flex items-center gap-0.5 font-medium", status === "out" ? "text-red-700" : "text-attention")}>
+            {status === "low" && <TriangleAlert className="size-3 shrink-0" aria-hidden />}
             {STOCK_STATUS_LABELS[lang][status]}
           </span>
         )}
@@ -238,10 +251,12 @@ export function StockStatusText({
   return (
     <span
       className={cn(
-        "shrink-0 text-xs font-medium",
-        status === "out" ? "text-red-700" : "text-amber-700"
+        "flex shrink-0 items-center gap-0.5 text-xs font-medium",
+        status === "out" ? "text-red-700" : "text-attention"
       )}
     >
+      {/* Running low with its mark, as the row that led here (Fable's look, #191). */}
+      {status === "low" && <TriangleAlert className="size-3 shrink-0" aria-hidden />}
       {STOCK_STATUS_LABELS[lang][status]}
     </span>
   );
