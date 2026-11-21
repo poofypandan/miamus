@@ -220,7 +220,7 @@ export function ChoreCard({
         {done && <CheckCircle2 className={cn("mt-0.5 size-4 shrink-0", DONE_TONE.check)} />}
         {/* A span, not a button: the card is already the button. */}
         {editable && !done && (
-          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-background/80 px-2.5 text-xs font-medium text-gray-700 ring-1 ring-border">
+          <span className="-mt-0.5 -mr-0.5 flex h-7 shrink-0 items-center gap-1 rounded-full bg-card/80 px-2.5 text-xs font-medium text-gray-700 ring-1 ring-border">
             <Pencil className="size-3" />
             {locale === "en" ? "Edit" : "Ubah"}
           </span>

@@ -9,6 +9,8 @@
 -- LOCAL DATABASE ONLY. One transaction, rolled back:
 --   PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -X -q -t \
 --     -f supabase/tests/143_signup_approval_switch.sql
+-- Since 175 request_household_access takes two optional answers: the grant
+-- checks below name request_household_access(text, text).
 \set ON_ERROR_STOP on
 \pset footer off
 begin;
@@ -348,7 +350,7 @@ select pg_temp.ok(pg_temp.err_as(:n4, 'select public.signup_auto_approve(auth.ui
 select pg_temp.ok(not exists (select 1 from public.household_access_requests where user_id = :n4::uuid),
   '... nothing written');
 select pg_temp.ok(not has_function_privilege('anon', 'public.my_household_access()', 'execute')
-                  and not has_function_privilege('anon', 'public.request_household_access()', 'execute')
+                  and not has_function_privilege('anon', 'public.request_household_access(text, text)', 'execute')
                   and not has_function_privilege('anon', 'public.list_household_access_requests()', 'execute')
                   and not has_function_privilege('anon', 'public.create_household(text, boolean)', 'execute')
                   and not has_function_privilege('anon', 'public.signup_auto_open()', 'execute')
@@ -369,7 +371,7 @@ select pg_temp.ok((select count(*) = 1 from public.signup_config), 'one config r
 select pg_temp.ok((select bool_and(prosecdef and proconfig @> array['search_path=""']) from pg_proc
                     where oid in ('public.signup_auto_open()'::regprocedure, 'public.signup_auto_approve(uuid)'::regprocedure,
                                   'public.notify_household_joined(uuid, text)'::regprocedure,
-                                  'public.my_household_access()'::regprocedure, 'public.request_household_access()'::regprocedure,
+                                  'public.my_household_access()'::regprocedure, 'public.request_household_access(text, text)'::regprocedure,
                                   'public.list_household_access_requests()'::regprocedure,
                                   'public.create_household(text, boolean)'::regprocedure,
                                   'public.set_my_access_contact(text)'::regprocedure, 'public.my_access_contact()'::regprocedure,

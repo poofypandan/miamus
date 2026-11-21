@@ -71,15 +71,15 @@ const GROUPS: { title: (t: Translate) => string; rows: Row[] }[] = [
       },
       {
         // Phase 170 PR A: the first feature that joins off (171 D4); on for
-        // the households that existed when migrations/148 ran. Recipes
-        // (PR B, migrations/151) belong to it too: the Menu pill.
+        // the households that existed when migrations/148 ran. Recipes and
+        // the menu are on for every home since 20 Nov, so it is amounts only.
         key: "kitchen",
         icon: Scale,
-        label: (t) => t("Kitchen amounts and recipes", "Jumlah bahan dan resep"),
+        label: (t) => t("Kitchen amounts", "Jumlah bahan"),
         line: (t) =>
           t(
-            "Exact amounts for the items you choose, such as 1.2 kg of rice left, and recipes your staff can read in Bahasa Indonesia.",
-            "Jumlah pasti untuk barang yang Anda pilih, misalnya sisa beras 1,2 kg, dan resep yang bisa dibaca staf dalam Bahasa Indonesia."
+            "Exact amounts for the items you choose, such as 1.2 kg of rice left, and where ingredients are kept.",
+            "Jumlah pasti untuk barang yang Anda pilih, misalnya sisa beras 1,2 kg, dan tempat simpan bahan masakan."
           ),
       },
     ],
