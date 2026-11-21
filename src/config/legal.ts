@@ -251,7 +251,16 @@ export const LEGAL = {
   // after 30 days, an account that is deleted). Short anonymous summaries
   // of the answers (no names or contact details) may be kept to decide what
   // to improve (owner, 2026-11-20). No new service.
-  policyVersion: "2026-11-21.1",
+  // 2026-11-21.2: who at Poofy Labs can see household data (security audit,
+  // 20 Nov 2026, finding S7) — section 5 now says that the operator can
+  // technically open a household's data and photos through Supabase and
+  // Vercel, that today this is one person signed in with two-step
+  // verification, when we look, and that the full-access keys never leave
+  // the database provider. The Indonesian photo line now also says the
+  // photo's own location data is removed on the phone (the English already
+  // did; PR #161 makes that true when compression fails, too). Nothing
+  // stored, collected or shared changes. Set effectiveDate to the merge day.
+  policyVersion: "2026-11-21.2",
   effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production
