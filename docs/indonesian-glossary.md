@@ -447,6 +447,13 @@ people are **staf** and **admin**.
 | The welcome (staff read it) | **Halo Sri, selamat datang. Ini Miamus, aplikasi rumah kita. Buka link ini lalu buat PIN 4 angka: {link}** / **Miamus mencatat tugas, foto, dan cuti Anda. Info: {origin}/privasi** | Staff onboarding step 3 (owner decisions 10): her name, her own link, and the line privacy policy section 9 asks admins to tell staff. No emoji. |
 | Are you Sri? This link is for Sri. Yes · No | **Anda Sri?** **Link ini untuk Sri.** **Ya · Bukan** | Staff onboarding step 3: the join page, opened from her own link. **Bukan** shows everyone's names, as before. |
 | Sri points their phone's camera at it, opens the link and makes a PIN. | **Sri mengarahkan kamera HP-nya ke sini, membuka link-nya, lalu membuat PIN.** | Staff onboarding step 3: under the QR code. |
+| Sri leaves today · Sri's 3 chores go to: Ari · Wati · Anyone · Remove Sri | **Sri berhenti hari ini** · **3 tugas milik Sri diberikan ke:** **Ari · Wati · Siapa saja** · **Hapus Sri** | Staff onboarding step 4 (owner decision 7): the remove card. The person who shares her area is suggested. "Berhenti", never "dipecat". |
+| Sri's phone is signed out now. Their past work keeps their name. · You can bring them back later. | **HP Sri langsung keluar. Pekerjaan sebelumnya tetap atas namanya.** · **Bisa dikembalikan nanti.** | Staff onboarding step 4: the remove card. |
+| Sri removed. Their 3 tasks are Wati's now. Other staff phones stay signed in. | **Sri dihapus. 3 tugasnya sekarang milik Wati. HP staf lain tetap masuk.** | Staff onboarding step 4: the toast. For Anyone: **sekarang untuk siapa saja**. |
+| Sri is back. Send the welcome so they can make a new PIN. · Sri is back | **Sri kembali. Kirim sambutan supaya dia bisa membuat PIN baru.** · **Sri sudah kembali** | Staff onboarding step 4: Bring back opens the welcome; the link works for 7 days again. |
+| Sri used to work here. Bring them back with what they saw before? · Bring Sri back | **Sri pernah bekerja di sini. Kembalikan dengan yang dia lihat sebelumnya?** · **Kembalikan Sri** | Staff onboarding step 4: Add staff, a name that matches someone who left. |
+| Remove for good · Tap again to remove for good · Former staff | **Hapus permanen · Ketuk lagi untuk menghapus permanen · Mantan staf** | Staff onboarding step 4 (owner decision 5): on Sudah tidak bekerja. The name becomes **Mantan staf** 12 months after they leave, or sooner with Hapus permanen. |
+| Their name stays on past work for 12 months after they leave, then it reads “Former staff”. | **Namanya tetap tercatat pada pekerjaan sebelumnya selama 12 bulan setelah berhenti, lalu menjadi “Mantan staf”.** | Staff onboarding step 4: under Sudah tidak bekerja. |
 
 ## Formatting
 

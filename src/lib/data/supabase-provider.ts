@@ -96,6 +96,7 @@ const STAFF_COLUMNS_WITH_MEMBER = `${STAFF_COLUMNS}, user_id`;
 // sign-in screen needs to draw at all. A dropped archived_at reads as
 // "active" everywhere; a dropped hidden_areas as "sees everything".
 const STAFF_COLUMN_SETS = [
+  `${STAFF_COLUMNS_WITH_MEMBER}, archived_at, hidden_areas, claimable_from, forgotten_at`,
   `${STAFF_COLUMNS_WITH_MEMBER}, archived_at, hidden_areas`,
   `${STAFF_COLUMNS_WITH_MEMBER}, archived_at`,
   STAFF_COLUMNS_WITH_MEMBER,
@@ -1599,14 +1600,22 @@ export const supabaseProvider: DataProvider = {
     if (error) throw error;
     return data;
   },
-  async archiveStaffProfile(id) {
+  async archiveStaffProfile(id, giveTo) {
     // Through the function, not the table: archiving also revokes the PIN and
-    // releases this person's unfinished chores, and all three have to happen
+    // hands over this person's unfinished chores, and all of it has to happen
     // together or the household is left worse off than before
-    // (migrations/109).
-    const { data, error } = await client().rpc("archive_staff_profile", { p_staff_id: id });
+    // (migrations/109). give_to only when someone takes the work (180), so
+    // "Anyone" is the same call older databases know.
+    const { data, error } = await client().rpc(
+      "archive_staff_profile",
+      giveTo ? { p_staff_id: id, p_give_to: giveTo } : { p_staff_id: id }
+    );
     if (error) throw error;
     return data;
+  },
+  async forgetStaffProfile(id) {
+    const { error } = await client().rpc("forget_staff_profile", { p_staff_id: id });
+    if (error) throw error;
   },
   async restoreStaffProfile(id) {
     const { data, error } = await client().rpc("restore_staff_profile", { p_staff_id: id });

@@ -347,7 +347,7 @@ test("after archiving someone, the next WhatsApp message carries the new house c
   await expect(send).toBeEnabled({ timeout: 20_000 });
 
   await page.getByRole("button", { name: "Remove Budi" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Remove", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Remove Budi", exact: true }).click();
   await expect(page.getByText("Budi removed.", { exact: false })).toBeVisible();
 
   await expect(send).toBeEnabled();

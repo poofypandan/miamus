@@ -275,7 +275,16 @@ export const LEGAL = {
   // a listed item bought (Enough), saved only when the admin confirms.
   // Nothing new is stored; no new service or region. Set effectiveDate to
   // the merge day.
-  policyVersion: "2026-11-21.4",
+  // 2026-11-21.5: staff who leave (staff onboarding step 4, migrations/180)
+  // — an archived staff profile keeps its name on past work for 12 months,
+  // then the name is replaced with "Former staff" ("Mantan staf") and the
+  // rest of the row is cleared, automatically every night; an admin can do
+  // it sooner (Remove for good). Two new facts on a staff profile: the date
+  // an admin brought them back (so the welcome link works again for 7 days)
+  // and the date the name was removed. When someone leaves, their chores and
+  // pet routines can go to another staff member (data that was already
+  // stored). No new service or region; nothing new sent to Kakak.
+  policyVersion: "2026-11-21.5",
   effectiveDate: { en: "21 November 2026", id: "21 November 2026" },
   /**
    * Where Supabase (database, sign-in, photo storage) runs. The production

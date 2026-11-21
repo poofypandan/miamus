@@ -40,7 +40,8 @@ const COPY = {
   en: {
     add: "Add staff",
     remove: "Remove Syam",
-    confirm: "Remove",
+    confirm: "Remove Syam",
+    anything: "Anything of Syam's still open goes to:",
     toast: "Syam removed. Other staff phones stay signed in.",
     signIn: "The code changes when you remove someone; phones already signed in stay signed in.",
     entry: "Adding a new staff member",
@@ -50,7 +51,8 @@ const COPY = {
   id: {
     add: "Tambah staf",
     remove: "Hapus Syam",
-    confirm: "Hapus",
+    confirm: "Hapus Syam",
+    anything: "Tugas Syam yang masih terbuka diberikan ke:",
     toast: "Syam dihapus. HP staf lain tetap masuk.",
     signIn: "Kodenya berganti saat Anda menghapus staf; HP yang sudah masuk tetap masuk.",
     entry: "Menambah staf baru",
@@ -85,6 +87,10 @@ for (const locale of ["en", "id"] as const) {
     await expect(page.getByRole("button", { name: c.add })).toBeVisible({ timeout: 20_000 });
     await shot(page, `pr1-${locale}-1-staff`);
     await page.getByRole("button", { name: c.remove }).click();
+    // Nothing of Syam's is counted, but who takes anything still open is
+    // asked anyway (code review, PR #172): Ari, the one other person here.
+    await expect(page.getByRole("dialog").getByText(c.anything)).toBeVisible();
+    await expect(page.getByRole("dialog").getByRole("button", { name: "Ari" })).toHaveAttribute("aria-pressed", "true");
     await page.getByRole("dialog").getByRole("button", { name: c.confirm, exact: true }).click();
     await expect(page.getByText(c.toast)).toBeVisible();
     await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -347,6 +353,146 @@ test("staff: a link naming someone not on the list just shows the names", async 
   await page.goto("/join/code#c=K7P-M2Q&k=ABCDEFGHJK&s=00000000-0000-4000-8000-00000000c999");
   await expect(page.getByRole("heading", { name: "Siapa yang bertugas?" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("heading", { name: /^Anda / })).toHaveCount(0);
+});
+
+// Step 4: the remove card with "give to" (decision 7), bringing someone back
+// with a fresh welcome link, and Remove for good (decision 5).
+
+const WATI = "00000000-0000-4000-8000-00000000c0b1";
+const YANTI = "00000000-0000-4000-8000-00000000c0b2";
+const GINA = "00000000-0000-4000-8000-00000000c0b3";
+
+async function stubStaffRpcs(page: Page, staff: Record<string, unknown>[]) {
+  const calls: [string, unknown][] = [];
+  const find = (id: string) => staff.find((p) => p.id === id)!;
+  await page.route("**/rest/v1/rpc/archive_staff_profile*", async (route) => {
+    const body = route.request().postDataJSON() as { p_staff_id: string };
+    calls.push(["archive", body]);
+    Object.assign(find(body.p_staff_id), { archived_at: new Date().toISOString(), has_pin: false });
+    await route.fulfill({ json: find(body.p_staff_id) });
+  });
+  await page.route("**/rest/v1/rpc/restore_staff_profile*", async (route) => {
+    const body = route.request().postDataJSON() as { p_staff_id: string };
+    calls.push(["restore", body]);
+    Object.assign(find(body.p_staff_id), { archived_at: null, claimable_from: new Date().toISOString() });
+    await route.fulfill({ json: find(body.p_staff_id) });
+  });
+  await page.route("**/rest/v1/rpc/forget_staff_profile*", async (route) => {
+    const body = route.request().postDataJSON() as { p_staff_id: string };
+    calls.push(["forget", body]);
+    Object.assign(find(body.p_staff_id), { name: "Mantan staf", forgotten_at: new Date().toISOString() });
+    await route.fulfill({ json: null });
+  });
+  return calls;
+}
+
+test("en: removing Sri suggests Wati, who also has Kitchen, and her chore goes to Wati", async ({ context, page }) => {
+  const staff = [
+    person(STAFF_ID, "Ari", { hidden_areas: ["kitchen"] }),
+    person(NEW_ID, "Sri", { hidden_areas: ["home", "pets", "repairs"] }),
+    person(WATI, "Wati", { hidden_areas: ["home", "pets", "repairs"] }),
+    person(OWNER_PROFILE_ID, "Moshe", { user_id: OWNER }),
+  ];
+  await installStub(context, {
+    owner: { locale: "en" },
+    staff,
+    household: { hasPets: true },
+    chores: [
+      {
+        id: DISHES, household_id: HOUSEHOLD_ID, title: "Cuci piring", category: "cleaning", status: "pending",
+        due_date: "2026-11-01", recurrence: "daily", recurrence_interval: 1, recurrence_until: null,
+        parent_task_id: null, assigned_to: NEW_ID, location_id: null,
+      },
+    ],
+  });
+  const calls = await stubStaffRpcs(page, staff);
+  await page.goto("/dashboard?module=access&page=staff");
+  await page.getByRole("button", { name: "Remove Sri" }).click({ timeout: 20_000 });
+  const card = page.getByRole("dialog", { name: "Sri leaves today" });
+  await expect(card.getByText("Sri's 1 chore goes to:")).toBeVisible();
+  await expect(card.getByRole("button", { name: "Wati" })).toHaveAttribute("aria-pressed", "true");
+  await expect(card.getByRole("button", { name: "Anyone" })).toHaveAttribute("aria-pressed", "false");
+  await expect(card.getByRole("button", { name: "Moshe" })).toHaveCount(0);
+  await shot(page, "pr4-en-1-remove-card");
+  await card.getByRole("button", { name: "Remove Sri" }).click();
+  await expect(page.getByText("Sri removed. Their task is Wati's now. Other staff phones stay signed in.")).toBeVisible();
+  expect(calls).toEqual([["archive", { p_staff_id: NEW_ID, p_give_to: WATI }]]);
+});
+
+test("en: Anyone sends the one-argument call older databases know", async ({ context, page }) => {
+  const staff = [person(STAFF_ID, "Ari"), person(NEW_ID, "Sri"), person(OWNER_PROFILE_ID, "Moshe", { user_id: OWNER })];
+  await installStub(context, {
+    owner: { locale: "en" },
+    staff,
+    household: { hasPets: true },
+    chores: [
+      {
+        id: DISHES, household_id: HOUSEHOLD_ID, title: "Cuci piring", category: "cleaning", status: "pending",
+        due_date: "2026-11-01", recurrence: "daily", recurrence_interval: 1, recurrence_until: null,
+        parent_task_id: null, assigned_to: NEW_ID, location_id: null,
+      },
+    ],
+  });
+  const calls = await stubStaffRpcs(page, staff);
+  await page.goto("/dashboard?module=access&page=staff");
+  await page.getByRole("button", { name: "Remove Sri" }).click({ timeout: 20_000 });
+  const card = page.getByRole("dialog", { name: "Sri leaves today" });
+  await card.getByRole("button", { name: "Anyone" }).click();
+  await card.getByRole("button", { name: "Remove Sri" }).click();
+  await expect(page.getByText("Sri removed. Their task is for anyone now. Other staff phones stay signed in.")).toBeVisible();
+  expect(calls).toEqual([["archive", { p_staff_id: NEW_ID }]]);
+});
+
+test("id: Kembalikan opens Yanti's welcome straight away; Hapus permanen takes two taps", async ({ context, page }) => {
+  const staff = [
+    ...roster(),
+    person(YANTI, "Yanti", { has_pin: false, archived_at: "2026-09-01T00:00:00Z", created_at: "2026-03-01T00:00:00Z" }),
+    person(GINA, "Gina", { has_pin: false, archived_at: "2026-08-01T00:00:00Z", created_at: "2026-02-01T00:00:00Z" }),
+  ];
+  await installStub(context, { owner: { locale: "id" }, staff, household: { hasPets: true } });
+  const calls = await stubStaffRpcs(page, staff);
+  await stubCodes(page);
+  await page.goto("/dashboard?module=access&page=staff");
+  await expect(page.getByText("Namanya tetap tercatat pada pekerjaan sebelumnya selama 12 bulan", { exact: false })).toBeVisible({ timeout: 20_000 });
+  await shot(page, "pr4-id-1-no-longer-here");
+
+  // Gina: the first tap only arms it.
+  await page.getByRole("button", { name: "Hapus permanen" }).last().click();
+  await expect(page.getByRole("button", { name: "Ketuk lagi untuk menghapus permanen" })).toBeVisible();
+  expect(calls).toEqual([]);
+  await page.getByRole("button", { name: "Ketuk lagi untuk menghapus permanen" }).click();
+  await expect(page.getByText("Nama Gina sudah dihapus.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Gina", { exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Kembalikan" }).click();
+  const welcome = page.getByRole("dialog", { name: "Sambut Yanti" });
+  await expect(welcome.getByRole("button", { name: "Kirim sambutan lewat WhatsApp" })).toBeEnabled();
+  await expect(page.getByText("Yanti kembali. Kirim sambutan supaya dia bisa membuat PIN baru.")).toBeVisible();
+  await shot(page, "pr4-id-2-back-welcome");
+  expect(calls).toEqual([
+    ["forget", { p_staff_id: GINA }],
+    ["restore", { p_staff_id: YANTI }],
+  ]);
+  // Her row offers the welcome again: the claim window counts from today.
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Kirim sambutan" })).toHaveCount(1);
+});
+
+test("en: typing the name of someone who left offers to bring them back", async ({ context, page }) => {
+  const staff = [...roster(), person(YANTI, "Yanti", { has_pin: false, archived_at: "2026-09-01T00:00:00Z", created_at: "2026-03-01T00:00:00Z" })];
+  await installStub(context, { owner: { locale: "en" }, staff, household: { hasPets: true } });
+  const calls = await stubStaffRpcs(page, staff);
+  await stubCodes(page);
+  await page.goto("/dashboard?module=access&page=staff");
+  await page.getByRole("button", { name: "Add staff" }).click({ timeout: 20_000 });
+  const sheet = page.getByTestId("add-staff-sheet");
+  await sheet.getByLabel("Name").fill("yanti");
+  await expect(sheet.getByText("Yanti used to work here.", { exact: false })).toBeVisible();
+  await shot(page, "pr4-en-2-add-former");
+  await sheet.getByRole("button", { name: "Bring Yanti back" }).click();
+  await expect(sheet.getByText("Yanti is back")).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Send welcome on WhatsApp" })).toBeEnabled();
+  expect(calls).toEqual([["restore", { p_staff_id: YANTI }]]);
 });
 
 test("en: rooms that fail to load offer Try again, instead of a spinner that never ends (Codex, PR #170)", async ({ context, page }) => {

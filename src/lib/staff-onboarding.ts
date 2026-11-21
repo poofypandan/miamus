@@ -17,7 +17,7 @@
  */
 import { CHORES, firstDue, nameKey, repeatOf, type ApplyPayload } from "@/lib/setup-templates";
 import { isSetUp } from "@/lib/rooms-view";
-import { AREAS, type StaffArea } from "@/lib/staff-areas";
+import { AREAS, ownAreas, type StaffArea } from "@/lib/staff-areas";
 import type { ChoreRecurrence, HouseholdLocation, HouseholdTask, HouseholdTaskCategory, StaffProfile } from "@/types/database";
 
 /** The chips, in the order the sheet shows them. */
@@ -214,4 +214,52 @@ export function addStaffPayload({
 /** The household's chores to move to the new person: ticked and already there. */
 export function choresToMove(starters: readonly StarterChore[], ticked: ReadonlySet<string>): string[] {
   return starters.filter((s) => ticked.has(s.key) && s.existing).map((s) => s.existing!.id);
+}
+
+// --- Step 4: when someone leaves ---------------------------------------------------------
+
+/** On the staff list now: not an owner's row, not archived. */
+function onStaff(p: Pick<StaffProfile, "user_id" | "archived_at">): boolean {
+  return !p.user_id && !p.archived_at;
+}
+
+/**
+ * Who should take a leaving person's work (owner decision 7): the one other
+ * staff member who shares their area, Kitchen first, then Pets, Chores and
+ * Repairs; null (Anyone) when nobody does, or when two could. The owner
+ * changes it with one tap either way.
+ */
+export function suggestGiveTo(leaving: StaffProfile, roster: readonly StaffProfile[]): string | null {
+  const others = roster.filter((p) => onStaff(p) && p.id !== leaving.id);
+  const mine = ownAreas(leaving);
+  for (const area of ["kitchen", "pets", "home", "repairs"] as const) {
+    if (!mine.has(area)) continue;
+    const withIt = others.filter((p) => ownAreas(p).has(area));
+    if (withIt.length === 1) return withIt[0].id;
+    if (withIt.length > 1) return null;
+  }
+  return null;
+}
+
+/** Who can take the work: everyone else on the staff list. */
+export function giveToChoices(leaving: StaffProfile, roster: readonly StaffProfile[]): StaffProfile[] {
+  return roster.filter((p) => onStaff(p) && p.id !== leaving.id);
+}
+
+/**
+ * Added, or brought back, less than 7 days ago: the welcome link can still
+ * claim the name (migrations/147, 180).
+ */
+export function isClaimable(person: Pick<StaffProfile, "created_at" | "claimable_from">, now = Date.now()): boolean {
+  const from = person.claimable_from ?? person.created_at;
+  if (!from) return false;
+  const at = new Date(from).getTime();
+  return Number.isFinite(at) && now - at < 7 * 24 * 60 * 60 * 1000;
+}
+
+/** Someone who left, with the name still kept (not yet "Former staff"), matched by name. */
+export function formerStaffWithName(name: string, roster: readonly StaffProfile[]): StaffProfile | null {
+  const key = nameKey(cleanStaffName(name));
+  if (!key) return null;
+  return roster.find((p) => !p.user_id && p.archived_at && !p.forgotten_at && nameKey(p.name) === key) ?? null;
 }

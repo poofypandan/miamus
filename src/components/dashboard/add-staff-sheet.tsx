@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, Loader2, UserRoundCheck } from "lucide-react";
+import { Check, Loader2, RotateCcw, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,6 +30,7 @@ import {
   addStaffPayload,
   choresToMove,
   cleanStaffName,
+  formerStaffWithName,
   hiddenAreasFor,
   kitchenStarters,
   staffWithName,
@@ -77,7 +78,7 @@ export function AddStaffSheet({
   );
 }
 
-type Added = { id: string; name: string; chores: number };
+type Added = { id: string; name: string; chores: number; back?: boolean };
 
 function AddStaffForm({
   onClose,
@@ -107,6 +108,9 @@ function AddStaffForm({
 
   const clean = cleanStaffName(name);
   const taken = staffWithName(clean, roster);
+  // Someone who left with this name (step 4): offered back, with a fresh
+  // welcome link, instead of a second "Sri" (migrations/180).
+  const former = taken ? null : formerStaffWithName(clean, roster);
   // The roster refuses these (migrations/147): said here, not as a failed save.
   const badName = /[<>]/.test(clean);
   const kitchen = jobs.has("kitchen");
@@ -157,6 +161,22 @@ function AddStaffForm({
     } catch (err) {
       console.error("Add staff (demo)", err);
       return { ok: false, reason: "failed" };
+    }
+  }
+
+  async function bringBack(person: StaffProfile) {
+    if (saving || !lock.acquire()) return;
+    setSaving(true);
+    try {
+      await dataProvider.restoreStaffProfile(person.id);
+      await Promise.allSettled([reload(), refresh({ silent: true })]);
+      setAdded({ id: person.id, name: person.name, chores: 0, back: true });
+    } catch (err) {
+      console.error(err);
+      lock.release();
+      toast.error(t(`Couldn't bring ${person.name} back. Try again.`, `${person.name} gagal dikembalikan. Coba lagi.`));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -247,7 +267,9 @@ function AddStaffForm({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <UserRoundCheck className="size-5 text-emerald-600" aria-hidden />
-            {t(`${added.name} is added`, `${added.name} sudah ditambahkan`)}
+            {added.back
+              ? t(`${added.name} is back`, `${added.name} sudah kembali`)
+              : t(`${added.name} is added`, `${added.name} sudah ditambahkan`)}
           </SheetTitle>
           <SheetDescription>
             {t(
@@ -316,6 +338,25 @@ function AddStaffForm({
             <p className="text-[11px] text-destructive" role="status">
               {t(`${taken.name} is already on the staff list.`, `${taken.name} sudah ada di daftar staf.`)}
             </p>
+          ) : former ? (
+            <div className="flex flex-col gap-2 rounded-lg bg-muted px-3 py-2" role="status">
+              <p className="text-xs text-gray-700">
+                {t(
+                  `${former.name} used to work here. Bring them back with what they saw before?`,
+                  `${former.name} pernah bekerja di sini. Kembalikan dengan yang dia lihat sebelumnya?`
+                )}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="min-h-10 self-start rounded-lg"
+                disabled={saving}
+                onClick={() => void bringBack(former)}
+              >
+                <RotateCcw /> {t(`Bring ${former.name} back`, `Kembalikan ${former.name}`)}
+              </Button>
+            </div>
           ) : (
             <p className="text-[11px] text-muted-foreground">
               {t(

@@ -13,7 +13,11 @@ import {
   STAFF_JOB_LABELS,
   addStaffPayload,
   choresToMove,
+  formerStaffWithName,
+  giveToChoices,
   hiddenAreasFor,
+  isClaimable,
+  suggestGiveTo,
   kitchenStarters,
   staffWithName,
 } from "@/lib/staff-onboarding";
@@ -21,6 +25,7 @@ import type { HouseholdLocation, HouseholdTask, StaffProfile } from "@/types/dat
 
 import { claimFromFragment, codeFromFragment, personalWelcomeMessage, staffFromFragment, welcomeLink } from "@/lib/setup-apply";
 import { qrPath } from "@/lib/qr";
+import { formerStaffLabel, staffNameLookup } from "@/hooks/use-staff-profiles";
 const STAFF_ENTRIES = ["add-staff", "staff-first-day", "staff-leaves", "staff-back", "kitchen-chores"] as const;
 
 describe("the guide's staff entries", () => {
@@ -43,6 +48,10 @@ describe("the guide's staff entries", () => {
     const back = guideEntry("staff-back")!;
     expect(back.body.en).toContain("No longer here");
     expect(back.body.id).toContain("Sudah tidak bekerja");
+    // 12 months, then "Former staff" (decision 5).
+    expect(back.body.en).toContain("Former staff");
+    expect(back.body.id).toContain("Mantan staf");
+    expect(guideEntry("staff-leaves")!.body.en).toContain("Anyone");
     const day = guideEntry("staff-first-day")!;
     for (const word of ["Sebelum", "Sesudah", "Selesai"]) {
       expect(day.body.en).toContain(word);
@@ -243,5 +252,78 @@ describe("the QR code", () => {
       expect(Number(x)).toBeGreaterThanOrEqual(4);
       expect(Number(y)).toBeLessThan(a.size - 4);
     }
+  });
+});
+
+// Step 4: when someone leaves, and bringing them back.
+describe("who takes a leaving person's work (decision 7)", () => {
+  const sri = staff("sri", "Sri", { hidden_areas: ["home", "pets", "repairs"] });
+  it("suggests the one other person who shares their area, Kitchen first", () => {
+    const ari = staff("ari", "Ari", { hidden_areas: ["kitchen"] });
+    const wati = staff("wati", "Wati", { hidden_areas: ["home", "pets", "repairs"] });
+    expect(suggestGiveTo(sri, [sri, ari, wati])).toBe("wati");
+  });
+  it("is Anyone when nobody shares it, or when two could take it", () => {
+    const ari = staff("ari", "Ari", { hidden_areas: ["kitchen"] });
+    expect(suggestGiveTo(sri, [sri, ari])).toBeNull();
+    const a = staff("a", "A"), b = staff("b", "B");
+    expect(suggestGiveTo(sri, [sri, a, b])).toBeNull();
+  });
+  it("never suggests an owner, someone who left, or the person leaving", () => {
+    const owner = staff("o", "Dewi", { user_id: "u" });
+    const gone = staff("g", "Gina", { archived_at: "2026-11-01T00:00:00Z" });
+    expect(suggestGiveTo(sri, [sri, owner, gone])).toBeNull();
+    expect(giveToChoices(sri, [sri, owner, gone, staff("ari", "Ari")]).map((p) => p.id)).toEqual(["ari"]);
+  });
+  it("for someone who sees everything, the one other person with Kitchen", () => {
+    const all = staff("all", "Nah");
+    const ari = staff("ari", "Ari", { hidden_areas: ["kitchen"] });
+    const wati = staff("wati", "Wati", { hidden_areas: ["home", "pets", "repairs"] });
+    expect(suggestGiveTo(all, [all, ari, wati])).toBe("wati");
+  });
+});
+
+describe("the claim window (migrations/147, 180)", () => {
+  const now = Date.parse("2026-11-20T12:00:00Z");
+  it("counts 7 days from when they were added", () => {
+    expect(isClaimable({ created_at: "2026-11-15T12:00:00Z" }, now)).toBe(true);
+    expect(isClaimable({ created_at: "2026-11-10T12:00:00Z" }, now)).toBe(false);
+  });
+  it("or from when they were brought back", () => {
+    expect(isClaimable({ created_at: "2026-05-01T00:00:00Z", claimable_from: "2026-11-19T00:00:00Z" }, now)).toBe(true);
+    expect(isClaimable({ created_at: "2026-05-01T00:00:00Z", claimable_from: "2026-11-01T00:00:00Z" }, now)).toBe(false);
+    expect(isClaimable({ created_at: null } as never, now)).toBe(false);
+  });
+});
+
+describe("Add staff knows who used to work here", () => {
+  it("finds someone who left by name, not someone already forgotten", () => {
+    const roster = [
+      staff("s", "Sri", { archived_at: "2026-10-01T00:00:00Z" }),
+      staff("f", "Mantan staf", { archived_at: "2025-01-01T00:00:00Z", forgotten_at: "2026-01-01T00:00:00Z" }),
+    ];
+    expect(formerStaffWithName(" sri ", roster)?.id).toBe("s");
+    expect(formerStaffWithName("Mantan staf", roster)).toBeNull();
+    expect(formerStaffWithName("Wati", roster)).toBeNull();
+  });
+});
+
+// Step 4: a removed name reads "Former staff" / "Mantan staf" in the screen's own language.
+describe("a removed name, in the screen's language", () => {
+  const roster = [
+    staff("a", "Ari"),
+    staff("w", "Mantan staf", { archived_at: "2025-01-01T00:00:00Z", forgotten_at: "2026-01-01T00:00:00Z" }),
+  ];
+  it("reads Former staff for an English owner and Mantan staf for an Indonesian owner or on a staff screen", () => {
+    expect(formerStaffLabel("en")).toBe("Former staff");
+    expect(formerStaffLabel("id")).toBe("Mantan staf");
+    expect(staffNameLookup(roster, "Someone", formerStaffLabel("en"))("w")).toBe("Former staff");
+    expect(staffNameLookup(roster, "Seseorang", formerStaffLabel("id"))("w")).toBe("Mantan staf");
+  });
+  it("leaves everyone else as they are, and an unknown id as the fallback", () => {
+    const name = staffNameLookup(roster, "Someone", "Former staff");
+    expect(name("a")).toBe("Ari");
+    expect(name("nope")).toBe("Someone");
+    expect(name(null)).toBe("Someone");
   });
 });

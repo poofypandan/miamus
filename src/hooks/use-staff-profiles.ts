@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { dataProvider } from "@/lib/data";
 import { createResource } from "@/lib/resource";
+import { useScreenLang } from "@/components/ui/ui-labels";
 import type { StaffProfile } from "@/types/database";
 
 const useRoster = createResource(() => dataProvider.listStaffProfiles());
@@ -46,10 +47,29 @@ export function useStaffProfiles() {
  */
 export function useStaffNameLookup(
   profiles: StaffProfile[] | null,
-  fallback = "Someone"
+  fallback = "Someone",
+  /** Override the label for someone whose name was removed (migrations/180). */
+  former?: string
 ): (id: string | null | undefined) => string {
-  return useMemo(() => {
-    const byId = new Map((profiles ?? []).map((p) => [p.id, p.name]));
-    return (id: string | null | undefined) => (id ? (byId.get(id) ?? fallback) : fallback);
-  }, [profiles, fallback]);
+  // "Former staff" for an English-speaking owner, "Mantan staf" for an
+  // Indonesian one and on every staff screen: the screen's own language, so
+  // no caller has to pass it (staff onboarding step 4).
+  const lang = useScreenLang();
+  const label = former ?? formerStaffLabel(lang);
+  return useMemo(() => staffNameLookup(profiles, fallback, label), [profiles, fallback, label]);
+}
+
+/** What a removed name reads as, in the screen's language. */
+export function formerStaffLabel(lang: "en" | "id"): string {
+  return lang === "en" ? "Former staff" : "Mantan staf";
+}
+
+/** The lookup itself, pure: a forgotten profile reads as `former`, an unknown id as `fallback`. */
+export function staffNameLookup(
+  profiles: StaffProfile[] | null,
+  fallback: string,
+  former: string
+): (id: string | null | undefined) => string {
+  const byId = new Map((profiles ?? []).map((p) => [p.id, p.forgotten_at ? former : p.name]));
+  return (id: string | null | undefined) => (id ? (byId.get(id) ?? fallback) : fallback);
 }
