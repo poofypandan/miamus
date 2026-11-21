@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
   // 20 Nov 2026). A resized thumbnail carries none; otherwise the original
   // is cleaned, and one that can't be cleaned or checked is not served
   // (the same answer as a missing photo).
-  const out = (width ? await resizeForWidth(original, width) : null) ?? (await servableOriginal(original, contentType));
+  const out = (width ? await resizeForWidth(original, width) : null) ?? (await servableOriginal(original));
   if (!out) {
     return new NextResponse("Not found", { status: 404 });
   }

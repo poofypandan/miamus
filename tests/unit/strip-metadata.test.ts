@@ -121,7 +121,7 @@ describe("stripImageMetadata", () => {
 
 describe("servableOriginal (what /api/photo serves full size)", () => {
   it("serves a camera JPEG without its GPS, orientation kept", async () => {
-    const out = (await servableOriginal(await cameraJpeg(6), "image/jpeg"))!;
+    const out = (await servableOriginal(await cameraJpeg(6)))!;
     expect(out.type).toBe("image/jpeg");
     expect(text(out.body)).not.toContain("PhoneCo");
     const meta = await sharp(out.body).metadata();
@@ -134,18 +134,33 @@ describe("servableOriginal (what /api/photo serves full size)", () => {
     // over the proxy's 40-megapixel decode limit (Codex, PR #161).
     const big = await pixels(8000, 6000).withExif({ ...CAMERA, ...GPS }).jpeg().toBuffer();
     expect(big.length).toBeLessThan(2 * 1024 * 1024);
-    const out = (await servableOriginal(big, "image/jpeg"))!;
+    const out = (await servableOriginal(big))!;
     expect(out).not.toBeNull();
     expect(text(out.body)).not.toContain("PhoneCo");
   });
 
+  it("re-encodes a JPEG the byte cleaner rejects, never serving it as stored", async () => {
+    // A clean JPEG whose end marker is replaced by a truncated APP1 holding
+    // GPS: the byte cleaner refuses it, sharp's header-only check sees no
+    // metadata (Codex, PR #161).
+    const clean = await pixels().jpeg().toBuffer();
+    const tampered = Buffer.concat([clean.subarray(0, clean.length - 2), Buffer.from([0xff, 0xe1, 0xff, 0xff]), Buffer.from("Exif\0\0 GPS -6.2088 106.8456")]);
+    expect(stripImageMetadata(tampered)).toBeNull();
+    expect((await sharp(tampered).metadata()).exif).toBeUndefined();
+    const out = (await servableOriginal(tampered))!;
+    expect(out).not.toBeNull();
+    expect(out.type).toBe("image/jpeg");
+    expect(text(out.body)).not.toContain("GPS");
+    expect(Buffer.compare(out.body, tampered)).not.toBe(0);
+  });
+
   it("refuses what it can neither clean nor check", async () => {
-    expect(await servableOriginal(Buffer.from("not a picture at all"), "image/avif")).toBeNull();
+    expect(await servableOriginal(Buffer.from("not a picture at all"))).toBeNull();
   });
 
   it("serves a clean photo as it is", async () => {
     const clean = await pixels().webp().toBuffer();
-    const out = (await servableOriginal(clean, "image/webp"))!;
+    const out = (await servableOriginal(clean))!;
     expect(Buffer.compare(out.body, clean)).toBe(0);
     expect(out.type).toBe("image/webp");
   });

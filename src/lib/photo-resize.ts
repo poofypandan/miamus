@@ -69,20 +69,23 @@ export async function resizeForWidth(
  *   JPEG, PNG, WebP  cleaned byte by byte, lossless, no decode
  *                    (lib/strip-metadata.ts), so even a photo too large for
  *                    sharp is served clean; the orientation stays.
- *   anything else    (AVIF from older storage transforms) checked by sharp:
- *                    served as stored only when it carries nothing,
- *                    re-encoded (turned as shown) when it does.
- * A photo that can be neither cleaned nor checked gives null, never the
- * original unchecked (Codex, PR #161).
+ *   anything else, or one of those three the byte cleaner can't parse
+ *                    (a malformed segment): re-encoded by sharp, turned as
+ *                    shown, which writes no metadata. Never served as
+ *                    stored: sharp's metadata check reads the header only,
+ *                    so "no metadata found" is no proof (Codex, PR #161).
+ * A photo that can be neither cleaned nor re-encoded gives null, never the
+ * original.
  */
-export async function servableOriginal(input: Buffer, storedType: string): Promise<{ body: Buffer; type: string } | null> {
-  const cleaned = stripImageMetadata(input);
-  if (cleaned) return { body: Buffer.from(cleaned), type: sniffedType(input) ?? storedType };
+export async function servableOriginal(input: Buffer): Promise<{ body: Buffer; type: string } | null> {
+  const sniffed = sniffedType(input);
+  const cleaned = sniffed ? stripImageMetadata(input) : null;
+  if (cleaned) return { body: Buffer.from(cleaned), type: sniffed! };
   try {
-    const image = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS });
-    const meta = await image.metadata();
-    if (!meta.exif && !meta.xmp && !meta.iptc && !meta.comments?.length) return { body: input, type: storedType };
-    return { body: await image.rotate().webp({ quality: 90 }).toBuffer(), type: "image/webp" };
+    const turned = sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).rotate();
+    if (sniffed === "image/jpeg") return { body: await turned.jpeg({ quality: 90 }).toBuffer(), type: "image/jpeg" };
+    if (sniffed === "image/png") return { body: await turned.png().toBuffer(), type: "image/png" };
+    return { body: await turned.webp({ quality: 90 }).toBuffer(), type: "image/webp" };
   } catch (err) {
     console.error("Photo not cleaned; refusing to serve it", err);
     return null;
