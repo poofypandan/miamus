@@ -126,8 +126,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "start",
     title: { en: "Today", id: "Hari ini" },
     body: {
-      en: "The line at the top says whether everything is on track or something is late. Waiting for you lists what needs your decision, like a leave request. Below it, each person's tasks for the day, your own under My tasks, and Coming up.",
-      id: "Baris paling atas menunjukkan apakah semuanya lancar atau ada yang terlambat. Menunggu Anda berisi yang perlu keputusan Anda, misalnya permintaan cuti. Di bawahnya ada tugas tiap orang hari itu, tugas Anda di Tugas saya, dan Segera.",
+      en: "The top says if all is on track; tap it for what's been done, with photos. Each person is a circle, with symbols for what they look after; tap it for their day. Next shows what's coming; See all opens the whole day. The date pill at the bottom left picks another day.",
+      id: "Bagian atas menunjukkan apakah semua lancar; ketuk untuk yang sudah selesai, dengan foto. Tiap orang tampil sebagai lingkaran dengan simbol yang ia urus; ketuk untuk harinya. Berikutnya: yang akan datang; Lihat semua membuka seluruh hari. Tanggal di kiri bawah memilih hari lain.",
     },
     where: "today",
     covers: ["my-tasks-2026-11", "first-run-2026-11"],
@@ -336,8 +336,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Food that is ready to eat", id: "Makanan siap dimakan" },
     body: {
-      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first, so it gets eaten in time.",
-      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas, supaya sempat dimakan.",
+      en: "Kitchen → Food lists leftovers, gifts and bought dishes: where each is kept and until when. Miamus never fills in a date by itself; anything close to its date is shown first. Ask Kakak \"What should we eat?\" and she answers from this list.",
+      id: "Dapur → Makanan berisi sisa masakan, kiriman, dan makanan yang dibeli: di mana disimpan dan sampai kapan. Miamus tidak pernah mengisi tanggalnya sendiri; yang hampir lewat tanggalnya tampil paling atas. Tanya Kakak \"Makan apa?\" dan Kakak menjawab dari daftar ini.",
     },
     where: "kitchen_food",
     needs: "food",
@@ -371,8 +371,18 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "The shopping list", id: "Daftar belanja" },
     body: {
-      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought.",
-      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa.",
+      en: "Anything marked Running low or Out goes on the list in Kitchen → Shopping, and staff can add to it from their phone. Whoever shops taps Bought; a tracked item asks how much was bought. Or tell Kakak \"I bought the santan\".",
+      id: "Barang yang ditandai Hampir habis atau Habis masuk ke daftar di Dapur → Belanja, dan staf bisa menambahkannya dari HP mereka. Yang berbelanja mengetuk Sudah dibeli; barang yang dicatat jumlahnya menanyakan beli berapa. Atau bilang ke Kakak \"Santan sudah dibeli\".",
+    },
+    where: "kitchen_shopping",
+  },
+  {
+    id: "kitchen-up-to-date",
+    group: "kitchen",
+    title: { en: "Keeping the kitchen up to date", id: "Menjaga stok tetap benar" },
+    body: {
+      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out. After Sudah dimasak, Miamus asks what ran out: one tap each. With Food at home on, they mark food Dimakan, Diberikan or Dibuang.",
+      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis. Setelah Sudah dimasak, Miamus bertanya bahan apa yang habis: sekali ketuk. Dengan Makanan di rumah, makanan ditandai Dimakan, Diberikan, atau Dibuang.",
     },
     where: "kitchen_shopping",
   },
@@ -481,15 +491,27 @@ export const GUIDE: readonly GuideEntry[] = [
       id: "Kakak, asisten AI Miamus, menyiapkan kartu dari yang Anda ketik atau ucapkan: tugas, belanja, rutinitas hewan, makanan, bahan masakan, atau yang dilihat staf. Semua disimpan setelah Anda konfirmasi. Bacakan jawaban Kakak memperdengarkan suaranya. Atur di Pengaturan → Kakak.",
     },
     where: "settings_kakak",
-    covers: ["kakak-routines-2026-11", "kakak-voice-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
+    covers: ["kakak-routines-2026-11", "kakak-answers-2026-11", "kakak-warm-seal-2026-11"],
+  },
+  {
+    // Tap to talk, tap Done to send (20 Nov): the voice flow in Kakak's sheet.
+    id: "kakak-voice",
+    group: "settings",
+    title: { en: "Talk to Kakak", id: "Bicara dengan Kakak" },
+    body: {
+      en: "Tap the mic in Kakak and talk; pauses are fine, she keeps listening. Tap Done to send, then Edit words if one was misheard. Nothing is saved until you confirm her card; Read replies aloud lets you hear her.",
+      id: "Ketuk mikrofon di Kakak lalu bicara; boleh berhenti sejenak, Kakak tetap mendengarkan. Ketuk Selesai untuk mengirim, lalu Ubah kata-kata kalau ada yang salah dengar. Semua disimpan setelah kartunya Anda konfirmasi; Bacakan jawaban Kakak memperdengarkan suaranya.",
+    },
+    where: null,
+    covers: ["kakak-voice-2026-11", "kakak-tap-to-talk-2026-11"],
   },
   {
     id: "kakak-cook",
     group: "settings",
     title: { en: "Ask Kakak: can we cook it?", id: "Tanya Kakak: bahannya lengkap?" },
     body: {
-      en: "Ask Kakak \"We're making opor tonight. Do we have everything?\" She answers from your saved recipes and what is at home, and her card puts the dish on the menu and what is missing on Shopping. With no saved recipe, she says so; add it in Kitchen → Menu.",
-      id: "Tanya Kakak \"Malam ini opor, bahannya lengkap?\" Kakak menjawab dari resep yang tersimpan dan stok di rumah, lalu kartunya memasukkan masakan ke menu dan yang kurang ke Belanja. Kalau resepnya belum ada, Kakak bilang; tambahkan di Dapur → Menu.",
+      en: "Ask Kakak \"We're making opor tonight. Do we have everything?\" or \"What can we cook tonight?\" She answers from your saved recipes and what is at home; her card puts the dish on the menu and what is missing on Shopping. No saved recipe? Add it in Kitchen → Menu.",
+      id: "Tanya Kakak \"Malam ini opor, bahannya lengkap?\" atau \"Masak apa malam ini?\" Kakak menjawab dari resep tersimpan dan stok di rumah; kartunya memasukkan masakan ke menu dan yang kurang ke Belanja. Resep belum ada? Tambahkan di Dapur → Menu.",
     },
     where: "kitchen_menu",
     covers: ["kakak-cook-2026-11"],

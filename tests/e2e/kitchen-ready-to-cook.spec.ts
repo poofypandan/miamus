@@ -201,3 +201,58 @@ test("the staff tip, in Indonesian", async ({ context, page }) => {
   await expect(tip).toContainText("Kurang 1: santan");
   await shot(page, "staff-id-tip");
 });
+
+test("the staff tip on keeping the kitchen up to date: two short lines, in Indonesian, no prices", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: false }, items, recipes, menu, kitchenSyncTip: true });
+  await page.goto("/staff");
+  const tip = page.getByRole("region", { name: "Supaya stok selalu benar" });
+  await expect(tip).toBeVisible({ timeout: 20_000 });
+  await expect(tip).toContainText("Di Dapur → Belanja, ketuk barangnya.");
+  await expect(tip).toContainText("Tekan Sudah dimasak di Menu hari ini.");
+  await expect(tip).not.toContainText(/Rp|Missing|Kitchen/);
+  await shot(page, "staff-id-kitchen-sync-tip");
+});
+
+test("after Sudah dimasak, one tap marks what ran out, and Batalkan puts it back (S2a)", async ({ context, page }) => {
+  await installStub(context, { stored: freshSession(), staffPhone: true, features: { kitchen: false, food: true }, items, recipes, menu });
+  await page.goto("/staff");
+  const card = page.getByRole("region", { name: "Menu hari ini", exact: true });
+  await card.getByRole("button", { name: /Opor ayam/ }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Sudah dimasak" }).click();
+  const sheet = page.getByRole("dialog", { name: "Ada bahan yang habis?" });
+  await expect(sheet).toBeVisible();
+  // Ayam is Enough: asked. Santan is already Out and Serai isn't on a list: not asked.
+  const ayam = sheet.getByRole("button", { name: /Ayam/ });
+  await expect(ayam).toBeVisible();
+  await expect(sheet.getByRole("button", { name: /Santan|Serai/ })).toHaveCount(0);
+  await expect(sheet.getByRole("button", { name: "Tidak ada" })).toBeVisible();
+  await expect(sheet).not.toContainText(/Rp|Missing|Out\b/);
+
+  const marked = page.waitForRequest((r) => r.url().includes("/inventory_items") && r.method() === "PATCH");
+  await ayam.click();
+  expect((await marked).postDataJSON()).toMatchObject({ stock_status: "out" });
+  await expect(ayam).toHaveAttribute("aria-pressed", "true");
+  await expect(ayam).toContainText("Habis");
+  await shot(page, "staff-id-ran-out");
+
+  await sheet.getByRole("button", { name: "Selesai" }).click();
+  // Then the usual Ada sisa?, while Food at home is on.
+  await page.getByRole("button", { name: "Tidak ada sisa" }).click();
+  const putBack = page.waitForRequest((r) => r.url().includes("/inventory_items") && r.method() === "PATCH");
+  await page.getByRole("button", { name: "Batalkan" }).click();
+  expect((await putBack).postDataJSON()).toMatchObject({ stock_status: "ok" });
+});
+
+test("in English for an owner, and Nothing ran out just closes it (S2a)", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, features: { kitchen: false, food: false }, items, recipes, menu });
+  await page.goto("/dashboard?module=inventory&kitchen=menu");
+  await page.locator(`section[data-day="${day(0)}"]`).getByRole("button", { name: /Opor ayam/ }).click({ timeout: 20_000 });
+  await page.getByRole("button", { name: "Cooked", exact: true }).click();
+  const sheet = page.getByRole("dialog", { name: "Anything run out?" });
+  await expect(sheet.getByRole("button", { name: /Ayam/ })).toBeVisible();
+  await expect(sheet.getByRole("button", { name: "Nothing ran out" })).toBeVisible();
+  await shot(page, "owner-en-ran-out");
+  await sheet.getByRole("button", { name: "Nothing ran out" }).click();
+  await expect(sheet).toHaveCount(0);
+});
+

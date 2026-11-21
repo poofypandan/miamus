@@ -125,7 +125,7 @@ export function FoodView({
 
       {containers.length > 0 && (
         <section className="flex flex-col gap-2" aria-labelledby="food-containers">
-          <h2 id="food-containers" className="text-sm font-semibold text-gray-900">
+          <h2 id="food-containers" className="text-sm font-semibold text-muted-foreground">
             {tr("Containers to return", "Wadah yang perlu dikembalikan")}
           </h2>
           <div className="inset-rows flex flex-col overflow-hidden rounded-2xl bg-card shadow-card [--row-inset:3.25rem]">
@@ -143,7 +143,7 @@ export function FoodView({
                   <Circle className="size-5" />
                 </button>
                 <span className="flex min-w-0 flex-1 flex-col py-2">
-                  <span className="truncate text-sm font-medium">{containerLabel(item.from_whom, locale)}</span>
+                  <span className="truncate text-base font-semibold">{containerLabel(item.from_whom, locale)}</span>
                   <span className="truncate text-xs text-muted-foreground">{foodName(item, locale)}</span>
                 </span>
               </div>
@@ -164,7 +164,7 @@ export function FoodView({
       ) : (
         GROUPS.filter((g) => groups[g].length > 0).map((group) => (
           <section key={group} className="flex flex-col gap-2" aria-labelledby={`food-${group}`}>
-            <h2 id={`food-${group}`} className="text-sm font-semibold text-gray-900">
+            <h2 id={`food-${group}`} className="text-sm font-semibold text-muted-foreground">
               {FOOD_GROUP_LABELS[locale][group]}
             </h2>
             <div className="inset-rows flex flex-col overflow-hidden rounded-2xl bg-card shadow-card [--row-inset:4.25rem]">
@@ -260,7 +260,7 @@ function FoodRow({
         </span>
       )}
       <span className="flex min-w-0 flex-1 flex-col">
-        <span className="truncate text-sm font-medium">{foodName(item, locale)}</span>
+        <span className="truncate text-base font-semibold">{foodName(item, locale)}</span>
         <span className={cn("truncate text-xs", past ? "font-medium text-red-700" : "text-muted-foreground")}>
           {past ? expiryLabel(days, locale) : detail}
         </span>
@@ -279,7 +279,18 @@ function FoodRow({
         )}
       </span>
       {!past && (
-        <span className={cn("shrink-0 text-xs", unknown ? "font-medium text-amber-700" : "text-muted-foreground")}>
+        // Today and tomorrow in attention ink, the word alone (Fable's look):
+        // the one thing on the screen that needs eating soon. Later, quiet.
+        <span
+          className={cn(
+            "shrink-0 text-xs",
+            unknown
+              ? "font-medium text-amber-700"
+              : days !== null && days <= 1
+                ? "font-medium text-attention"
+                : "text-muted-foreground"
+          )}
+        >
           {expiryLabel(days, locale, item.expiry_unknown)}
         </span>
       )}

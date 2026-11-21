@@ -62,8 +62,9 @@ function ExampleList({ onPick, staffNames }: { onPick: (text: string) => void; s
   );
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs font-medium text-muted-foreground">{t("Try saying", "Coba bilang")}</p>
-      <ul className="flex flex-col gap-2">
+      <p className="px-1 text-sm font-medium text-muted-foreground">{t("Try saying", "Coba bilang")}</p>
+      {/* One paper inset with hairlines between the rows (04, PR 5): lists, not boxes. */}
+      <ul className="flex flex-col divide-y overflow-hidden rounded-[22px] bg-background">
         {examples.map((example) => {
           const Icon = ICONS[example.kind];
           return (
@@ -71,11 +72,9 @@ function ExampleList({ onPick, staffNames }: { onPick: (text: string) => void; s
               <button
                 type="button"
                 onClick={() => onPick(example.text)}
-                className="flex w-full items-center gap-3 rounded-xl border bg-card px-3 py-2.5 text-left text-sm text-gray-900 transition-colors active:bg-muted"
+                className="flex min-h-[52px] w-full items-center gap-3 px-4 py-3 text-left text-base text-foreground transition-colors active:bg-muted"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
+                <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="min-w-0">{example.text}</span>
               </button>
             </li>
