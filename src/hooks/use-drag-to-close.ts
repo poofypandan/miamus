@@ -8,6 +8,8 @@ const SLOP = 6;
 const DISTANCE = 120;
 /** So does a quick flick down, in px per ms. */
 const VELOCITY = 0.5;
+/** A flick counts only if the finger was still moving when it let go (Codex, #188). */
+const FLICK_MS = 100;
 
 /**
  * Drag a bottom sheet down by its grabber and header to close it (Fable and
@@ -39,7 +41,9 @@ export function useDragToClose<T extends HTMLElement>(onClose: () => void) {
     if (!d || d.id !== event.pointerId) return;
     drag.current = null;
     if (!d.on) return;
-    if (d.dy > DISTANCE || d.v > VELOCITY) {
+    // A fast pull that stopped and held before letting go is not a flick.
+    const flick = d.v > VELOCITY && event.timeStamp - d.lastT < FLICK_MS;
+    if (d.dy > DISTANCE || flick) {
       // Stay where the finger left it: the exit animation adds its travel to this.
       sheet.current?.style.setProperty("transition", "none");
       onClose();

@@ -49,3 +49,18 @@ test("a short pull springs back, and Close still closes", async ({ context, page
   await sheet.getByRole("button", { name: "Close" }).click();
   await expect(sheet).toHaveCount(0);
 });
+
+test("a quick short pull that stops and holds before letting go springs back (Codex, #188)", async ({ context, page }) => {
+  await installStub(context, { owner: { locale: "en" }, kakak: { allowed: true, enabled: true } });
+  const sheet = await open(page);
+  const box = (await page.getByTestId("kakak-handle").boundingBox())!;
+  const x = box.x + 60;
+  const y = box.y + 12;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x, y + 80, { steps: 2 });
+  await page.waitForTimeout(400);
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+  await expect(sheet).toBeVisible();
+});
