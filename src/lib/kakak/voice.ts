@@ -183,11 +183,20 @@ export function joinSession(results: RecognitionResultEventLike["results"], snap
 
 // ---- Listening until Done ---------------------------------------------------
 
+/**
+ * Who ended listening in the new flow: the owner's Done tap, the safety limit,
+ * or the browser (it would not keep listening, or failed after hearing words).
+ * Only the owner's tap sends to Kakak (owner, 20 Nov: "making sure kakak
+ * doesn't act immediately without another tap"); the others keep the words in
+ * the typing box.
+ */
+export type FinishedBy = "owner" | "limit" | "browser";
+
 export interface ListenHandlers {
   /** Every change in what was heard, for the live words. */
   onHeard: (transcript: string) => void;
-  /** Listening finished (Done or the time limit in the new flow, Stop or the browser's end in the current one): the words heard. */
-  onFinished: (transcript: string) => void;
+  /** Listening finished (Done or the time limit in the new flow, Stop or the browser's end in the current one): the words heard, and who ended it (new flow only). */
+  onFinished: (transcript: string, by?: FinishedBy) => void;
   onProblem: (problem: VoiceProblem) => void;
 }
 
@@ -201,8 +210,15 @@ export interface Listening {
 /** How long Done (or Stop) waits for the browser's own end before ending itself. */
 export const FINISH_GRACE_MS = 1500;
 
-/** The safety limit: listening ends by itself after this long, as if Done was tapped. */
-export const MAX_LISTEN_MS = 60_000;
+/**
+ * The safety limit (20 Nov: two minutes, was one): listening ends by itself
+ * after this long. The words are kept for the owner to check and send; they
+ * are not sent.
+ */
+export const MAX_LISTEN_MS = 120_000;
+
+/** From here a quiet notice counts down the seconds left before the limit. */
+export const LIMIT_NOTICE_MS = 105_000;
 
 /**
  * A session that ends this soon with nothing heard, or a restart that fails
@@ -251,6 +267,8 @@ export function listenUntilDone(
   let stumbles = 0;
   let sessions = 0;
   let graceTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Who ended it: the browser, unless finish() says otherwise. */
+  let by: FinishedBy = "browser";
 
   const end = () => {
     state = "over";
@@ -262,7 +280,7 @@ export function listenUntilDone(
   const handOver = () => {
     if (state === "over") return;
     end();
-    if (heard) handlers.onFinished(heard);
+    if (heard) handlers.onFinished(heard, by);
     else handlers.onProblem("quiet");
   };
   /** A real problem: keep what was heard if anything was, so no words are lost. */
@@ -275,7 +293,7 @@ export function listenUntilDone(
     } catch {
       // already stopped
     }
-    if (heard) handlers.onFinished(heard);
+    if (heard) handlers.onFinished(heard, "browser");
     else handlers.onProblem(problem);
   };
 
@@ -337,9 +355,10 @@ export function listenUntilDone(
     }
   };
 
-  const finish = () => {
+  const finishBy = (who: FinishedBy) => {
     if (state !== "on") return;
     state = "finishing";
+    by = who;
     const r = current;
     try {
       r?.stop();
@@ -350,11 +369,11 @@ export function listenUntilDone(
     graceTimer = setTimeout(handOver, FINISH_GRACE_MS);
   };
 
-  const limitTimer = setTimeout(finish, MAX_LISTEN_MS);
+  const limitTimer = setTimeout(() => finishBy("limit"), MAX_LISTEN_MS);
   begin();
 
   return {
-    finish,
+    finish: () => finishBy("owner"),
     cancel() {
       if (state === "over") return;
       const r = current;
@@ -451,10 +470,10 @@ export function listenOnce(Ctor: RecognitionCtor, lang: string, handlers: Listen
 // ---- The switch --------------------------------------------------------------
 
 /**
- * The new voice flow (tap Done, check, then Send) is opt-in per phone while
- * the owner tries it: opening any Miamus address with ?newvoice=1 turns it
- * on for this phone, ?newvoice=0 turns it off. Off by default, and then the
- * current flow above runs unchanged.
+ * The new voice flow (tap to talk, tap Done to send) is the default since
+ * 20 Nov (it was opt-in with ?newvoice=1). ?newvoice=0 on any Miamus address
+ * turns it off for this phone, back to the older flow above, while it settles
+ * in; ?newvoice=1 turns it on again. A phone that opted in earlier keeps "on".
  */
 export const NEW_VOICE_KEY = "miamus.kakak.newVoice";
 export const NEW_VOICE_PARAM = "newvoice";
@@ -472,9 +491,9 @@ export function newVoiceFromUrl(search: string): boolean | null {
 
 export function readNewVoice(storage: Pick<Storage, "getItem"> | undefined): boolean {
   try {
-    return storage?.getItem(NEW_VOICE_KEY) === "on";
+    return storage?.getItem(NEW_VOICE_KEY) !== "off";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -486,8 +505,7 @@ export function syncNewVoice(search: string, storage: Pick<Storage, "getItem" | 
   const asked = newVoiceFromUrl(search);
   if (asked === null) return readNewVoice(storage);
   try {
-    if (asked) storage?.setItem(NEW_VOICE_KEY, "on");
-    else storage?.removeItem(NEW_VOICE_KEY);
+    storage?.setItem(NEW_VOICE_KEY, asked ? "on" : "off");
   } catch {
     // storage blocked: the choice lasts this visit only
   }

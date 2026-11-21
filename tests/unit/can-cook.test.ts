@@ -232,3 +232,32 @@ describe("countedItems (cooking and Add missing with Kitchen amounts off)", () =
     expect(tracked.track_amount).toBe(true);
   });
 });
+
+describe("Ada bahan yang habis? (S2a)", () => {
+  it("asks about the linked items cooking didn't take off, once each, never one already Out", async () => {
+    const { ranOutCandidates } = await import("@/lib/menu");
+    const at = (n: number, status: "ok" | "low" | "out") =>
+      ({ id: `i${n}`, name: `Item ${n}`, stock_status: status, track_amount: false, unit: "pcs", quantity: 0 }) as unknown as import("@/types/database").InventoryItem;
+    const items = [at(1, "ok"), at(2, "out"), at(3, "low")];
+    const recipe = {
+      id: "r",
+      servings: 4,
+      written_in: "id",
+      ingredients: [
+        { id: "l1", item_id: "i1", name: "Item 1", name_id: null, amount: 1, unit: "kg", position: 1 },
+        { id: "l2", item_id: "i2", name: "Item 2", name_id: null, amount: 1, unit: "kg", position: 2 },
+        { id: "l3", item_id: "i3", name: "Item 3", name_id: null, amount: 1, unit: "kg", position: 3 },
+        { id: "l4", item_id: null, name: "Serai", name_id: null, amount: 1, unit: "batang", position: 4 },
+        { id: "l5", item_id: "i1", name: "Item 1 again", name_id: null, amount: 1, unit: "kg", position: 5 },
+      ],
+    } as unknown as import("@/lib/recipes").RecipeWithLines;
+    expect(ranOutCandidates(recipe, items, []).map((i) => i.id)).toEqual(["i1", "i3"]);
+    // What cooking took off by amount isn't asked.
+    expect(ranOutCandidates(recipe, items, [{ item_id: "i1", amount: 1, unit: "kg" }]).map((i) => i.id)).toEqual(["i3"]);
+    expect(ranOutCandidates(null, items, [])).toEqual([]);
+    // With Kitchen amounts on, a counted item keeps its own amount: never asked (Codex, PR #164).
+    const counted = items.map((i) => (i.id === "i3" ? ({ ...i, track_amount: true, unit: "kg" } as typeof i) : i));
+    expect(ranOutCandidates(recipe, counted, [], true).map((i) => i.id)).toEqual(["i1"]);
+    expect(ranOutCandidates(recipe, counted, [], false).map((i) => i.id)).toEqual(["i1", "i3"]);
+  });
+});

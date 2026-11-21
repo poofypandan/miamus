@@ -6,7 +6,7 @@ import { householdRefs, type KakakHousehold } from "@/lib/kakak/household";
 import { KAKAK_TOOLS, TOOL_WEEKDAYS } from "@/lib/kakak/tools";
 import { AREAS } from "@/lib/staff-areas";
 import { isDay, isTime } from "@/lib/kakak/validate";
-import type { ExpectedShoppingItem, FieldMatcher, KakakTestSet } from "./types";
+import { householdForCase, type ExpectedShoppingItem, type FieldMatcher, type KakakTestSet } from "./types";
 
 const REF_FIELDS: Record<string, "people" | "pets" | "rooms" | "items" | "recipes"> = {
   recipe: "recipes",
@@ -41,7 +41,8 @@ export function checkTestSet(
   idPattern: RegExp = /^K\d{3}$/,
 ): string[] {
   const problems: string[] = [];
-  const refs = householdRefs(household);
+  // The case's own recipes count for its references (PR C1).
+  let refs = householdRefs(household);
   const seen = new Set<string>();
   if (testSet.version !== 1) problems.push("version must be 1");
 
@@ -94,6 +95,7 @@ export function checkTestSet(
 
   for (const kakakCase of testSet.cases) {
     const where = kakakCase.id;
+    refs = householdRefs(householdForCase(household, kakakCase));
     if (!idPattern.test(kakakCase.id)) problems.push(`${where}: id must match ${idPattern}`);
     if (seen.has(kakakCase.id)) problems.push(`${where}: duplicate id`);
     seen.add(kakakCase.id);

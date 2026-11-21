@@ -19,6 +19,7 @@ import {
   Loader2,
   MessageSquare,
   PawPrint,
+  Pencil,
   Refrigerator,
   RotateCcw,
   Send,
@@ -159,7 +160,7 @@ function Conversation({
   const { allProfiles, reload: reloadRoster } = useStaffProfiles();
   const [staffAdd, setStaffAdd] = useState<{ preset: AddStaffPreset; requestId: string; refined: boolean } | null>(null);
   const staffAdded = useRef(false);
-  /** The new voice flow (tap Done, check, then Send), opt-in on this phone with ?newvoice=1. */
+  /** The voice flow (tap to talk, tap Done to send), the default; ?newvoice=0 turns it off on this phone. */
   const newVoice = useNewVoice();
   const [screen, setScreen] = useState<Screen>({ kind: "typing" });
   /** A reply is being read aloud (the voice beta tells): her heart follows it. */
@@ -191,6 +192,11 @@ function Conversation({
   const [said, setSaid] = useState<SaidLine[]>([]);
   const [draft, setDraft] = useState("");
   const [typingAnswer, setTypingAnswer] = useState(false);
+  /**
+   * The owner's latest line was spoken and sent by Done: what to put back if
+   * they tap Edit words under it (a misheard name). Cleared by the next send.
+   */
+  const [spokenTurn, setSpokenTurn] = useState<SpokenTurn | null>(null);
   const [saving, setSaving] = useState(false);
   /** The server answered in practice mode (scripted, no AI): say so. */
   const [practice, setPractice] = useState(false);
@@ -212,9 +218,10 @@ function Conversation({
     latestSaid.current?.scrollIntoView({ block: "start" });
   }, [lines, showing]);
 
-  async function send(text: string) {
+  async function send(text: string, { spoken = false }: { spoken?: boolean } = {}) {
     const typed = text.trim();
     if (!typed) return;
+    setSpokenTurn(spoken ? { words: typed.slice(0, MAX_TYPED), screen, history, said, typingAnswer } : null);
     // A correction after the card's chips carries what they changed, so
     // Kakak's next card keeps it (Codex, PR #68). The owner's words are
     // never cut for it: the note shrinks to the room left, or is left out.
@@ -224,7 +231,7 @@ function Conversation({
     const words = note ? `${note} ${own}` : own;
     // Kakak's line the owner is answering stays above their answer.
     const hers = kakakLine(screen, t("Here's what I'll add:", "Ini yang akan Kakak tambahkan:"));
-    setSaid((list) => [...list, ...(hers ? [{ who: "kakak" as const, text: hers }] : []), { who: "owner" as const, text: own }]);
+    setSaid((list) => [...list, ...(hers ? [{ who: "kakak" as const, text: hers }] : []), { who: "owner" as const, text: own, spoken }]);
     setDraft("");
     setTypingAnswer(false);
     // After her plain reply the conversation is at rest: a long one starts
@@ -238,8 +245,26 @@ function Conversation({
     if (lastTurn.current) void ask(lastTurn.current.words, lastTurn.current.history);
   }
 
+  /**
+   * Edit words under a spoken line (20 Nov): Kakak's answer to it is dropped (a
+   * card unconfirmed, so nothing was saved), the conversation goes back to
+   * where it was, and the words go into the typing box to fix and send.
+   */
+  function editSpoken() {
+    if (!spokenTurn || saving || screen.kind === "saved") return;
+    abort.current?.abort();
+    if (screen.kind === "card") reportKakakOutcome(screen.requestId, "cancelled");
+    setScreen(spokenTurn.screen);
+    setHistory(spokenTurn.history);
+    setSaid(spokenTurn.said);
+    setDraft(spokenTurn.words);
+    setTypingAnswer(spokenTurn.typingAnswer || spokenTurn.screen.kind === "question" || spokenTurn.screen.kind === "card");
+    setSpokenTurn(null);
+  }
+
   function restart() {
     abort.current?.abort();
+    setSpokenTurn(null);
     lastTurn.current = null;
     setHistory(null);
     setSaid([]);
@@ -260,6 +285,8 @@ function Conversation({
     } catch {
       return; // the sheet was closed
     }
+    // Edit took the words back, or a newer turn started: this answer is stale.
+    if (controller.signal.aborted) return;
     show(reply);
   }
 
@@ -367,6 +394,10 @@ function Conversation({
     setSaving(true);
     try {
       const { undo } = await save(items);
+      // Saved: the spoken words can't be edited any more. Putting them back
+      // would leave the saved screen (and its Undo) with the routine still
+      // saved, and resending could add it twice (Codex, PR #165).
+      setSpokenTurn(null);
       // Adjusted with the card's chips: Kakak was close, not right (statistics).
       reportKakakOutcome(requestId, refined ? "changed" : "confirmed");
       // A pet routine ends on Kakak's own "Done", saying what it means for
@@ -450,13 +481,27 @@ function Conversation({
         <div className="flex flex-col gap-2" data-testid="kakak-said">
           {said.map((line, index) =>
             line.who === "owner" ? (
-              <p
-                key={index}
-                ref={index === said.length - 1 ? latestSaid : undefined}
-                className="max-w-[85%] scroll-mt-2 self-end rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900"
-              >
-                {line.text}
-              </p>
+              <div key={index} className="flex max-w-[85%] flex-col items-end gap-1 self-end">
+                <p
+                  ref={index === said.length - 1 ? latestSaid : undefined}
+                  className="scroll-mt-2 rounded-2xl rounded-br-md bg-slate-100 px-3 py-2 text-sm text-gray-900"
+                >
+                  {line.text}
+                </p>
+                {/* Sent by Done, so the owner never saw it in the box: one tap
+                    puts it back there to fix a misheard word. */}
+                {line.spoken && index === said.length - 1 && spokenTurn && (
+                  <button
+                    type="button"
+                    onClick={editSpoken}
+                    disabled={saving}
+                    className="flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-medium text-muted-foreground active:bg-muted disabled:opacity-50"
+                  >
+                    <Pencil className="size-3.5" aria-hidden="true" />
+                    {t("Edit words", "Ubah kata-kata")}
+                  </button>
+                )}
+              </div>
             ) : (
               // Her earlier lines: the same bubble, a little quieter than her latest.
               <div key={index} className="opacity-80" data-testid="kakak-earlier">
@@ -588,16 +633,24 @@ function Conversation({
       {/* Kakak answers questions, and adds an ingredient (2026-11-14): the same, in its own week. */}
       {screen.kind === "typing" && said.length === 0 && <WhatsNewCard id="kakak-answers-2026-11" />}
 
-      {/* Talk to Kakak (voice beta): spoken words go through send() like typed ones. */}
+      {/* Talk to Kakak: spoken words go through send() like typed ones. */}
       {newVoice ? (
-        // Done puts the spoken words in the typing box, to check (a misheard
-        // name) and send like typed ones.
+        // Tap to talk, tap to end (owner, 20 Nov). Done sends straight away,
+        // with anything already typed in front; Edit words under the line puts it
+        // back. Ended any other way (the limit, the browser), nothing is
+        // sent: the words wait in the typing box. Either way Kakak only
+        // prepares a card; nothing is saved before its confirm tap.
         <KakakVoiceNew
           screen={screen}
           onSpeaking={setSpeaking}
           listenHere={showTyping || screen.kind === "question"}
-          onReview={(text) => {
-            setDraft((typed) => (typed.trim() ? `${typed.trim()} ${text}` : text).slice(0, MAX_TYPED));
+          onSpoken={(text, by) => {
+            const words = (draft.trim() ? `${draft.trim()} ${text}` : text).slice(0, MAX_TYPED);
+            if (by === "owner") {
+              void send(words, { spoken: true });
+              return;
+            }
+            setDraft(words);
             // Kakak's question has no typing box until asked for: open it.
             if (screen.kind === "question" || screen.kind === "card") setTypingAnswer(true);
           }}
@@ -647,6 +700,17 @@ function Conversation({
 interface SaidLine {
   who: "owner" | "kakak";
   text: string;
+  /** The owner's line came from the mic's Done, not the typing box. */
+  spoken?: boolean;
+}
+
+/** A spoken line sent by Done, and the conversation as it was before it, for Edit. */
+interface SpokenTurn {
+  words: string;
+  screen: Screen;
+  history: KakakHistory | null;
+  said: SaidLine[];
+  typingAnswer: boolean;
 }
 
 /**
