@@ -142,7 +142,7 @@ export function KakakSheet({
             scrolled ? "border-border" : "border-transparent"
           )}
         >
-          <KakakAvatar className="size-11" beat={open ? beat : null} />
+          <KakakAvatar large className="size-11" beat={open ? beat : null} />
           <div className="min-w-0 flex-1">
             {/* Its own span: cn() reads text-headline as a colour and would drop the title's. */}
             <SheetTitle className="leading-none">

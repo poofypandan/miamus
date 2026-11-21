@@ -101,11 +101,11 @@ export const WHATS_NEW: WhatsNewEntry[] = [
     title: { en: "New: Kakak's new look", id: "Baru: tampilan baru Kakak" },
     steps: {
       en: [
-        "Kakak has a new mark: the Miamus roof and a heart on a terracotta circle. Her replies sit on her own soft colour, so you can tell at a glance who is speaking.",
+        "Kakak has a new mark: the Miamus roof and a heart in terracotta on a warm white circle. Her replies sit on her own soft colour, so you can tell at a glance who is speaking.",
         "Her heart moves a little: it beats while she thinks, follows her voice when Read replies aloud is on, and settles once when something is saved. It stays still if your phone is set to reduce motion.",
       ],
       id: [
-        "Kakak punya tanda baru: atap Miamus dan hati di lingkaran terakota. Jawabannya ada di warna lembutnya sendiri, jadi langsung terlihat siapa yang bicara.",
+        "Kakak punya tanda baru: atap Miamus dan hati berwarna terakota di lingkaran putih hangat. Jawabannya ada di warna lembutnya sendiri, jadi langsung terlihat siapa yang bicara.",
         "Hatinya sedikit bergerak: berdetak saat Kakak berpikir, mengikuti suaranya saat Bacakan jawaban Kakak menyala, dan bergerak sekali saat ada yang tersimpan. Tetap diam kalau HP Anda diatur untuk mengurangi gerakan.",
       ],
     },

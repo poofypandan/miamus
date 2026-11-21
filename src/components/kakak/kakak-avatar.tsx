@@ -2,16 +2,15 @@ import { cn } from "@/lib/utils";
 import { ROOF_POINTS } from "@/components/brand/brand-mark";
 
 /**
- * Kakak's mark, the "warm seal" (owner, 20 Nov 2026; treatment 2 of the
- * Kakak identity proposal): the Miamus roof with a heart under it, drawn in
- * the light on a solid disc of her terracotta, with no border. The whole disc
- * is the mark, so she reads at 20 px as a terracotta dot with a roof and a
- * heart. The roof is the logo's own stroke; the logo's two walls are gone
- * (they read as legs), and the heart is fuller, with a rounded tip.
+ * Kakak's mark D, the light seal (chosen by the owners on 20 Nov, "We love
+ * logo D"; spec in docs/private/landing/kakak-mark-d/): the Miamus roof with
+ * a full heart under it, both in her terracotta, on a warm-white disc lifted
+ * on a soft shadow. No walls, no outline, no solid terracotta disc. The roof
+ * is the logo's own stroke; the heart is about a fifth wider than the warm
+ * seal's, with a rounded tip.
  *
- * Only her tokens: the disc is `kakak` and the drawing `kakak-tint`, which
- * keeps it light on terracotta here and dark on the lighter rose of the dark
- * tokens.
+ * The disc is the same colour as the surfaces it sits on, so its shadow is
+ * part of the mark: the deeper one from 36 px (`large`), the small one below.
  *
  * The roof never moves; the heart is alive (globals.css, "Kakak's heart"):
  * `beat` makes it beat slowly while she thinks, follow a gentle beat while a
@@ -19,16 +18,12 @@ import { ROOF_POINTS } from "@/components/brand/brand-mark";
  * runs under reduced motion.
  */
 
-/**
- * The heart, in the logo's 512 box: under the roof where the M's dip was,
- * with full lobes and a soft rounded tip, so its lower edge is a curve and
- * not a point.
- */
+/** The heart, in the logo's 512 box: a box 232 wide and 200 tall at (140, 206), the tip rounded. */
 export const KAKAK_HEART =
-  "M256 249.8C244.5 221.6 225.3 204 204.2 204C177.3 204 160 226.9 160 258.6C160 302.6 206.1 337.8 242.6 371.2Q256 383.5 269.4 371.2C305.9 337.8 352 302.6 352 258.6C352 226.9 334.7 204 307.8 204C286.7 204 267.5 221.6 256 249.8Z";
+  "M256 258C242.1 226 218.9 206 193.4 206C160.9 206 140 232 140 268C140 318 195.7 358 239.8 396Q256 410 272.2 396C316.3 358 372 318 372 268C372 232 351.1 206 318.6 206C293.1 206 269.9 226 256 258Z";
 
-/** The drawing's own square, the roof's top to the heart's tip, so it sits evenly in the circle. */
-export const KAKAK_VIEWBOX = "92 78 328 328";
+/** The drawing's own box, the roof's top to the heart's tip; 66 % of the disc's width. */
+export const KAKAK_VIEWBOX = "88 78 336 340";
 
 /** What her heart is doing: thinking, speaking (reading a reply aloud), or a saved settle. */
 export type KakakBeat = "think" | "speak" | "settle";
@@ -36,13 +31,26 @@ export type KakakBeat = "think" | "speak" | "settle";
 /** How long a settle is shown for: its 420 ms (globals.css) and a little room. Then the heart is still again. */
 export const KAKAK_SETTLE_MS = 600;
 
-export function KakakAvatar({ className, beat }: { className?: string; beat?: KakakBeat | null }) {
+export function KakakAvatar({
+  className,
+  beat,
+  large = false,
+}: {
+  className?: string;
+  beat?: KakakBeat | null;
+  /** 36 px or larger: the deeper of her two shadows (mark D). */
+  large?: boolean;
+}) {
   return (
     <span
       aria-hidden="true"
-      className={cn("inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-kakak text-kakak-tint", className)}
+      className={cn(
+        "inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-kakak-disc text-kakak",
+        large ? "shadow-kakak" : "shadow-kakak-sm",
+        className
+      )}
     >
-      <svg viewBox={KAKAK_VIEWBOX} className="size-[60%]" fill="none">
+      <svg viewBox={KAKAK_VIEWBOX} className="size-[66%]" fill="none">
         <polyline
           points={ROOF_POINTS}
           stroke="currentColor"
