@@ -64,7 +64,7 @@ export interface ChoreSuggestion {
 export interface ShoppingSuggestion {
   kind: "shopping";
   entries: (
-    | { type: "item"; itemId: string; name: string; status: "low" | "out" }
+    | { type: "item"; itemId: string; name: string; status: "low" | "out" | "ok" }
     | { type: "note"; note: string; petId: string | null; petName: string | null }
   )[];
 }
@@ -299,11 +299,15 @@ export type KakakSuggestion =
  * The oldest page (lib/kakak/client.ts KAKAK_CLIENT_VERSION) that can show
  * and save this suggestion: 2 (2026-11-14) for a new ingredient or an
  * amount, 3 for what a staff member sees (Phase 178 follow-up), 4 for a
- * dish on the menu (Can we cook it?), 5 for adding or removing a staff
+ * dish on the menu (Can we cook it?), 5 for Bought on a shopping card
+ * (E2), 6 for adding or removing a staff
  * member (staff onboarding step 5), else 1.
  */
 export function clientVersionFor(item: KakakSuggestion): number {
-  if (item.kind === "add_staff" || item.kind === "remove_staff") return 5;
+  // Staff cards (staff onboarding step 5): above E2's Bought.
+  if (item.kind === "add_staff" || item.kind === "remove_staff") return 6;
+  // E2: "Bought" on a shopping card; an older page would save it as Out.
+  if (item.kind === "shopping" && item.entries.some((e) => e.type === "item" && e.status === "ok")) return 5;
   if (item.kind === "menu_dish") return 4;
   if (item.kind === "staff_areas") return 3;
   if (item.kind === "new_ingredient" || (item.kind === "ingredient" && Boolean(item.amount || item.amountSkipped))) return 2;
@@ -441,7 +445,7 @@ export function toSuggestion(
       const seen = new Set<string>();
       for (const entry of items) {
         const item = str(entry.item);
-        const status = entry.status === "low" ? "low" : "out";
+        const status = entry.status === "low" ? "low" : entry.status === "ok" && str(entry.item) ? "ok" : "out";
         if (item) {
           if (seen.has(item)) continue;
           seen.add(item);
@@ -757,7 +761,7 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         s.entries.length <= 10 &&
         s.entries.every((e: Record<string, unknown>) =>
           e?.type === "item"
-            ? okId(e.itemId, false) && (e.status === "low" || e.status === "out")
+            ? okId(e.itemId, false) && (e.status === "low" || e.status === "out" || e.status === "ok")
             : e?.type === "note" && okText(e.note, 120, false) && okId(e.petId, true),
         )
       );

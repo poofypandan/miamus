@@ -177,8 +177,9 @@ export const KAKAK_TOOLS: Anthropic.Tool[] = [
               ),
               status: {
                 type: "string",
-                enum: ["low", "out"],
-                description: "'low' for running low, 'out' for none left or just 'buy'.",
+                enum: ["low", "out", "ok"],
+                description:
+                  "'low' for running low, 'out' for none left or just 'buy', 'ok' for bought ('Santan sudah dibeli', 'I bought eggs'): only on a listed item, never a new note.",
               },
               note: nullableString(
                 "For a new note: what to buy, in Bahasa Indonesia, with an amount if given ('Gula 2 kg'). Max 120 characters. Null when item is set.",

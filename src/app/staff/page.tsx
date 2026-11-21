@@ -511,6 +511,8 @@ function TasksView() {
         ) : pushCard.ready ? (
         <StaffTipCard
           tips={[
+            // 20 Nov: keeping the kitchen up to date (S1), for anyone who sees Dapur.
+            { id: "staff-kitchen-sync-2026-11", show: sees.kitchen },
             // 20 Nov: Can we cook it? (D18), once Today has a menu.
             { id: "staff-ready-to-cook-2026-11", show: showMenuTip },
             // 19 Nov: the task card with its Sebelum and Sesudah places.

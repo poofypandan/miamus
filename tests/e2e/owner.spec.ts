@@ -106,7 +106,7 @@ test("Kitchen (Bahasa Indonesia): the admin adds food and may delete it", async 
 
 test("Today: the day's routines for both pets, in the owner's language", async ({ context, page }) => {
   const stub = await installStub(context, { owner: { locale: "en" } });
-  await page.goto("/dashboard");
+  await page.goto("/dashboard?day=all");
 
   await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true", {
     timeout: 20_000,

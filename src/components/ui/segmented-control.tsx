@@ -11,8 +11,9 @@ export interface Segment<T extends string> {
 }
 
 /**
- * An iOS-style two-or-more-way switch: a shaded track with the active option
- * lifted out as a primary-coloured pill. Used where one screen holds two
+ * An iOS-style two-or-more-way switch: a warm track with the active option
+ * lifted out as a paper pill (21 Nov, the visual direction's PR 2: black is
+ * for the action, never for "you are here"). Used where one screen holds two
  * unrelated jobs (chores vs. inventory) that should never be on screen at once.
  */
 export function SegmentedControl<T extends string>({
@@ -66,7 +67,7 @@ export function SegmentedControl<T extends string>({
             aria-selected={active}
             onClick={() => onChange(segment.value)}
             className={cn(
-              "flex items-center justify-center gap-1.5 rounded-full font-medium",
+              "flex items-center justify-center gap-1.5 rounded-full font-semibold",
               size === "sm" ? "min-h-10 px-3 text-xs" : "min-h-[44px] px-3 text-sm",
               scrollable || size === "sm"
                 ? "shrink-0"
@@ -78,8 +79,8 @@ export function SegmentedControl<T extends string>({
                   ? "flex-auto whitespace-nowrap"
                   : "flex-1",
               active
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground active:bg-background/60"
+                ? "bg-card text-foreground shadow-[0_1px_2px_rgb(60_40_20/0.1),0_3px_8px_-3px_rgb(60_40_20/0.14)]"
+                : "text-muted-foreground active:bg-card/50"
             )}
           >
             {segment.label}
@@ -87,7 +88,7 @@ export function SegmentedControl<T extends string>({
               <span
                 className={cn(
                   "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-semibold tabular-nums",
-                  active ? "bg-primary-foreground/20" : "bg-background text-foreground"
+                  active ? "bg-muted text-foreground" : "bg-card text-foreground"
                 )}
               >
                 {segment.badge}

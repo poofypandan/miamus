@@ -1,5 +1,6 @@
 "use client";
 
+import { AREAS } from "@/lib/staff-areas";
 import { startTransition, useCallback, useMemo, useRef, useState } from "react";
 import { addDays } from "date-fns";
 import Link from "next/link";
@@ -23,12 +24,15 @@ import { OwnerFinishSheet } from "@/components/chores/owner-finish-sheet";
 import { WeekPager } from "@/components/agenda/week-pager";
 import { WeekSummaryView } from "@/components/agenda/week-summary-view";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DateRibbon } from "@/components/date-ribbon";
 import { ApprovalQueue, pendingBatches } from "@/components/dashboard/approval-queue";
 import { MedicationCourseAlerts } from "@/components/dashboard/medication-course-alerts";
 import { PetsQuestionCard } from "@/components/dashboard/pets-question-card";
 import { ChoreTimelineRow } from "@/components/dashboard/chore-timeline-row";
+import { DatePill } from "@/components/agenda/date-pill";
 import { StaffProgressCard } from "@/components/dashboard/staff-progress-card";
+import { LatestSheet, latestRows } from "@/components/agenda/latest-list";
+import { NextList } from "@/components/agenda/next-list";
+import { PeopleCircles } from "@/components/agenda/people-circles";
 import { StaffWorkloadSheet } from "@/components/dashboard/staff-workload-sheet";
 import { useStaffProgress } from "@/hooks/use-staff-progress";
 import { ANYONE_PERSON, useWorkloadParam } from "@/hooks/use-staff-workload";
@@ -37,7 +41,7 @@ import { TimelineRow } from "@/components/dashboard/timeline-row";
 import { ChoreEditorDialog } from "@/components/chores/chore-editor-dialog";
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
-import { useAgendaRange } from "@/hooks/use-agenda-range";
+import { useAgendaRange, type AgendaRange } from "@/hooks/use-agenda-range";
 import { applyAgendaFilter, useAgendaFilter, type AgendaFilter } from "@/hooks/use-agenda-filter";
 import { useAgendaWeek } from "@/hooks/use-agenda-week";
 import { useChoreOccurrences } from "@/hooks/use-chore-occurrences";
@@ -81,6 +85,9 @@ import { isPlainClick, pushInPlace } from "@/lib/in-place-navigation";
 import { buildAgenda, formatDateLocal } from "@/lib/scheduleEngine";
 import {
   buildUnifiedAgenda,
+  finishedEntries,
+  isEntryDone,
+  routinePart,
   splitOverdue,
   weekStartOf,
   type UnifiedAgendaEntry,
@@ -274,6 +281,16 @@ export function AgendaTab() {
   );
   const entries = useMemo(() => applyAgendaFilter(allEntries, filter), [allEntries, filter]);
   const { overdue, rest } = useMemo(() => splitOverdue(entries), [entries]);
+  /**
+   * Finished on the day: what Latest shows (latestRows puts the latest
+   * first). From the whole day, the admin's own chores and the finished pets
+   * of a routine still under way included, as the status ring counts them.
+   */
+  const admittedIds = useMemo(() => new Set(pets.filter(isAdmitted).map((p) => p.id)), [pets]);
+  const finished = useMemo(
+    () => finishedEntries({ groups, chores: allChores, admittedIds, logs }),
+    [groups, allChores, admittedIds, logs]
+  );
 
   // Things to buy (Phase 154): one quiet line here instead of a banner on
   // every tab. Items marked running low or out, plus the staff's notes.
@@ -285,6 +302,11 @@ export function AgendaTab() {
   // Food to eat soon (Phase 156): the same kind of quiet line, above it.
   // Food at home and Repairs switched off (Phase 171): their lines go.
   const { food: foodOn, repairs: repairsOn } = useHouseholdFeatures();
+  // The areas this household uses, for the symbols under each person.
+  const householdAreas = useMemo(
+    () => AREAS.filter((area) => (area === "pets" ? petsOn : area === "repairs" ? repairsOn : true)),
+    [petsOn, repairsOn]
+  );
   const eatSoon = useMemo(
     () => (foodOn ? countEatSoon(foodItems, formatDateLocal(today)) : 0),
     [foodItems, today, foodOn]
@@ -417,6 +439,32 @@ export function AgendaTab() {
   const showsToday = range === "day" && dateStr === todayKey;
   // Ticks each minute, so the line appears when the hour comes.
   const clock = useMinuteClock(showsToday);
+  /**
+   * Today v3 (21 Nov; docs/private/landing/06): the front page is the state,
+   * the people and Next. The whole day opens under Next, and what has been
+   * finished (Latest) behind the status card.
+   */
+  // In the address (?day=all), like every other view toggle here, so the
+  // door and what it shows can never disagree after a remount.
+  const showDay = searchParams.get("day") === "all";
+  function setShowDay(next: boolean | ((on: boolean) => boolean)) {
+    const on = typeof next === "function" ? next(showDay) : next;
+    const params = new URLSearchParams(searchParams.toString());
+    if (on) params.set("day", "all");
+    else params.delete("day");
+    const query = params.toString();
+    startTransition(() => pushInPlace(query ? `${pathname}?${query}` : pathname));
+  }
+  // A routine tapped in Next opens the whole day, where routines are: with
+  // Chores chosen under See all it would be filtered out of what just opened,
+  // so the filter goes back to All in the same step (Codex, PR #181).
+  function openDayForRoutine() {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("day", "all");
+    if (params.get("show") === "chores") params.delete("show");
+    startTransition(() => pushInPlace(`${pathname}?${params.toString()}`));
+  }
+  const [latestOpen, setLatestOpen] = useState(false);
   const notDoneCount = useMemo(() => {
     if (!showsToday) return 0;
     const now = new Date(clock);
@@ -471,8 +519,13 @@ export function AgendaTab() {
       workload.openPerson(lateOwners[0]);
       return;
     }
+    // Several people: their rows, which open with the whole day (Today v3).
     const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    progressCard.current?.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
+    setShowDay(true);
+    window.setTimeout(
+      () => progressCard.current?.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" }),
+      50
+    );
   }
   // Late and couldn't-do are about now: only while Today shows today.
   const totals = useMemo(() => dayTotals(showsToday ? progress : null), [showsToday, progress]);
@@ -499,6 +552,29 @@ export function AgendaTab() {
     firstRun.view !== "checklist" &&
     progress !== null &&
     (totals.total > 0 || waiting > 0);
+  // Next: carried-over chores first, as they lead the day (Phase 113), then
+  // open entries from now on (any-time ones first, as the day lists them);
+  // if nothing is left ahead, the open ones that are late. Without the
+  // carried-over ones here they were out of sight until See all (Codex, PR
+  // #181). From the whole day, never the Pets | Chores filter: that
+  // belongs to the list under See all, and folded away it would leave
+  // Next saying "Nothing more today" with no sign of why (Codex, PR #181).
+  const nowHm = (() => {
+    const now = new Date(clock);
+    return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  })();
+  const nextEntries = useMemo(() => {
+    const { overdue: carried, rest: dayRest } = splitOverdue(allEntries);
+    // A routine still under way is named for what is left in it.
+    const open = dayRest.flatMap((entry): UnifiedAgendaEntry[] => {
+      if (entry.kind === "chore") return isEntryDone(entry) ? [] : [entry];
+      // Paused while a pet is at the clinic, and a vet visit open until closed.
+      const left = routinePart(entry.group, false, { admittedIds, logs });
+      return left ? [{ ...entry, group: left }] : [];
+    });
+    const ahead = showsToday ? open.filter((entry) => !entry.time || entry.time >= nowHm) : open;
+    return [...carried.filter((entry) => !isEntryDone(entry)), ...(ahead.length > 0 ? ahead : open)];
+  }, [allEntries, showsToday, nowHm, admittedIds, logs]);
   const waitingLines = slip !== null || repairLines.toReview > 0 || repairLines.toCheck > 0 || needsDate > 0;
   const comingLines = comingUp.length > 0 || !!menuLine || eatSoon > 0 || toBuy > 0;
 
@@ -586,7 +662,7 @@ export function AgendaTab() {
   // Day | Week (Phase 112): which view. On top of the Week view, which is
   // the whole page; with the list on the Day view (Phase 175), where the
   // top of the page belongs to what needs the owner.
-  const rangePill = (size: "md" | "sm") => (
+  const rangePill = (size: "md" | "sm", choose: (next: AgendaRange) => void = setRange) => (
     <SegmentedControl
       ariaLabel={t("Agenda range", "Rentang agenda")}
       size={size}
@@ -595,7 +671,7 @@ export function AgendaTab() {
         { value: "week", label: t("Week", "Minggu") },
       ]}
       value={range}
-      onChange={setRange}
+      onChange={choose}
     />
   );
 
@@ -620,9 +696,8 @@ export function AgendaTab() {
             that went the Agenda was left following a date it could not change.
             Day view only since Phase 115: the Week grid's own headers are the
             days, and a strip of the same dates above them said it twice. */}
-        {range === "day" && (
-          <DateRibbon value={selectedDate} onChange={setSelectedDate} locale={locale} />
-        )}
+        {/* The date is a pill at the bottom left now (Today v3, DatePill),
+            beside Tell Kakak: its week opens from where the thumb is. */}
 
         {/* Set up your home (audit B1): a new household's steps to its first
             finished task. Directly under the date, above everything else
@@ -663,7 +738,7 @@ export function AgendaTab() {
             how many rows wait below. A tap opens Who did what in a home
             with staff. */}
         {showStatus && (
-          <TodayStatus waiting={waiting} totals={totals} onPress={hasStaff ? () => workload.open() : undefined} />
+          <TodayStatus waiting={waiting} totals={totals} onPress={finished.length > 0 ? () => setLatestOpen(true) : undefined} />
         )}
 
         {/* Asked once, of a household that never answered and never had a
@@ -853,14 +928,34 @@ export function AgendaTab() {
             in the Who did what sheet. */}
         {range === "day" && hasStaff && progress && (
           // scroll-mt: the late row scrolls here, clear of the sticky header.
+          <PeopleCircles progress={progress} profiles={allProfiles ?? []} areas={householdAreas} />
+        )}
+
+        {/* Next (Today v3): what happens from here, three rows at most; its
+            door opens the whole day below. */}
+        {range === "day" && !(allEntries.length === 0 && brandNew) && (
+          <NextList
+            entries={nextEntries}
+            heading={showsToday ? t("Next", "Berikutnya") : label}
+            staffName={staffName}
+            expanded={showDay}
+            onToggleDay={() => setShowDay((on) => !on)}
+            onOpen={(entry) => (entry.kind === "chore" ? openChore(entry.occurrence) : openDayForRoutine())}
+          />
+        )}
+
+        {/* Someone working in the house now (Phase 174), under the people
+            it keeps busy: "Pak Budi is here · Leaking tap, LT2". */}
+        {/* The whole day opens with each person's row, their counts and
+            Who did what: the detail the circles fold away. */}
+        {range === "day" && showDay && hasStaff && progress && (
+          // scroll-mt: the late row scrolls here, clear of the sticky header.
           <div ref={progressCard} className="scroll-mt-24 empty:hidden">
             <StaffProgressCard progress={progress} dayLabel={label} />
           </div>
         )}
 
-        {/* Someone working in the house now (Phase 174), under the people
-            it keeps busy: "Pak Budi is here · Leaking tap, LT2". */}
-        {showsToday && hereNow.length > 0 && (
+        {showsToday && showDay && hereNow.length > 0 && (
           <div className="-my-1 flex flex-col">
             {hereNow.map((visit) => {
               const repair = repairs.find((r) => r.id === visit.repair_id);
@@ -886,9 +981,9 @@ export function AgendaTab() {
 
         {/* Coming up (Phase 175): the next few days and the kitchen's quiet
             lines, in one calm group. Nothing here waits on a decision. */}
-        {comingLines && (
+        {comingLines && (range === "week" || showDay) && (
           <section aria-label={t("Coming up", "Segera")} data-testid="coming-up" className="flex flex-col gap-1">
-            <h2 className="text-sm font-semibold text-gray-900">{t("Coming up", "Segera")}</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground">{t("Coming up", "Segera")}</h2>
             <div className="-my-1 flex flex-col">
               {/* Bills and upkeep inside their reminder window (Phase 164).
                   Named in full for screen readers; the heading is the lead
@@ -952,10 +1047,9 @@ export function AgendaTab() {
         )}
 
         {range === "day" ? (
-          <>
+          (showDay || (allEntries.length === 0 && brandNew)) && <>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-gray-900">{label}</h2>
-              {rangePill("sm")}
+              <h2 className="text-sm font-semibold text-muted-foreground">{label}</h2>
             </div>
             {/* Under the heading, as the Pets tab's photo filters sit under
                 theirs (Phase 134). Not on an empty day — unless a filter is
@@ -1150,9 +1244,16 @@ export function AgendaTab() {
         }}
       />
 
-      {/* Who did what, and a person's day from their progress row; open
-          while ?workload= is set. Mounted here only, so one sheet opens. */}
+      {/* Who did what, and a person's day from their circle; open while
+          ?workload= is set. Mounted here only, so one sheet opens. */}
       <StaffWorkloadSheet />
+
+      {/* The date, at the bottom left beside Tell Kakak (Today v3). */}
+      <DatePill rangeSwitch={(afterClose) => rangePill("md", (next) => afterClose(() => setRange(next)))} />
+
+      {/* Latest (Today v3): behind the status card, what has been finished
+          today, with its photos, the latest first. */}
+      <LatestSheet open={latestOpen} onClose={() => setLatestOpen(false)} rows={latestRows(finished, staffName)} />
 
       <EveningSummarySheet
         date={summaryOpen}

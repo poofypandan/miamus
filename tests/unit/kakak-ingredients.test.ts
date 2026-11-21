@@ -73,7 +73,10 @@ describe("the household block", () => {
   });
 
   it("is exactly as before unless Kitchen amounts is explicitly on and Food at home isn't off", () => {
-    const before = renderHouseholdBlock(buildContext({ ...rows, items: rows.items.map(({ id, name, scope, created_at }) => ({ id, name, scope, created_at })) }, opts).household);
+    // E2: every item's status is in the block anyway; only the ingredient parts depend on the switches.
+    const before = renderHouseholdBlock(
+      buildContext({ ...rows, items: rows.items.map(({ id, name, scope, created_at, stock_status }) => ({ id, name, scope, created_at, stock_status })) }, opts).household,
+    );
     for (const flags of [{}, { kitchenOn: null }, { kitchenOn: false }]) {
       const { household } = buildContext({ ...rows, ...flags }, opts);
       expect(household.ingredientsOn).toBeUndefined();

@@ -140,10 +140,12 @@ describe("the cards", () => {
   });
 
   it("need this page or newer: an older page is asked to reopen", () => {
-    expect(KAKAK_CLIENT_VERSION).toBe(5);
-    expect(clientVersionFor(added)).toBe(5);
-    expect(needsNewerApp(removed, 4)).toBe(true);
-    expect(needsNewerApp(removed, 5)).toBe(false);
+    // 6: above E2's Bought on a shopping card (5).
+    expect(KAKAK_CLIENT_VERSION).toBe(6);
+    expect(clientVersionFor(added)).toBe(6);
+    expect(clientVersionFor(removed)).toBe(6);
+    expect(needsNewerApp(removed, 5)).toBe(true);
+    expect(needsNewerApp(removed, 6)).toBe(false);
   });
 
   it("read as the sheets do, with no job title, in both languages", () => {
