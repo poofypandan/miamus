@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
 
   // A thumbnail: a feed asking for 320px gets ~24KB instead of the ~185KB
   // original. Scaled to fit the width, never upscaled; an original no wider
-  // than asked (or one that can't be read) is served as it is.
+  // than asked (or one that can't be resized) is served as servableOriginal
+  // allows: cleaned, re-encoded, or not at all.
   const original = Buffer.from(await data.arrayBuffer());
   // Never with hidden data such as where it was taken (security audit,
   // 20 Nov 2026). A resized thumbnail carries none; otherwise the original

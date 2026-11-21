@@ -1,5 +1,5 @@
 import imageCompression from "browser-image-compression";
-import { stripImageMetadata } from "@/lib/strip-metadata";
+import { imageTypeOf, stripImageMetadata } from "@/lib/strip-metadata";
 
 const OPTIONS = {
   maxSizeMB: 0.2,
@@ -42,13 +42,22 @@ function asFile(result: Blob, original: File): File {
  * removed on the phone. A file that can be neither compressed nor cleaned
  * is refused (the buckets accept only JPEG, PNG and WebP anyway).
  */
+/** The buckets' own limit (2 MB, migrations/101). */
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
+
 export async function photoForUpload(file: File): Promise<File> {
   try {
     return await compressPhoto(file);
   } catch (err) {
     console.error("Compression failed; sending the original without its hidden data", err);
-    const cleaned = stripImageMetadata(new Uint8Array(await file.arrayBuffer()));
-    if (!cleaned) throw new Error("This photo could not be prepared for upload");
-    return new File([cleaned as BlobPart], file.name, { type: file.type, lastModified: file.lastModified });
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const type = imageTypeOf(bytes);
+    const cleaned = type ? stripImageMetadata(bytes) : null;
+    if (!type || !cleaned) throw new Error("This photo could not be prepared for upload");
+    // Over the buckets' 2 MB it would be refused on every try and sit in the
+    // phone's queue for good: refused here, where the person can retake it.
+    if (cleaned.length > MAX_UPLOAD_BYTES) throw new Error("This photo is too large to upload");
+    // The type the bytes say: a browser can report none, or a wrong one.
+    return new File([cleaned as BlobPart], file.name, { type, lastModified: file.lastModified });
   }
 }

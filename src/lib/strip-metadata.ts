@@ -26,6 +26,10 @@
  * Colour profiles and colour-space chunks stay: they say how to read the
  * pixels (a Display-P3 or HDR photo would otherwise show wrong colours),
  * and are not where a phone writes location or who took it (Codex, PR #161).
+ * A profile can hold short free text (an ICC description, a PNG iCCP profile
+ * name); phones write standard ones ("Display P3"), and that text is kept.
+ * Re-encoding (as /api/photo does for anything this can't parse) would be
+ * the way to drop it too.
  * Kept by name, never by a list of what to drop, so a metadata container
  * nobody listed yet is dropped too.
  * The one EXIF field that changes how a photo looks, its orientation, is
@@ -334,4 +338,32 @@ function stripWebp(b: Uint8Array): Uint8Array | null {
   header.set(b.subarray(0, 12));
   new DataView(header.buffer).setUint32(4, body.length + 4, true);
   return concat([header, body]);
+}
+
+/** The format the bytes say, for the three formats this cleans; null otherwise. */
+export function imageTypeOf(b: Uint8Array): "image/jpeg" | "image/png" | "image/webp" | null {
+  if (isJpeg(b)) return "image/jpeg";
+  if (isPng(b)) return "image/png";
+  if (isWebp(b)) return "image/webp";
+  return null;
+}
+
+/**
+ * The file as it goes to storage: cleaned, whatever path it took to get
+ * here. Every upload passes through this (lib/data/supabase-provider.ts), so
+ * a photo queued on a phone by an older build, or any future caller that
+ * skips photoForUpload, still loses its hidden data (code review, PR #161).
+ * A canvas-made photo has nothing to take out and comes back as it was.
+ *
+ * A file this can't parse goes up unchanged rather than being refused: the
+ * buckets take only JPEG, PNG and WebP, a malformed one is never served as
+ * stored (/api/photo re-encodes it or refuses), and refusing here would
+ * leave it stuck in the phone's queue for good.
+ */
+export async function cleanedForUpload(file: File): Promise<File> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const type = imageTypeOf(bytes);
+  const cleaned = type ? stripImageMetadata(bytes) : null;
+  if (!type || !cleaned) return file;
+  return new File([cleaned as BlobPart], file.name, { type, lastModified: file.lastModified });
 }

@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { describe, expect, it, vi } from "vitest";
-import { stripImageMetadata } from "@/lib/strip-metadata";
+import { cleanedForUpload, stripImageMetadata } from "@/lib/strip-metadata";
 import { servableOriginal } from "@/lib/photo-resize";
 
 // A photo of someone's home must never reach storage, or leave /api/photo,
@@ -279,6 +279,27 @@ describe("servableOriginal (what /api/photo serves full size)", () => {
   });
 });
 
+describe("cleanedForUpload (every upload, whatever path it took)", () => {
+  it("cleans a camera original a phone queued before this build", async () => {
+    const raw = new File([new Uint8Array(await cameraJpeg(6))], "IMG_0001.jpg", { type: "image/jpeg" });
+    const out = await cleanedForUpload(raw);
+    const bytes = new Uint8Array(await out.arrayBuffer());
+    expect(text(bytes)).not.toContain("PhoneCo");
+    expect((await sharp(bytes).metadata()).orientation).toBe(6);
+    expect(out.type).toBe("image/jpeg");
+  });
+
+  it("names the type from the bytes", async () => {
+    const out = await cleanedForUpload(new File([new Uint8Array(await cameraJpeg())], "photo", { type: "" }));
+    expect(out.type).toBe("image/jpeg");
+  });
+
+  it("passes a file it can't parse through unchanged (storage and the proxy decide)", async () => {
+    const odd = new File(["not a picture"], "x.webp", { type: "image/webp" });
+    expect(await cleanedForUpload(odd)).toBe(odd);
+  });
+});
+
 describe("photoForUpload", () => {
   it("uploads the original without its GPS when compression fails", async () => {
     vi.resetModules();
@@ -290,6 +311,27 @@ describe("photoForUpload", () => {
     expect(out.type).toBe("image/jpeg");
     expect(text(bytes)).not.toContain("PhoneCo");
     expect((await sharp(bytes).metadata()).exif).toBeUndefined();
+    vi.doUnmock("browser-image-compression");
+  });
+
+  it("refuses a cleaned original over the buckets' 2 MB, rather than queue it for good", async () => {
+    vi.resetModules();
+    vi.doMock("browser-image-compression", () => ({ default: () => Promise.reject(new Error("out of memory")) }));
+    const { photoForUpload } = await import("@/lib/image");
+    const noisy = await sharp(Buffer.from(Array.from({ length: 1500 * 1500 * 3 }, (_, n) => (n * 2654435761) >>> 24)), {
+      raw: { width: 1500, height: 1500, channels: 3 },
+    }).jpeg({ quality: 100 }).toBuffer();
+    expect(noisy.length).toBeGreaterThan(2 * 1024 * 1024);
+    await expect(photoForUpload(new File([new Uint8Array(noisy)], "big.jpg", { type: "image/jpeg" }))).rejects.toThrow(/too large/);
+    vi.doUnmock("browser-image-compression");
+  });
+
+  it("gives the cleaned original the type its bytes say", async () => {
+    vi.resetModules();
+    vi.doMock("browser-image-compression", () => ({ default: () => Promise.reject(new Error("out of memory")) }));
+    const { photoForUpload } = await import("@/lib/image");
+    const out = await photoForUpload(new File([new Uint8Array(await cameraJpeg())], "IMG.heic", { type: "" }));
+    expect(out.type).toBe("image/jpeg");
     vi.doUnmock("browser-image-compression");
   });
 
