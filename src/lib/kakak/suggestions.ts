@@ -62,7 +62,7 @@ export interface ChoreSuggestion {
 export interface ShoppingSuggestion {
   kind: "shopping";
   entries: (
-    | { type: "item"; itemId: string; name: string; status: "low" | "out" }
+    | { type: "item"; itemId: string; name: string; status: "low" | "out" | "ok" }
     | { type: "note"; note: string; petId: string | null; petName: string | null }
   )[];
 }
@@ -273,6 +273,8 @@ export type KakakSuggestion =
  * dish on the menu (Can we cook it?), else 1.
  */
 export function clientVersionFor(item: KakakSuggestion): number {
+  // E2: "Bought" on a shopping card; an older page would save it as Out.
+  if (item.kind === "shopping" && item.entries.some((e) => e.type === "item" && e.status === "ok")) return 5;
   if (item.kind === "menu_dish") return 4;
   if (item.kind === "staff_areas") return 3;
   if (item.kind === "new_ingredient" || (item.kind === "ingredient" && Boolean(item.amount || item.amountSkipped))) return 2;
@@ -410,7 +412,7 @@ export function toSuggestion(
       const seen = new Set<string>();
       for (const entry of items) {
         const item = str(entry.item);
-        const status = entry.status === "low" ? "low" : "out";
+        const status = entry.status === "low" ? "low" : entry.status === "ok" && str(entry.item) ? "ok" : "out";
         if (item) {
           if (seen.has(item)) continue;
           seen.add(item);
@@ -699,7 +701,7 @@ export function isSaveableSuggestion(value: unknown): value is KakakSuggestion {
         s.entries.length <= 10 &&
         s.entries.every((e: Record<string, unknown>) =>
           e?.type === "item"
-            ? okId(e.itemId, false) && (e.status === "low" || e.status === "out")
+            ? okId(e.itemId, false) && (e.status === "low" || e.status === "out" || e.status === "ok")
             : e?.type === "note" && okText(e.note, 120, false) && okId(e.petId, true),
         )
       );

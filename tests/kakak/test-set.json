@@ -8339,6 +8339,315 @@
         ]
       ],
       "note": "The wife's questions, casual: what to cook today (PR C1). Ready first (Nasi goreng, Rendang daging); no card until she picks one."
+    },
+    {
+      "id": "K200",
+      "sentence": "Makan apa ya malam ini?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "foods": [
+          {
+            "name": "Rendang",
+            "keptIn": "fridge",
+            "expiresOn": "2026-11-11",
+            "expiryUnknown": false
+          },
+          {
+            "name": "Lapis legit",
+            "keptIn": "counter",
+            "expiresOn": "2026-11-12",
+            "expiryUnknown": false
+          }
+        ]
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "rendang"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E1: the rendang at home expires today, so it comes first. A short reply, no card."
+    },
+    {
+      "id": "K201",
+      "sentence": "Is there anything left over?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "food",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "foods": [
+          {
+            "name": "Rendang",
+            "keptIn": "fridge",
+            "expiresOn": "2026-11-11",
+            "expiryUnknown": false
+          },
+          {
+            "name": "Lapis legit",
+            "keptIn": "counter",
+            "expiresOn": "2026-11-12",
+            "expiryUnknown": false
+          }
+        ]
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "rendang"
+              ],
+              [
+                "lapis"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E1: both ready-to-eat foods, soonest first (rendang today, lapis legit tomorrow). Never a food the block doesn't list. No card."
+    },
+    {
+      "id": "K202",
+      "sentence": "Ada sisa makanan nggak?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "food",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "household": {
+        "foods": []
+      },
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "belum ada",
+                "tidak ada",
+                "nggak ada",
+                "kosong"
+              ]
+            ],
+            "avoids": [
+              "sisa rendang",
+              "rendang di",
+              "rendang yang",
+              "kedaluwarsa",
+              "lapis",
+              "sop",
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E1: nothing ready to eat is noted. She says so, and may offer what can be cooked. Never makes up a leftover. No card. A recipe such as Rendang daging may be offered (run 44737820659 did), so only a leftover rendang is refused."
+    },
+    {
+      "id": "K203",
+      "sentence": "Santan sudah dibeli",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "shopping",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "suggestions",
+            "calls": [
+              {
+                "tool": "add_to_shopping_list",
+                "fields": {
+                  "items": {
+                    "items": [
+                      {
+                        "item": "I12",
+                        "status": "ok",
+                        "note": null
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      ],
+      "note": "E2: Santan (I12) is Out; bought sets it back to Enough. One card, Undo restores."
+    },
+    {
+      "id": "K204",
+      "sentence": "I bought eggs today",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "shopping",
+      "holdout": false,
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "egg"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E2: Telur (I1) isn't marked low or out, so it is already Enough. She says so; no card."
+    },
+    {
+      "id": "K205",
+      "sentence": "Apa saja yang hampir habis?",
+      "ownerLocale": "id",
+      "lang": "id",
+      "category": "shopping",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "bihun"
+              ],
+              [
+                "galon"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E2: running low are Bihun (I14) and Galon air (I9); Santan is out. By name, never an amount. No card."
+    },
+    {
+      "id": "K206",
+      "sentence": "What do we need to buy?",
+      "ownerLocale": "en",
+      "lang": "en",
+      "category": "shopping",
+      "holdout": false,
+      "mustNever": [
+        "states_amount"
+      ],
+      "paths": [
+        [
+          {
+            "kind": "message",
+            "mentions": [
+              [
+                "santan",
+                "coconut milk"
+              ],
+              [
+                "bihun"
+              ],
+              [
+                "galon",
+                "water"
+              ]
+            ],
+            "avoids": [
+              "ml",
+              " gram",
+              "gr ",
+              " kg",
+              "liter",
+              " cup",
+              "kaleng",
+              "sdm",
+              "sendok",
+              "tbsp",
+              "tsp"
+            ]
+          }
+        ]
+      ],
+      "note": "E2: everything marked out or running low (Santan out; Bihun, Galon air low), and where the list is. No card."
     }
   ]
 }

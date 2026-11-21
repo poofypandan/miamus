@@ -93,7 +93,9 @@ people are **staf** and **admin**.
 | Let Kakak help (household switch) | **Izinkan Kakak membantu** | The opt-in switch; says what is sent and to whom. |
 | Kakak's guess — check it | **Tebakan Kakak — cek lagi** | Marks a field Kakak guessed (a date, a room) so the owner looks again. |
 | Sorry, I didn't catch that. Could you say it another way? | **Maaf, Kakak belum paham. Bisa Anda katakan dengan cara lain?** | Said instead of a Kakak reply that the server dropped (a note to self, a reference, the wrong language). Builds on the sheet's existing "Maaf, Kakak belum paham." |
-| Chores · Rooms · Repairs (Home pill) | **Tugas · Ruangan · Perbaikan** | Phase 175: was Today · Rooms (Phase 158) and Repairs (Phase 159). "Ruangan", not "Kamar": a lounge or a terrace isn't a kamar. |
+| Rooms · Chores · Repairs (Home pill) | **Ruangan · Tugas · Perbaikan** | Phase 175: was Today · Rooms (Phase 158) and Repairs (Phase 159). Rooms first since 21 Nov, when Home moved to the centre tab and opens on the house. "Ruangan", not "Kamar": a lounge or a terrace isn't a kamar. |
+| Tabs: Today · Pets · Home · Kitchen · Settings | **Hari ini · Hewan · Rumah · Dapur · Pengaturan** | 21 Nov: Home in the centre (Fable's tab order). No pets: Hari ini · Rumah · Dapur · Pengaturan. |
+| The house (Home → Rooms drawing) · Needs attention · since 7 Nov | **Rumah · Perlu perhatian · sejak Sab 7 Nov** | 21 Nov: rooms drawn floor by floor, the top floor first. Amber is "kuning" in words, always with the warning mark. |
 | Room / Rooms | **Ruangan** | Phase 158. |
 | Whole floor | **Seluruh lantai** | Phase 158: chores for a room named just "LT2". |
 | Other rooms / No room | **Ruangan lain** / **Tanpa ruangan** | Phase 158. |
@@ -335,6 +337,7 @@ people are **staf** and **admin**.
 | Cooked / Use these ingredients / Mark not cooked | **Sudah dimasak** / **Pakai bahan ini** / **Tandai belum dimasak** | Phase 170 PR C. Toast: **Rendang sudah dimasak · Batalkan**. |
 | Ingredients used / Not counted | **Bahan yang dipakai** / **Tidak dihitung** | Phase 170 PR C, the cook's confirm sheet. |
 | Leftovers? / Save to Food / No leftovers | **Ada sisa?** / **Simpan ke Makanan** / **Tidak ada sisa** | Phase 170 PR C. |
+| Anything run out? / Nothing ran out / Done (after Cooked) | **Ada bahan yang habis?** / **Tidak ada** / **Selesai** | Kitchen sync S2a (20 Nov): right after Sudah dimasak, one chip per linked item; one tap Habis, again Hampir habis. |
 | Kitchen notes | **Catatan dapur** | Phase 170 PR C: neutral, never names the cook's role ("untuk yang memasak"). |
 | Add missing to Shopping / To buy / Not in your Ingredients / In your Ingredients / Enough for this week | **Tambahkan yang kurang ke Belanja** / **Perlu dibeli** / **Belum ada di Bahan masakan** / **Ada di Bahan masakan** / **Cukup untuk minggu ini** | Phase 170 PR C, the review sheet; order and words 2026-11-12 (a tick always means "put it on the shopping list"; replaced Cek dulu / Belum ada di daftar). With Food at home off: **Belum ada di Stok di rumah** / **Ada di Stok di rumah**. Line: **Perlu 1,5 kg · ada 1 kg · beli 500 g**; on To buy **Beli 500 g**; under Cukup untuk minggu ini **perlu 500 g · ada 1 kg**. |
 | For the dishes not cooked yet this week. Ticked items go on the shopping list. · Miamus doesn't know if you have these. Untick what's at home. · Marked as enough. Tick any that are running out. | **Untuk masakan minggu ini yang belum dimasak. Yang dicentang masuk daftar belanja.** · **Miamus belum tahu apakah ini ada di rumah. Hapus centang yang sudah ada.** · **Tercatat masih ada. Centang yang ternyata hampir habis.** | 2026-11-12, the review sheet: the line under the title, then the grey lines under Belum ada di Bahan masakan and Ada di Bahan masakan. |

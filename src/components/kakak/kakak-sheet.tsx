@@ -176,8 +176,10 @@ export function KakakSheet({
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
           onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 0)}
         >
-          {/* Keyed by open: each opening starts a new conversation. */}
-          {open && <Conversation onClose={onClose} onSaved={onSaved} onBeat={setBeat} />}
+          {/* Each opening starts a new conversation: the sheet's content unmounts
+              once it has closed. Not gated on open, so the whole sheet travels down
+              as it closes instead of its body vanishing first (Fable, PR 7). */}
+          <Conversation onClose={onClose} onSaved={onSaved} onBeat={setBeat} />
         </div>
       </SheetContent>
     </Sheet>
