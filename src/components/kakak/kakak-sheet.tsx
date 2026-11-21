@@ -44,6 +44,7 @@ import { KAKAK_CHIP, KAKAK_CHIP_OFF, KAKAK_CHIP_ON, KakakRemindChips } from "@/c
 import { useHousehold } from "@/context/household-context";
 import { useOwnerLocale, useT } from "@/context/owner-locale-context";
 import { useBackToClose } from "@/hooks/use-back-to-close";
+import { useDragToClose } from "@/hooks/use-drag-to-close";
 import { askKakak, historyForNextTurn, reportKakakOutcome, type KakakFailure, type KakakReply } from "@/lib/kakak/client";
 import { addsSomething, choreGlance, describeSuggestion, routineListLine, savedBenefit, savedSummary } from "@/lib/kakak/describe";
 import { routineKindInfo } from "@/lib/pet-routine-kinds";
@@ -121,48 +122,55 @@ export function KakakSheet({
     setWasOpen(open);
     if (open) setScrolled(false);
   }
+  // The grabber means it: pull her sheet down by the grabber or her header to close it.
+  const { sheet, handle } = useDragToClose<HTMLDivElement>(onClose);
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       {/* The sheet as one warm object (04, PR 5): a softer corner, a grabber,
           a warm scrim, and light above it in place of a line. */}
       <SheetContent
+        ref={sheet}
         side="bottom"
         showCloseButton={false}
         overlayClassName="bg-[rgb(20_16_14/0.4)]"
         className="max-h-[92dvh] gap-0 overflow-hidden rounded-t-[30px] border-t-0 pb-safe shadow-[0_-12px_44px_rgb(31_26_23/0.2)]"
       >
-        <div aria-hidden className="mx-auto mt-2.5 h-[5px] w-9 shrink-0 rounded-full bg-muted" />
-        {/* Her lock-up (the warm seal, 20 Nov): the mark on the left, her name
-            beside it at the headline size, and Close in the same row. */}
-        {/* The grabber and her header stay put; only the conversation scrolls,
-            under a hairline once it has (Fable, PR 5), so Close is always in reach. */}
-        <SheetHeader
-          className={cn(
-            "shrink-0 flex-row items-center gap-3 border-b pb-3 pl-5 pr-2.5 pt-2 text-left transition-colors",
-            scrolled ? "border-border" : "border-transparent"
-          )}
-        >
-          <KakakAvatar className="size-11" beat={open ? beat : null} />
-          <div className="min-w-0 flex-1">
-            {/* Its own span: cn() reads text-headline as a colour and would drop the title's. */}
-            <SheetTitle className="leading-none">
-              <span className="block text-headline">Kakak</span>
-            </SheetTitle>
-            <SheetDescription>
-              {t("Nothing is saved until you confirm.", "Tidak ada yang disimpan sebelum Anda konfirmasi.")}
-            </SheetDescription>
-          </div>
-          <SheetClose asChild>
-            {/* On her name's row in both languages, however the line under it wraps. */}
-            <button
-              type="button"
-              aria-label={closeLabel}
-              className="-mt-2 flex size-11 shrink-0 items-center justify-center self-start rounded-full text-muted-foreground active:bg-muted"
-            >
-              <X className="size-5" aria-hidden="true" />
-            </button>
-          </SheetClose>
-        </SheetHeader>
+        {/* The handle: the grabber and her header drag the sheet down (the
+            conversation below scrolls on its own). Tap outside and Close still work. */}
+        <div data-testid="kakak-handle" className="flex shrink-0 cursor-grab flex-col active:cursor-grabbing" {...handle}>
+          <div aria-hidden className="mx-auto mt-2.5 h-[5px] w-9 shrink-0 rounded-full bg-muted" />
+          {/* Her lock-up (the warm seal, 20 Nov): the mark on the left, her name
+              beside it at the headline size, and Close in the same row. */}
+          {/* The grabber and her header stay put; only the conversation scrolls,
+              under a hairline once it has (Fable, PR 5), so Close is always in reach. */}
+          <SheetHeader
+            className={cn(
+              "shrink-0 flex-row items-center gap-3 border-b pb-3 pl-5 pr-2.5 pt-2 text-left transition-colors",
+              scrolled ? "border-border" : "border-transparent"
+            )}
+          >
+            <KakakAvatar className="size-11" beat={open ? beat : null} />
+            <div className="min-w-0 flex-1">
+              {/* Its own span: cn() reads text-headline as a colour and would drop the title's. */}
+              <SheetTitle className="leading-none">
+                <span className="block text-headline">Kakak</span>
+              </SheetTitle>
+              <SheetDescription>
+                {t("Nothing is saved until you confirm.", "Tidak ada yang disimpan sebelum Anda konfirmasi.")}
+              </SheetDescription>
+            </div>
+            <SheetClose asChild>
+              {/* On her name's row in both languages, however the line under it wraps. */}
+              <button
+                type="button"
+                aria-label={closeLabel}
+                className="-mt-2 flex size-11 shrink-0 items-center justify-center self-start rounded-full text-muted-foreground active:bg-muted"
+              >
+                <X className="size-5" aria-hidden="true" />
+              </button>
+            </SheetClose>
+          </SheetHeader>
+        </div>
         <div
           data-testid="kakak-scroll"
           className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
