@@ -144,7 +144,7 @@ test("Bahasa Indonesia: the bill's form shows its payment history, owners only",
     chores: [pdam],
     billPayments: [pay(sep, 175000, 60), pay(oct, 186000, 30)],
   });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await page.getByText("Air PDAM").first().click();
   const form = page.getByRole("dialog");
   const history = form.getByRole("region", { name: "Riwayat bayar" });
@@ -284,7 +284,7 @@ test("a bill staff paid: an owner adds its amount from Chores (Codex, PR #65)", 
     after_photo_url: "x/a.jpg",
   });
   const stub = await installStub(context, { owner: { locale: "id" }, chores: [iuran] });
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await page.getByRole("button", { name: "Pembayaran" }).click({ timeout: 20_000 });
   const sheet = page.getByRole("dialog");
   await sheet.getByRole("button", { name: "Tambah jumlah atau bukti bayar" }).click();

@@ -118,7 +118,7 @@ test("a chores-only maid and a pets-only maid each show only their own kind, nev
   await expect(page).not.toHaveURL(/workload=/);
 
   // No strip on Chores, none on Pets.
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await expect(page.getByText("Mop the kitchen")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId("staff-progress-row")).toHaveCount(0);
   await expect(page.getByText("Today's progress")).toHaveCount(0);
