@@ -70,22 +70,31 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
   const stub = await installStub(context, { owner: { locale: "en" }, rooms: ROOMS, chores: CHORES });
   await page.goto("/dashboard?module=chores");
 
-  await page.getByRole("tab", { name: "Rooms" }).click({ timeout: 20_000 });
-  await expect(page).toHaveURL(/chores=rooms/);
-
-  // Floors in order, the whole floor first, rooms without a floor last.
-  const lt2 = page.getByRole("region", { name: "LT2" });
-  await expect(lt2.getByText("Whole floor")).toBeVisible();
-  await expect(lt2.getByText("Lounge")).toBeVisible();
-  await expect(page.getByRole("region", { name: "LT3" }).getByText("Music Room")).toBeVisible();
-  await expect(page.getByRole("region", { name: "Other rooms" }).getByText("Teras")).toBeVisible();
-  // One chip per job, with its days.
-  await expect(lt2.getByText("Vacuum · Mon, Thu")).toBeVisible();
+  // Home opens on Rooms, drawn as the house: the top floor first, rooms
+  // without a floor under it (21 Nov).
+  await expect(page.getByRole("tab", { name: "Rooms" })).toHaveAttribute("aria-selected", "true", { timeout: 20_000 });
+  const house = page.getByRole("region", { name: "The house" });
+  await expect(house.getByRole("button", { name: /show its list$/ })).toHaveText(["LT3", "LT2"]);
+  await expect(house.getByRole("button", { name: /^LT3 Music Room/ })).toBeVisible();
+  await expect(house.getByText("Other rooms")).toBeVisible();
+  await expect(house.getByRole("button", { name: "Teras", exact: true })).toBeVisible();
   await expect(page.getByText("1 chore has no room")).toBeVisible();
+  // A small house has no job pills (07: for four rooms they filter nothing).
+  await expect(page.getByRole("button", { name: /^Vacuum \d/ })).toHaveCount(0);
 
-  // Vacuum: "sedot debu" counts as vacuuming, never as dusting.
-  await page.getByRole("button", { name: /^Vacuum \d/ }).click();
-  await expect(page).toHaveURL(/job=vacuum/);
+  // A floor's name opens its list: the whole floor first, one chip per job, with its days.
+  await house.getByRole("button", { name: "LT2: show its list" }).click();
+  const floor = page.getByRole("dialog", { name: "LT2" });
+  await expect(floor.getByText("Whole floor")).toBeVisible();
+  await expect(floor.getByText("Lounge")).toBeVisible();
+  await expect(floor.getByText("Vacuum · Mon, Thu")).toBeVisible();
+  await floor.getByRole("button", { name: "Close", exact: true }).click();
+
+  // Vacuum, from a link that names the job: the list says which rooms have
+  // it. "sedot debu" counts as vacuuming, never as dusting.
+  await page.goto("/dashboard?module=chores&job=vacuum");
+  const lt2 = page.getByRole("region", { name: "LT2" });
+  await expect(page.getByRole("button", { name: /^Vacuum \d/ })).toHaveAttribute("aria-pressed", "true", { timeout: 20_000 });
   // The terrace's vacuum is three weeks out, yet it counts.
   await expect(page.getByText(/in 3 of 4\s+rooms/)).toBeVisible();
   await expect(page.getByRole("region", { name: "Other rooms" }).getByText("No vacuum yet")).toHaveCount(0);
@@ -108,7 +117,7 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
 
   // A room's sheet lists what's set up there, by job.
   await page.getByRole("button", { name: /^All \d/ }).click();
-  await lt2.getByText("Lounge").click();
+  await house.getByRole("button", { name: /^LT2 Lounge/ }).click();
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByRole("heading", { name: "LT2 Lounge" })).toBeVisible();
   await expect(sheet.getByText("Every Monday · Ari")).toBeVisible();
@@ -117,10 +126,11 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
   // A chore three weeks out, moved to today from Rooms, shows on Today at
   // once (Codex, #30): the shared chore list takes the edited row.
   await sheet.getByRole("button", { name: "Close" }).click();
-  await page.getByRole("region", { name: "Other rooms" }).getByText("Teras").click();
+  await house.getByRole("button", { name: "Teras", exact: true }).click();
   await page.getByRole("dialog").getByText("Vacuum kamar musik").click();
   const editor = page.getByRole("dialog");
   await expect(editor.getByRole("heading", { name: "Edit Chore" })).toBeVisible();
+  await editor.getByRole("button", { name: /^When/ }).click();
   await editor.locator('input[type="date"]').first().fill(today());
   await editor.getByRole("button", { name: "Save Changes" }).click();
   await expect(editor).toHaveCount(0);
@@ -133,17 +143,21 @@ test("Rooms: which rooms get vacuumed, and adding it where it's missing", async 
 
 test("Rooms in Bahasa Indonesia, with its What's new card shown once", async ({ context, page }) => {
   await installStub(context, { owner: { locale: "id" }, rooms: ROOMS, chores: CHORES });
+  await context.addInitScript(() => localStorage.setItem("miamus.whats-new.home-centre-2026-11", "seen"));
   await page.goto("/dashboard?module=chores");
 
+  // Home opens on Rooms, so the card has nothing to open: Mengerti closes it.
   const card = page.getByRole("region", { name: "Baru: Ruangan" });
   await expect(card).toBeVisible({ timeout: 20_000 });
-  await card.getByRole("button", { name: "Lihat Ruangan" }).click();
-  await expect(page).toHaveURL(/chores=rooms/);
   await expect(page.getByRole("tab", { name: "Ruangan" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByText("Seluruh lantai", { exact: true })).toBeVisible();
-  await expect(page.getByText("Vakum · Sen, Kam")).toBeVisible();
+  await card.getByRole("button", { name: "Mengerti" }).click();
+  await page.getByRole("button", { name: "LT2: lihat daftarnya" }).click();
+  const floor = page.getByRole("dialog", { name: "LT2" });
+  await expect(floor.getByText("Seluruh lantai", { exact: true })).toBeVisible();
+  await expect(floor.getByText("Vakum · Sen, Kam")).toBeVisible();
+  await page.keyboard.press("Escape");
 
-  await page.getByRole("button", { name: /^Vakum \d/ }).click();
+  await page.goto("/dashboard?module=chores&job=vacuum");
   await expect(page.getByText(/di 3 dari 4\s+ruangan/)).toBeVisible();
   await expect(page.getByText("Belum ada vakum").first()).toBeVisible();
 
@@ -163,5 +177,5 @@ test("Rooms says when the room list can't load, and tries again", async ({ conte
 
   roomsFail.on = false;
   await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("region", { name: "LT2" }).getByText("Lounge")).toBeVisible();
+  await expect(page.getByRole("region", { name: "The house" }).getByRole("button", { name: /^LT2 Lounge/ })).toBeVisible();
 });

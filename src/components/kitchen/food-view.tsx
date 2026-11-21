@@ -62,7 +62,7 @@ export function FoodView({
 }) {
   const id = locale === "id";
   const tr = (en: string, ind: string) => (id ? ind : en);
-  const { foodItems, loading, returnFoodContainer, pendingIds } = useHousehold();
+  const { foodItems, loading, pendingIds } = useHousehold();
   const today = formatDateLocal(useToday());
   const { allProfiles } = useStaffProfiles();
   const lookup = useStaffNameLookup(allProfiles, "");
@@ -83,24 +83,7 @@ export function FoodView({
   const open = useMemo(() => foodItems.find((f) => f.id === openId && f.outcome === null) ?? null, [foodItems, openId]);
 
   const groups = useMemo(() => groupFood(foodItems, today), [foodItems, today]);
-  const containers = useMemo(
-    () =>
-      foodItems
-        .filter(containerToReturn)
-        .sort((a, b) => (a.finished_at ?? "").localeCompare(b.finished_at ?? "")),
-    [foodItems]
-  );
   const listed = groups.today.length + groups.week.length + groups.later.length;
-
-  async function returned(item: FoodItem) {
-    try {
-      await returnFoodContainer(item.id);
-      toast.success(tr("Container returned", "Wadah sudah dikembalikan"));
-    } catch (err) {
-      console.error(err);
-      toast.error(tr("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
-    }
-  }
 
   if (loading && foodItems.length === 0) {
     return (
@@ -123,34 +106,7 @@ export function FoodView({
           : tr("Add food", "Tambah makanan")}
       </Button>
 
-      {containers.length > 0 && (
-        <section className="flex flex-col gap-2" aria-labelledby="food-containers">
-          <h2 id="food-containers" className="text-sm font-semibold text-muted-foreground">
-            {tr("Containers to return", "Wadah yang perlu dikembalikan")}
-          </h2>
-          <div className="inset-rows flex flex-col overflow-hidden rounded-2xl bg-card shadow-card [--row-inset:3.25rem]">
-            {containers.map((item) => (
-              <div key={item.id} className="flex min-h-14 items-center gap-1 pr-3">
-                <button
-                  type="button"
-                  onClick={() => returned(item)}
-                  aria-label={tr(
-                    `Container returned: ${foodName(item, locale)}`,
-                    `Wadah sudah dikembalikan: ${foodName(item, locale)}`
-                  )}
-                  className="flex size-12 shrink-0 items-center justify-center text-muted-foreground active:text-gray-900"
-                >
-                  <Circle className="size-5" />
-                </button>
-                <span className="flex min-w-0 flex-1 flex-col py-2">
-                  <span className="truncate text-base font-semibold">{containerLabel(item.from_whom, locale)}</span>
-                  <span className="truncate text-xs text-muted-foreground">{foodName(item, locale)}</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      <ContainersToReturn locale={locale} />
 
       {listed === 0 ? (
         <EmptyState
@@ -295,5 +251,62 @@ function FoodRow({
         </span>
       )}
     </button>
+  );
+}
+
+/**
+ * Containers to return (Phase 156): food that is finished but came in
+ * someone's dish, oldest first, each ticked returned with one tap. Only when
+ * there are any. Shared by the food list and the owner's shelves.
+ */
+export function ContainersToReturn({ locale }: { locale: FoodLocale }) {
+  const tr = (en: string, ind: string) => (locale === "id" ? ind : en);
+  const { foodItems, returnFoodContainer } = useHousehold();
+  const containers = useMemo(
+    () =>
+      foodItems
+        .filter(containerToReturn)
+        .sort((a, b) => (a.finished_at ?? "").localeCompare(b.finished_at ?? "")),
+    [foodItems]
+  );
+
+  async function returned(item: FoodItem) {
+    try {
+      await returnFoodContainer(item.id);
+      toast.success(tr("Container returned", "Wadah sudah dikembalikan"));
+    } catch (err) {
+      console.error(err);
+      toast.error(tr("Couldn't save. Try again.", "Gagal menyimpan. Coba lagi."));
+    }
+  }
+
+  if (containers.length === 0) return null;
+  return (
+    <section className="flex flex-col gap-2" aria-labelledby="food-containers">
+      <h2 id="food-containers" className="text-sm font-semibold text-muted-foreground">
+        {tr("Containers to return", "Wadah yang perlu dikembalikan")}
+      </h2>
+      <div className="inset-rows flex flex-col overflow-hidden rounded-2xl bg-card shadow-card [--row-inset:3.25rem]">
+        {containers.map((item) => (
+          <div key={item.id} className="flex min-h-14 items-center gap-1 pr-3">
+            <button
+              type="button"
+              onClick={() => returned(item)}
+              aria-label={tr(
+                `Container returned: ${foodName(item, locale)}`,
+                `Wadah sudah dikembalikan: ${foodName(item, locale)}`
+              )}
+              className="flex size-12 shrink-0 items-center justify-center text-muted-foreground active:text-gray-900"
+            >
+              <Circle className="size-5" />
+            </button>
+            <span className="flex min-w-0 flex-1 flex-col py-2">
+              <span className="truncate text-base font-semibold">{containerLabel(item.from_whom, locale)}</span>
+              <span className="truncate text-xs text-muted-foreground">{foodName(item, locale)}</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

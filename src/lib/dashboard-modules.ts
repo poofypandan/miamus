@@ -4,15 +4,17 @@
  * Today anchors the left edge and Settings the right: Today is the screen
  * people open the app for, so it is the first tab and the default, and
  * Settings — members, staff, invites, the app lock — is the rarely-visited
- * end. They are the two fixed points. Between them are the areas of the home:
- * Home second, because every home has one; then Pets, the only tab a home can
- * switch off, so only Kitchen ever changes place (Phase 175 plan, section 2).
+ * end. They are the two fixed points. Between them are the areas of the home,
+ * with Home in the centre, as the owners asked (21 Nov; Fable's
+ * 08-kitchen-inventory.md, section 7): Today · Pets · Home · Kitchen ·
+ * Settings. Pets is the only tab a home can switch off; without it the bar
+ * is Today · Home · Kitchen · Settings.
  *
  * The keys are the URL's ?module= values and never change; only labels,
  * icons and this order do (bottom-tab-bar.tsx has the labels). To reorder the
  * bar, reorder this one line.
  */
-export const DASHBOARD_MODULES = ["agenda", "chores", "pets", "inventory", "access"] as const;
+export const DASHBOARD_MODULES = ["agenda", "pets", "chores", "inventory", "access"] as const;
 export type DashboardModule = (typeof DASHBOARD_MODULES)[number];
 
 export const DEFAULT_MODULE: DashboardModule = "agenda";

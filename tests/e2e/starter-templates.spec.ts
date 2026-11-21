@@ -181,7 +181,7 @@ test("Starter list on Chores: what the household has is Added and never sent aga
   await installStub(context, { owner: { locale: "en" }, rooms, chores });
   const calls = await answerSetup(context, ["Dapur"]);
 
-  await page.goto("/dashboard?module=chores");
+  await page.goto("/dashboard?module=chores&chores=today");
   await page.getByRole("button", { name: "Starter list" }).click({ timeout: 20_000 });
   const sheet = page.getByRole("dialog");
   await expect(sheet.getByRole("heading", { name: "Starter list" })).toBeVisible();
