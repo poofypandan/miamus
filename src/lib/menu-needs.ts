@@ -165,8 +165,9 @@ export function menuNeeds({
   // Enough for each dish on its own but not for the week together (Codex,
   // PR #195): the shortfall adds the week up, so it says what to buy, for
   // every dish that uses the item.
+  // A dish short on its own is already in; every other dish that uses the
+  // item joins it, so Needed for and Add all name them all (Codex, PR #195).
   for (const [itemId, buy] of buyOf) {
-    if (needs.has(itemId)) continue;
     const item = items.find((i) => i.id === itemId);
     if (!item) continue;
     const status = stockStatus(item);
@@ -182,6 +183,7 @@ export function menuNeeds({
       );
     }
   }
+  for (const need of needs.values()) need.dishes.sort((a, b) => a.day.localeCompare(b.day));
   return [...needs.values()].sort(
     (a, b) => ORDER[a.kind] - ORDER[b.kind] || a.dishes[0].day.localeCompare(b.dishes[0].day) || a.name.localeCompare(b.name)
   );
