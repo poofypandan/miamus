@@ -188,7 +188,8 @@
     {
       "ref": "I9",
       "name": "Galon air",
-      "pet": false
+      "pet": false,
+      "status": "low"
     },
     {
       "ref": "I10",
@@ -213,7 +214,8 @@
       "ingredient": true,
       "out": true,
       "keptIn": null,
-      "expiresOn": null
+      "expiresOn": null,
+      "status": "out"
     },
     {
       "ref": "I13",
@@ -230,7 +232,8 @@
       "ingredient": true,
       "out": true,
       "keptIn": null,
-      "expiresOn": null
+      "expiresOn": null,
+      "status": "low"
     }
   ],
   "ingredientsOn": true,
@@ -309,5 +312,6 @@
       "title": "Soto ayam",
       "recipe": "D3"
     }
-  ]
+  ],
+  "statusesRead": true
 }

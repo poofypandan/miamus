@@ -52,15 +52,18 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  overlayClassName,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
+  /** The scrim behind the sheet, when a caller needs its own (Kakak's warm one). */
+  overlayClassName?: string
 }) {
   const closeLabel = useUiLabels().close
   return (
     <SheetPortal>
-      <SheetOverlay />
+      <SheetOverlay className={overlayClassName} />
       {/* A sheet arrives from below and comes to rest (ease-arrive, 420 ms),
           and leaves faster than it came (ease-travel, 240 ms) (04, PR 7).
           Under reduced motion it only fades: globals.css drops the slide. */}

@@ -356,6 +356,8 @@ export function buildContext(
       ref,
       name,
       pet: item.scope === "pet",
+      ...(item.stock_status === "low" || item.stock_status === "out" ? { status: item.stock_status } : {}),
+      ...(rows.kitchenOn === true && item.track_amount === true ? { tracked: true } : {}),
       ...(ingredient
         ? {
             ingredient: true,
@@ -389,6 +391,8 @@ export function buildContext(
       ...(rows.hasPets === false ? { petsOff: true } : {}),
       ...(rows.foodOn === false ? { foodOff: true } : {}),
       ...(ingredientsOn ? { ingredientsOn: true } : {}),
+      // E2: every row carried its status (the route reads stock_status).
+      ...(rows.items.length > 0 && rows.items.every((i) => typeof i.stock_status === "string") ? { statusesRead: true } : {}),
       // Only when the switches were read: a failed read says nothing is off.
       ...(rows.featuresRead && rows.repairsOn === false ? { repairsOff: true } : {}),
       ...(rows.featuresRead && rows.billsOn === false ? { billsOff: true } : {}),
