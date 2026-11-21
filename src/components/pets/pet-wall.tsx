@@ -123,7 +123,9 @@ function PetTile({ pet, layout, single }: { pet: TaskEntity; layout: WallLayout;
               the pet shows (Fable's look, #197). */}
           <span
             aria-hidden
-            className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 bg-gradient-to-t from-black/55 via-black/35 to-transparent px-4 pt-10 pb-3.5"
+            // A soft shadow on the words themselves lifts them on a pale photo
+            // and hides nothing of the pet (Fable's look, #197).
+            className="absolute inset-x-0 bottom-0 flex flex-col gap-0.5 bg-gradient-to-t from-black/55 via-black/35 to-transparent px-4 pt-10 pb-3.5 [text-shadow:0_1px_3px_rgb(31_26_23/0.45)]"
           >
             <span className={cn("truncate font-semibold tracking-[-0.02em] text-[#fff6e8]", nameSize)}>{pet.name}</span>
             {line && <TileLine line={line} onPhoto />}

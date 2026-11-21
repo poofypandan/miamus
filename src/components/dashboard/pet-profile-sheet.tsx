@@ -310,7 +310,7 @@ function PetHero({ pet, onOpenPhoto }: { pet: TaskEntity; onOpenPhoto?: () => vo
           photo
         )}
         {/* The shade only behind the words, no darker than 55 % (#197). */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col bg-gradient-to-t from-black/55 via-black/35 to-transparent px-5 pt-10 pb-4">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col bg-gradient-to-t from-black/55 via-black/35 to-transparent px-5 pt-10 pb-4 [text-shadow:0_1px_3px_rgb(31_26_23/0.45)]">
           {words}
         </div>
       </div>
