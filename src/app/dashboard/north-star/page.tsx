@@ -113,7 +113,7 @@ export default function NorthStarPage() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-gray-900">{t("By sign-up week", "Per minggu pendaftaran")}</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t("By sign-up week", "Per minggu pendaftaran")}</h2>
         {s.households === 0 && report.weeks.every((w) => w.s3Due === 0) ? (
           <p className="text-sm text-muted-foreground">
             {t("Nothing yet in these weeks.", "Belum ada apa-apa di minggu-minggu ini.")}
@@ -163,16 +163,16 @@ function targetLine(key: SignalTile["key"], report: NorthStarReport, t: Translat
 function SignalCard({ tile, t, children }: { tile: SignalTile; t: Translate; children: React.ReactNode }) {
   const label = tile.key.toUpperCase();
   return (
-    <Card className={cn("py-4", tile.status === "below" && "border-amber-200 bg-amber-50/40")}>
+    <Card className={cn("py-4", tile.status === "below" && "bg-attention-tint/40")}>
       <CardContent className="flex flex-col gap-1.5 px-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold tracking-wide text-muted-foreground">{label}</p>
-            <h3 className="text-sm font-medium text-gray-900">{signalTitle(tile.key, t)}</h3>
+            <p className="text-xs font-semibold tracking-wide text-muted-foreground">{label}</p>
+            <h3 className="text-sm font-medium text-foreground">{signalTitle(tile.key, t)}</h3>
           </div>
           <StatusChip status={tile.status} t={t} />
         </div>
-        <p className="text-2xl font-semibold tabular-nums text-gray-900" data-testid={`signal-${tile.key}`}>
+        <p className="text-2xl font-semibold tabular-nums text-foreground" data-testid={`signal-${tile.key}`}>
           {tile.value ?? <span className="text-muted-foreground">–</span>}
         </p>
         {children}
@@ -255,10 +255,10 @@ function StatusChip({ status, t }: { status: SignalStatus; t: Translate }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-        status === "met" && "bg-emerald-100 text-emerald-800",
-        status === "below" && "bg-amber-100 text-amber-800",
-        status === "none" && "bg-slate-100 text-slate-600"
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+        status === "met" && "bg-done-tint text-done-foreground",
+        status === "below" && "bg-attention-tint text-attention",
+        status === "none" && "bg-muted text-muted-foreground"
       )}
     >
       <Icon className="size-3" aria-hidden />
@@ -292,14 +292,14 @@ function WeekCard({ week, t, locale }: { week: NorthStarWeek; t: Translate; loca
   return (
     <Card className="py-3" data-testid="north-star-week">
       <CardContent className="flex flex-col gap-2 px-4">
-        <h3 className="text-sm font-medium text-gray-900">
+        <h3 className="text-sm font-medium text-foreground">
           {t(`Week of ${dayLabel(week.weekStart, locale)}`, `Minggu ${dayLabel(week.weekStart, locale)}`)}
         </h3>
         <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-xs">
           {rows.map(([label, value]) => (
             <div key={label} className="contents">
               <dt className="text-muted-foreground">{label}</dt>
-              <dd className="text-right tabular-nums text-gray-900">{value}</dd>
+              <dd className="text-right tabular-nums text-foreground">{value}</dd>
             </div>
           ))}
         </dl>
@@ -331,7 +331,7 @@ function Shell({ t, children }: { t: Translate; children: React.ReactNode }) {
       >
         <ArrowLeft className="size-3.5" /> {t("Household requests", "Permintaan rumah")}
       </Link>
-      <h1 className="text-lg font-semibold text-gray-900">{t("North star", "Ukuran utama")}</h1>
+      <h1 className="text-lg font-semibold text-foreground">{t("North star", "Ukuran utama")}</h1>
       {children}
     </div>
   );

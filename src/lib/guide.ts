@@ -240,6 +240,16 @@ export const GUIDE: readonly GuideEntry[] = [
     covers: ["starter-list-2026-11"],
   },
   {
+    id: "the-days-chores",
+    group: "home",
+    title: { en: "The day's chores", id: "Tugas hari itu" },
+    body: {
+      en: "Home → Chores lists the day's chores by time, each with who, the room and how often. Done ones get a tick and stay in place; the camera beside one shows its photos. From earlier, in amber, is what is left from other days. Tap a chore to change it.",
+      id: "Rumah → Tugas menampilkan tugas hari itu menurut jam, dengan siapa, ruangan, dan seberapa sering. Yang selesai diberi centang dan tetap di tempatnya; kamera di sampingnya membuka fotonya. Dari hari sebelumnya, berwarna kuning, ialah yang tertinggal. Ketuk tugas untuk mengubahnya.",
+    },
+    where: "home_chores",
+  },
+  {
     id: "add-a-chore",
     group: "home",
     title: { en: "Adding a chore by hand", id: "Menambah tugas sendiri" },
@@ -274,8 +284,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "home",
     title: { en: "Rooms, floors and spots", id: "Ruangan, lantai, dan bagian" },
     body: {
-      en: "Home opens on Rooms: your house, one band a floor, top floor first. Amber means an open repair or a chore left from an earlier day. A room can hold rooms inside it; a spot is one thing in a room, like the sink. Change them in Home → Rooms → Edit rooms.",
-      id: "Rumah dibuka di Ruangan: rumah Anda, satu baris per lantai, lantai teratas di atas. Kuning berarti ada perbaikan atau tugas tertinggal. Ruangan bisa punya ruangan di dalamnya; bagian adalah satu benda di ruangan, seperti wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
+      en: "Home opens on Rooms: your house, floor by floor, top first. Amber: a repair or a chore left from earlier; the room's sheet says which. A floor's name lists its rooms. Rooms can hold rooms inside; a spot is one thing in a room, like the sink. Edit in Home → Rooms → Edit rooms.",
+      id: "Rumah dibuka di Ruangan: rumah Anda per lantai, teratas di atas. Kuning: ada perbaikan atau tugas tertinggal, disebut di lembar ruangannya. Nama lantai membuka ruangannya. Ruangan bisa berisi ruangan; bagian ialah satu benda, mis. wastafel. Ubah di Rumah → Ruangan → Ubah ruangan.",
     },
     where: "home_rooms",
     covers: ["rooms-2026-11", "floors-2026-11", "room-picker-2026-11", "rooms-inside-2026-11"],
@@ -435,8 +445,8 @@ export const GUIDE: readonly GuideEntry[] = [
     group: "kitchen",
     title: { en: "Keeping the kitchen up to date", id: "Menjaga stok tetap benar" },
     body: {
-      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out. After Sudah dimasak, Miamus asks what ran out: one tap each. With Food at home on, they mark food Dimakan, Diberikan or Dibuang.",
-      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis. Setelah Sudah dimasak, Miamus bertanya bahan apa yang habis: sekali ketuk. Dengan Makanan di rumah, makanan ditandai Dimakan, Diberikan, atau Dibuang.",
+      en: "Miamus is only as right as its lists. Staff tap an item in Kitchen → Shopping when it runs low or out. After Sudah dimasak, Miamus asks what ran out: one tap each. With Food at home on, they mark food Dimakan (the big button), Diberikan or Dibuang, and can undo it.",
+      id: "Miamus hanya benar kalau daftarnya benar. Staf mengetuk barang di Dapur → Belanja saat hampir habis atau habis. Setelah Sudah dimasak, Miamus bertanya apa yang habis. Dengan Makanan di rumah, makanan ditandai Dimakan (tombol besar), Diberikan, atau Dibuang, dan bisa dibatalkan.",
     },
     where: "kitchen_shopping",
   },

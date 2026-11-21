@@ -37,10 +37,10 @@ function GuideList() {
   const t = useT();
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-sm font-semibold text-gray-900">{t("How Miamus works", "Cara pakai Miamus")}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t("How Miamus works", "Cara pakai Miamus")}</h2>
       {GUIDE_GROUPS.map((group) => (
         <section key={group} className="flex flex-col gap-2" aria-label={GUIDE_GROUP_TITLES[group][locale]}>
-          <h3 className="px-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+          <h3 className="px-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
             {GUIDE_GROUP_TITLES[group][locale]}
           </h3>
           <SettingsGroup>
@@ -85,8 +85,8 @@ function GuideEntryPage({ entry }: { entry: GuideEntry }) {
 
   return (
     <article className="flex flex-col gap-4">
-      <h2 className="text-base font-semibold text-gray-900">{entry.title[locale]}</h2>
-      <p className="text-[15px] leading-relaxed text-gray-800">{entry.body[locale]}</p>
+      <h2 className="text-base font-semibold text-foreground">{entry.title[locale]}</h2>
+      <p className="text-base leading-relaxed text-foreground">{entry.body[locale]}</p>
       {off && (
         <p className="text-sm text-muted-foreground">
           {t(

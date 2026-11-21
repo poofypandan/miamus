@@ -79,7 +79,7 @@ export function HouseholdMembersPanel() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-gray-900">{t("Family", "Keluarga")}</h2>
+      <h2 className="text-sm font-semibold text-foreground">{t("Family", "Keluarga")}</h2>
       <p className="-mt-1 text-xs text-muted-foreground">
         {t(
           "People who sign in with Google and can manage the home. Staff, who sign in with a PIN, are listed below.",
@@ -124,12 +124,12 @@ export function HouseholdMembersPanel() {
                 </span>
 
                 {member.is_self && (
-                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                  <Badge variant="secondary" className="shrink-0">
                     {t("You", "Anda")}
                   </Badge>
                 )}
                 {member.is_founder && !member.is_self && (
-                  <Badge variant="secondary" className="shrink-0 text-[10px]">
+                  <Badge variant="secondary" className="shrink-0">
                     {t("Owner", "Pemilik")}
                   </Badge>
                 )}
