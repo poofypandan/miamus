@@ -190,13 +190,15 @@ export function KitchenShelves({ locale, ingredients: withIngredients }: { local
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Adding by hand, until the one "+" at the top right (07, rule 3). */}
-      <div className="flex gap-2">
-        <Button variant="outline" className="min-h-11 flex-1 rounded-xl" onClick={() => setAddingFood(true)}>
+      {/* Adding by hand, until the one "+" at the top right (07, rule 3).
+          Side by side when they fit, stacked when not: "Tambah bahan
+          masakan" must never run past the edge (Fable's look, #189). */}
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" className="min-h-11 min-w-fit flex-1 rounded-xl" onClick={() => setAddingFood(true)}>
           <Plus /> {tr("Add food", "Tambah makanan")}
         </Button>
         {withIngredients && (
-          <Button variant="outline" className="min-h-11 flex-1 rounded-xl" onClick={() => editIngredient("new")}>
+          <Button variant="outline" className="min-h-11 min-w-fit flex-1 rounded-xl" onClick={() => editIngredient("new")}>
             <Plus /> {tr("Add ingredient", "Tambah bahan masakan")}
           </Button>
         )}
@@ -333,7 +335,7 @@ function Shelf({
       <h2
         className={cn(
           "flex items-center gap-1.5 px-1 text-xs font-semibold tracking-[0.06em] uppercase",
-          soon ? "text-amber-800" : "text-muted-foreground"
+          soon ? "text-attention" : "text-muted-foreground"
         )}
       >
         <Icon className="size-4 shrink-0" aria-hidden />
@@ -406,7 +408,7 @@ function Tile({
           out
             ? "border border-zinc-300 bg-transparent text-zinc-400"
             : amber
-              ? "bg-amber-100 text-amber-800"
+              ? "bg-attention-tint text-attention"
               : "bg-zinc-100 text-gray-600"
         )}
       >
@@ -421,7 +423,7 @@ function Tile({
           <Symbol className="size-7" strokeWidth={1.5} />
         )}
         {waiting && (
-          <CloudUpload className="absolute top-1 right-1 size-3.5 rounded-full bg-card p-0.5 text-amber-700" />
+          <CloudUpload className="absolute top-1 right-1 size-3.5 rounded-full bg-card p-0.5 text-attention" />
         )}
       </span>
       <span
@@ -434,15 +436,17 @@ function Tile({
         {name}
       </span>
       {state.word && (
+        // A state is never cut off: it wraps to a second line, centred, the
+        // mark on the first (Fable's look, #189: "Hampir habis").
         <span
           aria-hidden
           className={cn(
-            "-mt-0.5 flex max-w-full items-center justify-center gap-0.5 text-[11px] leading-4",
-            amber || state.tone === "soon" || state.tone === "low" ? "font-medium text-amber-800" : "text-muted-foreground"
+            "-mt-0.5 block w-full text-center text-[11px] leading-4 break-words",
+            amber || state.tone === "soon" || state.tone === "low" ? "font-medium text-attention" : "text-muted-foreground"
           )}
         >
-          {marked && <TriangleAlert className="size-3 shrink-0" />}
-          <span className="truncate">{state.word}</span>
+          {marked && <TriangleAlert className="mr-0.5 inline size-3 -translate-y-px align-middle" />}
+          {state.word}
         </span>
       )}
     </button>

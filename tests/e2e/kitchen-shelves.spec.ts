@@ -114,8 +114,8 @@ test("the shelves: Use soon first, food and ingredients together, amber only for
   const soon = kitchen.getByRole("region", { name: "Use soon" });
   await expect(soon.getByRole("button")).toHaveText(["Sayur asemTomorrow", "Opor2 days", "Kue lapis3 days"]);
   // Only tomorrow's tile is amber; two and three days keep a plain tile.
-  await expect(soon.getByRole("button", { name: "Sayur asem, Tomorrow" }).locator("span").first()).toHaveClass(/bg-amber-100/);
-  await expect(soon.getByRole("button", { name: "Opor, 2 days" }).locator("span").first()).not.toHaveClass(/bg-amber-100/);
+  await expect(soon.getByRole("button", { name: "Sayur asem, Tomorrow" }).locator("span").first()).toHaveClass(/bg-attention-tint/);
+  await expect(soon.getByRole("button", { name: "Opor, 2 days" }).locator("span").first()).not.toHaveClass(/bg-attention-tint/);
 
   const fridge = kitchen.getByRole("region", { name: "Fridge" });
   await expect(fridge.getByRole("button", { name: "Tempe, Low" })).toBeVisible();
@@ -164,6 +164,27 @@ test("in Bahasa Indonesia", async ({ context, page }) => {
   await expect(kitchen.getByRole("region", { name: "Kulkas" }).getByRole("button", { name: "Tempe, Hampir habis" })).toBeVisible();
   await expect(kitchen.getByRole("region", { name: "Kulkas" }).getByRole("button", { name: "Santan, Habis" })).toBeVisible();
   await expect(kitchen.getByRole("region", { name: "Freezer" }).getByRole("button", { name: "Rendang, 24 hari lagi" })).toBeVisible();
+});
+
+test("narrow phone in Bahasa Indonesia: no state word is cut off, and both add buttons fit (Fable's look, #189)", async ({
+  context,
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  const stub = await installStub(context, { owner: { locale: "id" }, features: { kitchen: true }, items: ITEMS });
+  await seed(stub);
+  await context.addInitScript((cards) => {
+    for (const card of cards) localStorage.setItem(`miamus.whats-new.${card}`, "seen");
+  }, SEEN);
+  await page.goto("/dashboard?module=inventory");
+  const word = page.getByRole("button", { name: "Tempe, Hampir habis" }).locator("span").last();
+  await expect(word).toHaveText("Hampir habis", { timeout: 20_000 });
+  // Never truncated: the word's box is as wide as its text needs.
+  expect(await word.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  for (const name of ["Tambah makanan", "Tambah bahan masakan"]) {
+    const box = await page.getByRole("button", { name }).boundingBox();
+    expect(box && box.x >= 0 && box.x + box.width <= 360).toBe(true);
+  }
 });
 
 test("Kitchen amounts off: food alone on the shelves, no To buy, no Add ingredient", async ({ context, page }) => {
