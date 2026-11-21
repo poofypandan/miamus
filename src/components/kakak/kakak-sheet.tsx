@@ -113,6 +113,14 @@ export function KakakSheet({
   const closeLabel = useUiLabels().close;
   /** What her heart in the header is doing: following her voice, or the saved settle. */
   const [beat, setBeat] = useState<KakakBeat | null>(null);
+  /** The conversation has scrolled under her header: a hairline parts them. */
+  const [scrolled, setScrolled] = useState(false);
+  // Each opening starts at the top, with no hairline (state reset on a prop change, during render).
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (open) setScrolled(false);
+  }
   return (
     <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
       {/* The sheet as one warm object (04, PR 5): a softer corner, a grabber,
@@ -121,12 +129,19 @@ export function KakakSheet({
         side="bottom"
         showCloseButton={false}
         overlayClassName="bg-[rgb(20_16_14/0.4)]"
-        className="max-h-[92dvh] gap-0 overflow-y-auto rounded-t-[30px] border-t-0 pb-safe shadow-[0_-12px_44px_rgb(31_26_23/0.2)]"
+        className="max-h-[92dvh] gap-0 overflow-hidden rounded-t-[30px] border-t-0 pb-safe shadow-[0_-12px_44px_rgb(31_26_23/0.2)]"
       >
         <div aria-hidden className="mx-auto mt-2.5 h-[5px] w-9 shrink-0 rounded-full bg-muted" />
         {/* Her lock-up (the warm seal, 20 Nov): the mark on the left, her name
             beside it at the headline size, and Close in the same row. */}
-        <SheetHeader className="flex-row items-center gap-3 pb-3 pl-5 pr-2.5 pt-2 text-left">
+        {/* The grabber and her header stay put; only the conversation scrolls,
+            under a hairline once it has (Fable, PR 5), so Close is always in reach. */}
+        <SheetHeader
+          className={cn(
+            "shrink-0 flex-row items-center gap-3 border-b pb-3 pl-5 pr-2.5 pt-2 text-left transition-colors",
+            scrolled ? "border-border" : "border-transparent"
+          )}
+        >
           <KakakAvatar className="size-11" beat={open ? beat : null} />
           <div className="min-w-0 flex-1">
             {/* Its own span: cn() reads text-headline as a colour and would drop the title's. */}
@@ -138,17 +153,24 @@ export function KakakSheet({
             </SheetDescription>
           </div>
           <SheetClose asChild>
+            {/* On her name's row in both languages, however the line under it wraps. */}
             <button
               type="button"
               aria-label={closeLabel}
-              className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground active:bg-muted"
+              className="-mt-2 flex size-11 shrink-0 items-center justify-center self-start rounded-full text-muted-foreground active:bg-muted"
             >
               <X className="size-5" aria-hidden="true" />
             </button>
           </SheetClose>
         </SheetHeader>
-        {/* Keyed by open: each opening starts a new conversation. */}
-        {open && <Conversation onClose={onClose} onSaved={onSaved} onBeat={setBeat} />}
+        <div
+          data-testid="kakak-scroll"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+          onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 0)}
+        >
+          {/* Keyed by open: each opening starts a new conversation. */}
+          {open && <Conversation onClose={onClose} onSaved={onSaved} onBeat={setBeat} />}
+        </div>
       </SheetContent>
     </Sheet>
   );
@@ -835,8 +857,11 @@ function SuggestionCard({
                 {rows.map((row, r) => {
                   // The card assembles itself, one row after another (motion-reduce: at once).
                   const motion = { className: "animate-kakak-row motion-reduce:animate-none", style: { animationDelay: `${r * 90}ms` } };
-                  // Values larger and heavier than their labels; a chore's name is the card's headline.
-                  const value = glance && r === 0 ? "text-headline" : "text-base font-semibold leading-snug";
+                  // Values larger and heavier than their labels. What the card adds is
+                  // its headline, on every kind that names one (Fable, PR 5): a chore's
+                  // name, a food's, an ingredient's. Not a list of Buy rows or of pets.
+                  const value =
+                    r === 0 && !row.toggle && row.label === t("What", "Apa") ? "text-headline" : "text-base font-semibold leading-snug";
                   return (
                     <div key={r} className="contents">
                       <dt className={cn("text-sm text-muted-foreground", motion.className)} style={motion.style}>
